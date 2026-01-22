@@ -49,6 +49,11 @@ async fn main() -> Result<()> {
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .init();
 
+    // Initialize the global logger for audit trails
+    if let Err(e) = logging::init_global_logger() {
+        tracing::warn!("Failed to initialize logger: {}", e);
+    }
+
     let cli = Cli::parse();
 
     match cli.command {

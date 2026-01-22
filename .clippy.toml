@@ -1,0 +1,50 @@
+# Clippy linting configuration
+msrv = "1.70.0"
+allow-dirty = false
+allow-staged = false
+allow-partially-staged = false
+
+# Allow some common patterns that are acceptable in this codebase
+allow = [
+    "collapsible_if",
+    "comparison_chain",
+    "explicit_iter_loop",
+    "filter_map",
+    "find_map",
+    "flat_map_option",
+    "into_iter_on_ref",
+    "manual_find_map",
+    "manual_flatten",
+    "map_flatten",
+    "needless_collect",
+    "needless_for_each",
+    "or_fun_call",
+    "redundant_closure_for_method_calls",
+    "single_match_else",
+    "unnested_or_patterns",
+    "unused_self",
+    "wildcard_imports",
+]
+
+# Deny these specific lints
+deny = [
+    "unsafe_code",
+    "unwrap_used",
+    "expect_used",
+    "panic",
+    "unimplemented",
+    "unreachable",
+    "todo",
+]
+
+# Warn on these lints
+warn = [
+    "pedantic",
+    "nursery",
+    "cargo",
+]
+
+# Forbid these lints (hard error)
+forbid = [
+    "unsafe_code",
+]
