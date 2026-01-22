@@ -26,6 +26,10 @@ pub struct Settings {
     /// Whether to continue operations on errors
     #[serde(default = "default_fail_open")]
     pub fail_open: bool,
+
+    /// Enable debug logging with full event and rule details
+    #[serde(default = "default_debug_logs")]
+    pub debug_logs: bool,
 }
 
 fn default_log_level() -> String {
@@ -42,6 +46,10 @@ fn default_script_timeout() -> u32 {
 
 fn default_fail_open() -> bool {
     true
+}
+
+fn default_debug_logs() -> bool {
+    false
 }
 
 /// Complete CCH configuration
@@ -65,6 +73,7 @@ impl Default for Settings {
             max_context_size: default_max_context_size(),
             script_timeout: default_script_timeout(),
             fail_open: default_fail_open(),
+            debug_logs: default_debug_logs(),
         }
     }
 }

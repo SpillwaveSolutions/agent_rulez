@@ -296,6 +296,11 @@ mod tests {
                 injected_files: None,
                 validator_output: Some("blocked by policy".to_string()),
             }),
+            // New enhanced logging fields
+            event_details: None,
+            response: None,
+            raw_event: None,
+            rule_evaluations: None,
         };
 
         logger.log_async(entry.clone()).await.unwrap();

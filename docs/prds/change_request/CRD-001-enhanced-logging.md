@@ -1,11 +1,11 @@
 # CRD-001: Enhanced Logging for Debugging
 
-**Status:** Proposed  
-**Created:** 2026-01-22  
-**Author:** Claude (with user collaboration)  
-**Branch:** `001-cch-binary-v1`  
-**Base Commit:** `fba3dd069347f21cb9301e9c799ce72919fffc46`  
-**Commit Date:** 2026-01-22 11:36:43 -0600  
+**Status:** Proposed
+**Created:** 2026-01-22
+**Author:** Claude (with user collaboration)
+**Branch:** `001-cch-binary-v1`
+**Base Commit:** `fba3dd069347f21cb9301e9c799ce72919fffc46`
+**Commit Date:** 2026-01-22 11:36:43 -0600
 **Commit Message:** "fix: resolve CI failures (clippy + rustfmt)"
 
 ---
@@ -32,6 +32,7 @@ pub struct LogEntry {
 ### Pain Points
 
 1. **Insufficient Context for Debugging**: When a rule fires or doesn't fire unexpectedly, there's no record of what the actual event input was. For example:
+
    - What command was Claude trying to run?
    - What file path was being edited?
    - What content triggered a block?
@@ -58,6 +59,7 @@ The User Guide (`docs/USER_GUIDE_CLI.md`, lines 222-254) documents logs as:
 ```
 
 This format lacks the detail needed for:
+
 - Root cause analysis
 - Policy debugging
 - Compliance evidence with full context
@@ -73,6 +75,7 @@ The following decisions were made through collaborative discussion:
 **Choice:** Use typed event details (Option B) for known tools, with fallback to full raw event (Option A) for unknown events or debug mode.
 
 **Rationale:**
+
 - Typed extraction keeps logs clean and consistent for 95% of use cases
 - Full raw event fallback ensures we handle new/unknown Claude events gracefully
 - Debug mode provides maximum detail when needed
@@ -80,7 +83,7 @@ The following decisions were made through collaborative discussion:
 ### Decision 2: Extracted Fields by Tool Type
 
 | Tool Type | Extracted Fields |
-|-----------|------------------|
+| --- | --- |
 | **Bash** | `command` only |
 | **Write** | `file_path` only |
 | **Edit** | `file_path` only |
@@ -102,11 +105,13 @@ The following decisions were made through collaborative discussion:
 ### Decision 4: Debug Mode Activation
 
 **Choice:** Support all three activation methods:
+
 1. CLI flag: `--debug-logs`
 2. Environment variable: `CCH_DEBUG_LOGS=1`
 3. Config setting: `settings.debug_logs: true`
 
 **Rationale:** Maximum flexibility for different use cases:
+
 - CLI flag for one-off debugging
 - Environment variable for CI/CD or scripted testing
 - Config setting for persistent verbose logging during development
@@ -291,7 +296,7 @@ pub struct LogEntry {
 ### 4.1 Files to Modify
 
 | File | Changes | Priority |
-|------|---------|----------|
+| --- | --- | --- |
 | `cch_cli/src/models.rs` | Add `EventDetails`, `ResponseSummary`, `RuleEvaluation`, `MatcherResults`; extend `LogEntry` | P1 |
 | `cch_cli/src/events/mod.rs` | Add `pub mod extract;` | P1 |
 | `cch_cli/src/events/extract.rs` | **New file** - `EventDetails::from_event()` implementation | P1 |
@@ -305,28 +310,33 @@ pub struct LogEntry {
 ### 4.2 Implementation Order
 
 1. **Phase 1: Core Structures** (models.rs)
+
    - Add all new structs/enums
    - Keep existing fields for backward compatibility
    - All new fields are `Option<T>` with `skip_serializing_if`
 
 2. **Phase 2: Event Extraction** (events/extract.rs)
+
    - Implement `EventDetails::from_event()`
    - Handle each tool type
    - Implement `Unknown` fallback
 
 3. **Phase 3: Hook Integration** (hooks.rs)
+
    - Modify `process_event()` signature to accept debug flag
    - Build `EventDetails` from event
    - Build `ResponseSummary` from response
    - Conditionally include `raw_event` and `rule_evaluations`
 
 4. **Phase 4: Debug Mode Plumbing** (config, args, main)
+
    - Add config setting
    - Add CLI flag
    - Check environment variable
    - Thread debug flag through
 
 5. **Phase 5: Documentation** (USER_GUIDE_CLI.md, spec.md)
+
    - Update log format examples
    - Document `--debug-logs` flag
    - Update spec acceptance criteria
@@ -334,17 +344,20 @@ pub struct LogEntry {
 ### 4.3 Testing Strategy
 
 1. **Unit Tests** (in models.rs or extract.rs):
+
    - `EventDetails::from_event()` for each tool type
    - Serialization/deserialization round-trip
    - Unknown tool fallback behavior
 
 2. **Integration Tests** (in tests/oq/us5_logging_test.rs):
+
    - Normal mode produces expected log structure
    - Debug mode includes `raw_event` and `rule_evaluations`
    - Session events extract correctly
    - Permission events wrap underlying tool
 
 3. **Manual Testing**:
+
    - `echo '{"tool_name":"Bash",...}' | cch pre-tool-use --debug-logs`
    - Verify log file contains expected fields
    - `cch logs` query shows new fields
@@ -363,17 +376,19 @@ Consider bumping `log_schema_version` in version metadata (from `cch --version -
 ### 4.6 Log Size Considerations
 
 **Warning:** Debug mode significantly increases log file size due to:
+
 - Full `raw_event` JSON (200-500+ bytes per event)
 - `rule_evaluations` array (50-200 bytes per rule evaluated)
 
 Recommend documenting log rotation best practices:
+
 - Default log location: `~/.claude/logs/cch.log`
 - Consider `logrotate` or similar for production use
 - Debug mode should be temporary, not permanent
 
 ---
 
-## 5. Future Enhancements
+## 5. Other Enhancements
 
 ### 5.1 Content Length for Edit/Write (v2)
 
@@ -392,17 +407,21 @@ Edit {
 ```
 
 **Use Cases:**
+
 - Identify unexpectedly large file operations
 - Debug content-based blocking rules
 - Compliance logging for data size
 
 ### 5.2 Log Compression (v2)
 
-For high-volume environments, consider optional gzip compression of log files.
+For high-volume environments, consider optional gzip compression of log files. 
+
+Investigae other frameworks that provide this support use a Perplexity MCP Search to research this.  
 
 ### 5.3 Structured Log Queries (v2)
 
 Enhance `cch logs` command with filtering by:
+
 - `--tool <name>` - Filter by tool type
 - `--outcome <allow|block|inject>` - Filter by decision
 - `--rule <name>` - Filter by matching rule
@@ -554,7 +573,7 @@ Enhance `cch logs` command with filtering by:
 ## 7. Success Criteria
 
 | ID | Criteria | Validation |
-|----|----------|------------|
+| --- | --- | --- |
 | SC-001 | Normal mode logs include `event_details` with extracted fields for all known tools | Unit tests for each tool type |
 | SC-002 | Normal mode logs include `response` summary with continue/block status | Integration test |
 | SC-003 | Debug mode logs include `raw_event` with full event JSON | Integration test with `--debug-logs` |
@@ -581,6 +600,7 @@ Enhance `cch logs` command with filtering by:
 Reference schemas from official Claude Code documentation for implementation:
 
 ### Bash Tool Input
+
 ```json
 {
   "tool_name": "Bash",
@@ -594,6 +614,7 @@ Reference schemas from official Claude Code documentation for implementation:
 ```
 
 ### Write Tool Input
+
 ```json
 {
   "tool_name": "Write",
@@ -605,6 +626,7 @@ Reference schemas from official Claude Code documentation for implementation:
 ```
 
 ### Edit Tool Input
+
 ```json
 {
   "tool_name": "Edit",
@@ -618,6 +640,7 @@ Reference schemas from official Claude Code documentation for implementation:
 ```
 
 ### Read Tool Input
+
 ```json
 {
   "tool_name": "Read",
@@ -630,6 +653,7 @@ Reference schemas from official Claude Code documentation for implementation:
 ```
 
 ### Common Fields (All Events)
+
 ```json
 {
   "session_id": "string",
@@ -641,6 +665,7 @@ Reference schemas from official Claude Code documentation for implementation:
 ```
 
 ### SessionStart Input
+
 ```json
 {
   "hook_event_name": "SessionStart",
@@ -649,6 +674,7 @@ Reference schemas from official Claude Code documentation for implementation:
 ```
 
 ### SessionEnd Input
+
 ```json
 {
   "hook_event_name": "SessionEnd",
