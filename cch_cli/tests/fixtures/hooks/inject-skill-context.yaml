@@ -1,0 +1,29 @@
+# Test fixture: Inject skill context for CDK files
+# This configuration injects SKILL.md content when editing files in cdk/ directories.
+#
+# IMPORTANT: This is a USER-DEFINED RULE, not a built-in feature.
+# The CCH binary is a policy engine that EXECUTES these rules.
+# Without this configuration, no injection occurs.
+
+version: "1.0"
+
+rules:
+  - name: inject-cdk-skill
+    description: "Injects CDK skill documentation when editing CDK files"
+    matchers:
+      tools: ["Edit", "Write"]
+      directories: ["cdk/**", "infrastructure/**"]
+    actions:
+      inject: ".opencode/skill/aws-cdk/SKILL.md"
+
+  - name: inject-terraform-skill
+    description: "Injects Terraform skill when editing tf files"
+    matchers:
+      tools: ["Edit", "Write"]
+      extensions: [".tf", ".tfvars"]
+    actions:
+      inject: ".opencode/skill/terraform/SKILL.md"
+
+settings:
+  log_level: "info"
+  max_context_size: 524288  # 512KB

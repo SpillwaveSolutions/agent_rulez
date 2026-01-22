@@ -42,7 +42,7 @@ enum Commands {
     },
 }
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
     // Initialize tracing
     tracing_subscriber::fmt()

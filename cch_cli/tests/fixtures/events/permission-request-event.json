@@ -1,0 +1,9 @@
+{
+  "event_type": "PermissionRequest",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "rm -rf node_modules && npm install"
+  },
+  "session_id": "test-session-005",
+  "timestamp": "2025-01-22T12:00:00Z"
+}

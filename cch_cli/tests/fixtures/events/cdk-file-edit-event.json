@@ -1,0 +1,11 @@
+{
+  "event_type": "PreToolUse",
+  "tool_name": "Edit",
+  "tool_input": {
+    "filePath": "cdk/lib/my-stack.ts",
+    "oldString": "const bucket = new s3.Bucket(this, 'MyBucket');",
+    "newString": "const bucket = new s3.Bucket(this, 'MyBucket', { versioned: true });"
+  },
+  "session_id": "test-session-003",
+  "timestamp": "2025-01-22T12:00:00Z"
+}

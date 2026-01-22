@@ -1,0 +1,9 @@
+{
+  "event_type": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "git push origin feature-branch"
+  },
+  "session_id": "test-session-002",
+  "timestamp": "2025-01-22T12:00:00Z"
+}

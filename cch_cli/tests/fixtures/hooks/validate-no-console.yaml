@@ -1,0 +1,25 @@
+# Test fixture: Custom validator for console.log detection
+# This configuration runs a Python script to detect console.log in code.
+#
+# IMPORTANT: This is a USER-DEFINED RULE, not a built-in feature.
+# The CCH binary is a policy engine that EXECUTES these rules.
+# Without this configuration, no validation occurs.
+
+version: "1.0"
+
+rules:
+  - name: no-console-log
+    description: "Blocks code containing console.log statements"
+    matchers:
+      tools: ["Edit", "Write"]
+      extensions: [".js", ".ts", ".tsx", ".jsx"]
+    actions:
+      run: ".claude/validators/no-console-log.py"
+    metadata:
+      timeout: 5
+      priority: 100
+
+settings:
+  log_level: "info"
+  script_timeout: 10
+  fail_open: true

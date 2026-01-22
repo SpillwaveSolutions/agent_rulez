@@ -1,0 +1,154 @@
+//! Operational Qualification (OQ) Tests - User Story 1: Block Dangerous Operations
+//!
+//! US1: As a developer, I want to automatically block dangerous git operations
+//! like force push, so that I don't accidentally overwrite remote history.
+//!
+//! These tests verify the blocking functionality works correctly.
+
+use assert_cmd::Command;
+use predicates::prelude::*;
+use std::fs;
+
+#[path = "common/mod.rs"]
+mod common;
+use common::{evidence_dir, fixture_path, read_fixture, setup_test_env, TestEvidence, Timer};
+
+/// Test that force push is blocked when configured
+#[test]
+fn test_us1_force_push_blocked() {
+    let timer = Timer::start();
+    let mut evidence = TestEvidence::new("force_push_blocked", "OQ-US1");
+    
+    // Setup test environment with blocking config
+    let temp_dir = setup_test_env("block-force-push.yaml");
+    
+    // Read the force push event
+    let event = read_fixture("events/force-push-event.json");
+    
+    // Run CCH with the event
+    let result = Command::cargo_bin("cch")
+        .expect("binary exists")
+        .current_dir(temp_dir.path())
+        .write_stdin(event)
+        .assert()
+        .success();
+    
+    // Response should indicate blocking
+    result.stdout(
+        predicate::str::contains(r#""continue_":false"#)
+            .or(predicate::str::contains(r#""continue_": false"#))
+            .and(
+                predicate::str::contains("block-force-push")
+                    .or(predicate::str::contains("Blocked"))
+            )
+    );
+    
+    evidence.pass(
+        "Force push event correctly blocked with reason containing rule name",
+        timer.elapsed_ms(),
+    );
+    let _ = evidence.save(&evidence_dir());
+}
+
+/// Test that safe push is allowed when force push is blocked
+#[test]
+fn test_us1_safe_push_allowed() {
+    let timer = Timer::start();
+    let mut evidence = TestEvidence::new("safe_push_allowed", "OQ-US1");
+    
+    // Setup test environment with blocking config
+    let temp_dir = setup_test_env("block-force-push.yaml");
+    
+    // Read the safe push event
+    let event = read_fixture("events/safe-push-event.json");
+    
+    // Run CCH with the event
+    let result = Command::cargo_bin("cch")
+        .expect("binary exists")
+        .current_dir(temp_dir.path())
+        .write_stdin(event)
+        .assert()
+        .success();
+    
+    // Response should allow the operation
+    result.stdout(predicate::str::contains(r#""continue_":true"#)
+        .or(predicate::str::contains(r#""continue_": true"#)));
+    
+    evidence.pass(
+        "Safe push event correctly allowed",
+        timer.elapsed_ms(),
+    );
+    let _ = evidence.save(&evidence_dir());
+}
+
+/// Test that hard reset is blocked when configured
+#[test]
+fn test_us1_hard_reset_blocked() {
+    let timer = Timer::start();
+    let mut evidence = TestEvidence::new("hard_reset_blocked", "OQ-US1");
+    
+    // Setup test environment with blocking config
+    let temp_dir = setup_test_env("block-force-push.yaml");
+    
+    // Create hard reset event
+    let event = r#"{
+        "event_type": "PreToolUse",
+        "tool_name": "Bash",
+        "tool_input": {
+            "command": "git reset --hard HEAD~5"
+        },
+        "session_id": "test-session-reset",
+        "timestamp": "2025-01-22T12:00:00Z"
+    }"#;
+    
+    // Run CCH with the event
+    let result = Command::cargo_bin("cch")
+        .expect("binary exists")
+        .current_dir(temp_dir.path())
+        .write_stdin(event)
+        .assert()
+        .success();
+    
+    // Response should indicate blocking
+    result.stdout(predicate::str::contains(r#""continue_":false"#)
+        .or(predicate::str::contains(r#""continue_": false"#)));
+    
+    evidence.pass(
+        "Hard reset event correctly blocked",
+        timer.elapsed_ms(),
+    );
+    let _ = evidence.save(&evidence_dir());
+}
+
+/// Test that blocking provides a clear reason
+#[test]
+fn test_us1_block_reason_provided() {
+    let timer = Timer::start();
+    let mut evidence = TestEvidence::new("block_reason_provided", "OQ-US1");
+    
+    // Setup test environment with blocking config
+    let temp_dir = setup_test_env("block-force-push.yaml");
+    
+    // Read the force push event
+    let event = read_fixture("events/force-push-event.json");
+    
+    // Run CCH with the event
+    let output = Command::cargo_bin("cch")
+        .expect("binary exists")
+        .current_dir(temp_dir.path())
+        .write_stdin(event)
+        .output()
+        .expect("command should run");
+    
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    
+    // Parse the response and check for reason
+    assert!(stdout.contains("reason"), "Response should include reason field");
+    assert!(stdout.contains("Blocked"), "Reason should mention blocking");
+    
+    evidence.pass(
+        &format!("Block response includes clear reason: {}", stdout.trim()),
+        timer.elapsed_ms(),
+    );
+    let _ = evidence.save(&evidence_dir());
+}

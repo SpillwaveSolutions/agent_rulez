@@ -1,0 +1,33 @@
+[package]
+name = "cch"
+description = "Claude Code Hooks - High-performance policy engine for development workflows"
+keywords = ["claude", "hooks", "policy", "security"]
+categories = ["development-tools"]
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+
+# Binaries
+[[bin]]
+name = "cch"
+path = "src/main.rs"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml.workspace = true
+clap.workspace = true
+regex.workspace = true
+tokio.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+chrono.workspace = true
+dirs.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+assert_cmd.workspace = true
+predicates.workspace = true

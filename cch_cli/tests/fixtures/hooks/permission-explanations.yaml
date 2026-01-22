@@ -1,0 +1,30 @@
+# Test fixture: Permission request explanations
+# This configuration injects explanations before permission prompts.
+#
+# IMPORTANT: This is a USER-DEFINED RULE, not a built-in feature.
+# The CCH binary is a policy engine that EXECUTES these rules.
+# Without this configuration, no explanations are provided.
+
+version: "1.0"
+
+rules:
+  - name: explain-bash-permissions
+    description: "Provides context for Bash command permission requests"
+    matchers:
+      tools: ["Bash"]
+      operations: ["PermissionRequest"]
+    actions:
+      inject: ".claude/context/explain-command.md"
+    metadata:
+      priority: 50
+
+  - name: explain-file-permissions
+    description: "Provides context for file operation permission requests"
+    matchers:
+      tools: ["Write", "Edit"]
+      operations: ["PermissionRequest"]
+    actions:
+      inject: ".claude/context/explain-file-ops.md"
+
+settings:
+  log_level: "info"

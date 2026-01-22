@@ -1,0 +1,29 @@
+# Test fixture: Block dangerous git operations
+# This configuration blocks force push and hard reset commands.
+#
+# IMPORTANT: This is a USER-DEFINED RULE, not a built-in feature.
+# The CCH binary is a policy engine that EXECUTES these rules.
+# Without this configuration, no blocking occurs.
+
+version: "1.0"
+
+rules:
+  - name: block-force-push
+    description: "Prevents destructive force push operations"
+    matchers:
+      tools: ["Bash"]
+      command_match: "git push.*--force|git push.*-f"
+    actions:
+      block: true
+
+  - name: block-hard-reset
+    description: "Prevents destructive hard reset operations"
+    matchers:
+      tools: ["Bash"]
+      command_match: "git reset --hard"
+    actions:
+      block: true
+
+settings:
+  log_level: "debug"
+  fail_open: false

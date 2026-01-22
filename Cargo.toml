@@ -1,34 +1,58 @@
-[package]
-name = "cch"
-version = "1.0.0"
-edition = "2021"
-authors = ["Your Name <your.email@example.com>"]
-description = "Claude Code Hooks - High-performance policy engine for development workflows"
-license = "MIT OR Apache-2.0"
-keywords = ["claude", "hooks", "policy", "security"]
-categories = ["development-tools"]
+# CCH Workspace - Claude Code Hooks Policy Engine
+#
+# This workspace contains the CCH binary and related packages.
+# The binary is a POLICY ENGINE that EXECUTES user-configured YAML rules.
+# It does NOT have built-in blocking/injection features - all behavior
+# is defined by user YAML configuration in .claude/hooks.yaml.
 
-[dependencies]
+[workspace]
+members = ["cch_cli"]
+resolver = "2"
+
+[workspace.package]
+version = "1.0.0"
+authors = ["Spillwave Solutions <engineering@spillwave.com>"]
+license = "MIT OR Apache-2.0"
+edition = "2024"
+
+[workspace.dependencies]
+# Serialization
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
+
+# CLI
 clap = { version = "4.0", features = ["derive"] }
+
+# Patterns
 regex = "1.10"
-tokio = { version = "1.0", features = ["full"] }
+
+# Async (minimal features for performance)
+tokio = { version = "1.0", features = ["process", "time", "fs", "io-std", "io-util", "rt", "macros"] }
+
+# Error handling
 anyhow = "1.0"
 thiserror = "1.0"
+
+# Logging
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Time
 chrono = { version = "0.4", features = ["serde"] }
-async-trait = "0.1"
-uuid = { version = "1.0", features = ["v4", "serde"] }
+
+# System
 dirs = "5.0"
 
+# Testing (used as dev-dependencies in member crates)
+tempfile = "3.24"
+assert_cmd = "2.0"
+predicates = "3.1"
+
+# Release profile for all workspace members
 [profile.release]
 opt-level = 3
 lto = true
 codegen-units = 1
 panic = "abort"
-
-[dev-dependencies]
-tempfile = "3.24.0"
+strip = true

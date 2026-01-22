@@ -1,0 +1,160 @@
+# CI Pipeline for CCH (Claude Code Hooks)
+#
+# This workflow runs on every push and PR to ensure code quality:
+# - Formatting check (rustfmt)
+# - Linting (clippy)
+# - Unit tests
+# - Integration tests (IQ/OQ/PQ)
+# - Code coverage (cargo-llvm-cov)
+# - Upload test evidence as artifacts
+
+name: CI
+
+on:
+  push:
+    branches: [main, "feature/**", "001-*"]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # Format check
+  fmt:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Check formatting
+        run: cargo fmt --all --check
+
+  # Linting with clippy
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Run clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+  # Unit tests
+  test-unit:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Run unit tests
+        run: cargo test --lib
+
+  # Integration tests (IQ/OQ/PQ)
+  test-integration:
+    name: Integration Tests (${{ matrix.test }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        test: [iq_installation, oq_us1_blocking, oq_us2_injection, oq_us3_validators, oq_us4_permissions, oq_us5_logging, pq_performance]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Set up Python (for validators)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run integration test
+        run: cargo test --test ${{ matrix.test }}
+      - name: Upload test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-evidence-${{ matrix.test }}
+          path: cch_cli/target/test-evidence/
+          if-no-files-found: ignore
+
+  # Code coverage
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+      - uses: Swatinem/rust-cache@v2
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Set up Python (for validators)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Generate coverage report
+        run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
+      - name: Check coverage threshold
+        run: |
+          COVERAGE=$(cargo llvm-cov --all-features --workspace --text 2>/dev/null | grep -E "^TOTAL" | awk '{print $NF}' | tr -d '%')
+          echo "Coverage: $COVERAGE%"
+          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+            echo "::warning::Coverage is below 80% threshold: $COVERAGE%"
+          fi
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: lcov.info
+
+  # Build release binary
+  build:
+    name: Build Release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: macos-latest
+            target: x86_64-apple-darwin
+          - os: macos-latest
+            target: aarch64-apple-darwin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Build release
+        run: cargo build --release --target ${{ matrix.target }}
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: cch-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/cch
+
+  # Summary job that requires all others to pass
+  ci-success:
+    name: CI Success
+    runs-on: ubuntu-latest
+    needs: [fmt, clippy, test-unit, test-integration, coverage, build]
+    if: always()
+    steps:
+      - name: Check all jobs passed
+        run: |
+          if [[ "${{ needs.fmt.result }}" != "success" ]] || \
+             [[ "${{ needs.clippy.result }}" != "success" ]] || \
+             [[ "${{ needs.test-unit.result }}" != "success" ]] || \
+             [[ "${{ needs.test-integration.result }}" != "success" ]] || \
+             [[ "${{ needs.build.result }}" != "success" ]]; then
+            echo "One or more jobs failed"
+            exit 1
+          fi
+          echo "All CI jobs passed successfully"
