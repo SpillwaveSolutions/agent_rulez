@@ -1,0 +1,53 @@
+# Operating System Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE and Editor Files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# Build and Dependency Directories
+node_modules/
+dist/
+build/
+target/
+*.egg-info/
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment and Configuration
+.env
+.env.local
+.env.*.local
+*.log
+
+# Temporary Files
+*.tmp
+*.temp
+.cache/
+
+# Coverage and Testing
+coverage/
+.coverage
+*.cover
+.pytest_cache/
+
+# Python Virtual Environments
+venv/
+env/
+ENV/
+
+# Claude Code specific
+.claude/cache/

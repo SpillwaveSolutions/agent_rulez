@@ -1,0 +1,73 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Claude Code Hook Event",
+  "description": "JSON schema for Claude Code hook events processed by CCH Binary",
+  "type": "object",
+  "required": ["event_type", "session_id", "timestamp"],
+  "properties": {
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "PreToolUse",
+        "PostToolUse",
+        "PermissionRequest",
+        "UserPromptSubmit",
+        "SessionStart",
+        "SessionEnd",
+        "PreCompact"
+      ],
+      "description": "The type of hook event being processed"
+    },
+    "tool_name": {
+      "type": "string",
+      "description": "Name of the tool being used (PreToolUse/PostToolUse only)",
+      "examples": ["Bash", "Edit", "Read", "Write", "Glob", "Grep"]
+    },
+    "tool_input": {
+      "type": "object",
+      "description": "Tool parameters and arguments",
+      "additionalProperties": true,
+      "examples": [
+        {"command": "ls -la", "workdir": "/tmp"},
+        {"filePath": "src/main.rs", "oldString": "old", "newString": "new"}
+      ]
+    },
+    "session_id": {
+      "type": "string",
+      "description": "Unique session identifier for tracking",
+      "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp with timezone",
+      "examples": ["2025-01-22T10:30:45.123Z"]
+    },
+    "user_id": {
+      "type": "string",
+      "description": "User identifier if available",
+      "examples": ["user_123", "email@example.com"]
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional event-specific metadata",
+      "additionalProperties": true
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "event_type": { "enum": ["PreToolUse", "PostToolUse"] },
+        "tool_name": { "type": "string" },
+        "tool_input": { "type": "object" }
+      },
+      "required": ["tool_name", "tool_input"]
+    },
+    {
+      "properties": {
+        "event_type": { "enum": ["PermissionRequest"] },
+        "tool_name": { "type": "string" }
+      }
+    }
+  ]
+}

@@ -1,0 +1,261 @@
+@startuml python-etl-architecture
+!theme cerulean
+
+<style>
+component {
+  BackgroundColor LightBlue
+  BorderColor Navy
+  FontColor DarkBlue
+  FontSize 11
+}
+database {
+  BackgroundColor LightYellow
+  BorderColor DarkGoldenrod
+}
+cloud {
+  BackgroundColor LightGreen
+  BorderColor DarkGreen
+}
+queue {
+  BackgroundColor LightCoral
+  BorderColor DarkRed
+}
+</style>
+
+title 🐍 Python ETL Pipeline Architecture
+
+' Data Sources
+cloud "📊 Data Sources" as sources {
+  database "🗄️ PostgreSQL\nOLTP Database" as postgres
+  database "☁️ S3 Bucket\nCSV/JSON Files" as s3_source
+  component "🌐 REST APIs\nThird-party Data" as rest_api
+  database "📈 Google Sheets\nManual Data" as sheets
+}
+
+' Orchestration Layer
+package "⚙️ Orchestration Layer" {
+  component "🎯 Apache Airflow\nDAG Scheduler" as airflow
+  component "⏱️ Cron Jobs\n(Fallback)" as cron
+}
+
+' ETL Processing Layer
+package "🔄 ETL Processing (Python 3.12)" {
+
+  ' Extract
+  component "📥 Extract Module" as extract {
+    [🐘 PostgreSQL Extractor\npsycopg2/asyncpg] as pg_extract
+    [☁️ S3 Extractor\nboto3] as s3_extract
+    [🌐 API Extractor\nhttpx/aiohttp] as api_extract
+    [📊 Sheets Extractor\ngspread] as sheets_extract
+  }
+
+  ' Transform
+  component "⚡ Transform Module" as transform {
+    [🐼 Data Validation\nPydantic/Pandera] as validate
+    [🧹 Data Cleaning\npandas] as clean
+    [🔀 Data Transformation\npandas/polars] as trans
+    [📐 Business Logic\nCustom Rules] as logic
+    [🔗 Data Enrichment\nJoins/Lookups] as enrich
+  }
+
+  ' Load
+  component "📤 Load Module" as load {
+    [🏠 Data Warehouse Loader\nSnowflake/BigQuery] as dw_load
+    [💾 Database Loader\nSQLAlchemy] as db_load
+    [☁️ S3 Loader\nParquet/CSV] as s3_load
+  }
+
+  ' Error Handling
+  component "⚠️ Error Handler" as error {
+    [🔄 Retry Logic\ntenacity] as retry
+    [📝 Error Logging\nstructlog] as error_log
+    [📧 Alert System\nEmail/Slack] as alerts
+  }
+}
+
+' Data Quality
+package "✅ Data Quality Layer" {
+  component "🔍 Quality Checks" as quality {
+    [📊 Schema Validation\nGreat Expectations] as schema_check
+    [🎯 Data Profiling\npandas-profiling] as profiling
+    [📈 Metrics Collection\nCustom Checks] as metrics
+  }
+}
+
+' Target Data Stores
+cloud "🎯 Target Data Stores" as targets {
+  database "🏠 Snowflake\nData Warehouse" as snowflake
+  database "📊 BigQuery\nAnalytics DB" as bigquery
+  storage "☁️ S3 Data Lake\nParquet Files" as s3_target
+  database "💾 PostgreSQL\nReporting DB" as postgres_target
+}
+
+' Monitoring and Logging
+package "📊 Monitoring & Logging" {
+  component "📝 Logging System" as logging {
+    [📜 CloudWatch Logs\nCentralized Logging] as cloudwatch
+    [🔍 ELK Stack\nLog Analysis] as elk
+  }
+
+  component "📊 Monitoring" as monitoring {
+    [📈 Prometheus\nMetrics Collection] as prometheus
+    [📊 Grafana\nDashboards] as grafana
+    [🚨 PagerDuty\nIncident Management] as pagerduty
+  }
+}
+
+' Metadata and State
+database "📋 Metadata Store" as metadata {
+  [📊 Pipeline State\nRedis/DynamoDB] as state
+  [📜 Audit Logs\nS3/Database] as audit
+  [🔖 Data Lineage\nAtlas/DataHub] as lineage
+}
+
+' Connections - Orchestration to ETL
+airflow --> extract : Trigger DAG runs
+cron ..> extract : Backup scheduler
+
+' Extract phase
+postgres --> pg_extract : SQL queries\nIncremental load
+s3_source --> s3_extract : Read files\naws_wrangler
+rest_api --> api_extract : HTTP requests\nAsync I/O
+sheets --> sheets_extract : Google API\nOAuth2
+
+' Extract to Transform
+pg_extract --> validate : Raw data
+s3_extract --> validate : Raw data
+api_extract --> validate : Raw data
+sheets_extract --> validate : Raw data
+
+' Transform pipeline
+validate --> clean : Validated data
+clean --> trans : Clean data
+trans --> logic : Transformed data
+logic --> enrich : Processed data
+
+' Transform with error handling
+validate ..> error : Validation errors
+clean ..> error : Cleaning errors
+trans ..> error : Transform errors
+logic ..> error : Logic errors
+
+error --> retry : Retry failed records
+error --> error_log : Log errors
+error --> alerts : Send notifications
+
+' Transform to Quality
+enrich --> schema_check : Check quality
+schema_check --> profiling : Generate profile
+profiling --> metrics : Collect metrics
+
+' Quality issues
+metrics ..> error : Quality failures
+
+' Load phase
+metrics --> dw_load : Quality-checked data
+metrics --> db_load : Quality-checked data
+metrics --> s3_load : Quality-checked data
+
+' Load to targets
+dw_load --> snowflake : COPY INTO\nBatch load
+db_load --> postgres_target : INSERT/UPSERT\nSQLAlchemy
+s3_load --> s3_target : Write Parquet\nboto3/pyarrow
+enrich --> bigquery : Streaming insert\ngoogle-cloud-bigquery
+
+' Metadata tracking
+extract --> state : Update state\nCheckpoint
+transform --> audit : Log transforms
+load --> audit : Log loads
+enrich --> lineage : Track lineage
+
+' Monitoring connections
+extract --> cloudwatch : Log extract metrics
+transform --> cloudwatch : Log transform metrics
+load --> cloudwatch : Log load metrics
+
+cloudwatch --> elk : Forward logs
+elk --> grafana : Visualize
+
+enrich --> prometheus : Export metrics\ndata_processed_total\nprocessing_duration
+load --> prometheus : Export metrics\nrecords_loaded_total\nload_duration
+
+prometheus --> grafana : Query metrics
+grafana --> pagerduty : Alert on failures
+
+note right of airflow
+  DAG Configuration:
+  - Schedule: @daily (0 0 * * *)
+  - Catchup: False
+  - Retries: 3
+  - Retry delay: 5 minutes
+  - SLA: 4 hours
+
+  Tasks:
+  1. extract_postgres
+  2. extract_s3
+  3. extract_apis
+  4. validate_data
+  5. transform_data
+  6. quality_check
+  7. load_warehouse
+  8. send_summary
+end note
+
+note bottom of extract
+  Incremental loading:
+  - Track watermarks (timestamps/IDs)
+  - Store checkpoints in Redis
+  - Handle late-arriving data
+  - Deduplicate records
+
+  Performance:
+  - Parallel extraction (ThreadPoolExecutor)
+  - Async I/O for APIs (aiohttp)
+  - Batch processing (1000 records)
+  - Connection pooling
+end note
+
+note bottom of transform
+  Libraries:
+  - pandas: DataFrames
+  - polars: Fast DataFrames
+  - pydantic: Data validation
+  - pandera: Schema validation
+  - numpy: Numerical ops
+
+  Patterns:
+  - Type hints everywhere
+  - Function composition
+  - Declarative transformations
+  - Unit testable logic
+end note
+
+note bottom of quality
+  Great Expectations:
+  - expect_column_values_to_not_be_null
+  - expect_column_values_to_be_unique
+  - expect_column_values_to_be_in_set
+  - expect_table_row_count_to_be_between
+
+  Custom checks:
+  - Business rule validation
+  - Cross-table consistency
+  - Historical comparison
+  - Anomaly detection
+end note
+
+note right of targets
+  Data Formats:
+  - Warehouse: Columnar (Parquet)
+  - Lake: Partitioned by date
+  - Reporting DB: Denormalized
+  - Compression: Snappy/Gzip
+
+  Performance:
+  - Bulk loading (COPY)
+  - Partitioning by date
+  - Clustering keys
+  - Incremental merges
+end note
+
+@enduml

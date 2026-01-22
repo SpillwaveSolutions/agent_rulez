@@ -1,0 +1,41 @@
+# Rust
+target/
+debug/
+release/
+*.rs.bk
+*.rlib
+*.prof*
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+*.tmp
+
+# Logs
+*.log
+
+# Environment
+.env*
+!.env.example
+
+# Build artifacts
+Cargo.lock
+.cargo/
+
+# Documentation builds
+docs/book/
+
+# Coverage reports
+coverage/
+*.profraw
+
+# Backup files
+*.bak
+*.backup

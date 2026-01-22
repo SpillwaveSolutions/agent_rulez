@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "html-to-image": "^1.11.13",
+    "react-zoom-pan-pinch": "^3.7.0"
+  }
+}

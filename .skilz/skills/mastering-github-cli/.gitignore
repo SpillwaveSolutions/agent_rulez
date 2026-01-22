@@ -1,0 +1,23 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.log
+*.bak
+
+# Script output
+*.out
+results/
+
+# Environment
+.env
+.env.local

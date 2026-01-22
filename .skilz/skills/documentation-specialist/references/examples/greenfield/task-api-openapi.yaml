@@ -1,0 +1,703 @@
+openapi: 3.0.3
+
+info:
+  title: Task Management API
+  version: 1.0.0
+  description: |
+    REST API for managing tasks, projects, and team collaboration.
+
+    **Features:**
+    - Create, update, delete tasks
+    - Organize tasks into projects
+    - Assign tasks to team members
+    - Track task status and progress
+
+    **Authentication:** Bearer token (JWT)
+
+    **Rate Limiting:** 1000 requests/hour per user
+  contact:
+    name: API Support
+    email: api-support@example.com
+    url: https://docs.example.com/api
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.taskmanager.com/v1
+    description: Production
+  - url: https://staging-api.taskmanager.com/v1
+    description: Staging
+  - url: http://localhost:3000/v1
+    description: Local development
+
+tags:
+  - name: Tasks
+    description: Task CRUD operations
+  - name: Projects
+    description: Project management
+  - name: Users
+    description: User management
+  - name: Comments
+    description: Task comments and discussions
+
+paths:
+  /tasks:
+    get:
+      summary: List tasks
+      description: Retrieve a paginated list of tasks with optional filtering
+      operationId: listTasks
+      tags:
+        - Tasks
+      parameters:
+        - name: status
+          in: query
+          description: Filter by task status
+          required: false
+          schema:
+            type: string
+            enum: [pending, in_progress, in_review, completed]
+            example: in_progress
+        - name: assignee
+          in: query
+          description: Filter by assignee user ID
+          required: false
+          schema:
+            type: string
+            format: uuid
+            example: "550e8400-e29b-41d4-a716-446655440000"
+        - name: project_id
+          in: query
+          description: Filter by project ID
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          description: Number of tasks to return (max 100)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+            example: 20
+        - name: offset
+          in: query
+          description: Number of tasks to skip (for pagination)
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+            example: 0
+      responses:
+        '200':
+          description: List of tasks retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Task'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+              examples:
+                success:
+                  value:
+                    data:
+                      - id: "550e8400-e29b-41d4-a716-446655440000"
+                        title: "Implement user authentication"
+                        description: "Add JWT-based authentication to the API"
+                        status: "in_progress"
+                        priority: "high"
+                        assignee_id: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+                        project_id: "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"
+                        due_date: "2025-01-30"
+                        created_at: "2025-01-15T10:30:00Z"
+                        updated_at: "2025-01-15T14:22:00Z"
+                    pagination:
+                      total: 42
+                      limit: 20
+                      offset: 0
+                      has_more: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+    post:
+      summary: Create task
+      description: Create a new task
+      operationId: createTask
+      tags:
+        - Tasks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+            examples:
+              simple:
+                summary: Simple task
+                value:
+                  title: "Write API documentation"
+                  project_id: "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"
+              detailed:
+                summary: Detailed task
+                value:
+                  title: "Implement payment processing"
+                  description: "Integrate Stripe API for credit card payments"
+                  status: "pending"
+                  priority: "high"
+                  assignee_id: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+                  project_id: "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"
+                  due_date: "2025-02-15"
+                  tags: ["backend", "payment", "integration"]
+      responses:
+        '201':
+          description: Task created successfully
+          headers:
+            Location:
+              description: URL of the created task
+              schema:
+                type: string
+                example: "/v1/tasks/550e8400-e29b-41d4-a716-446655440000"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /tasks/{task_id}:
+    get:
+      summary: Get task by ID
+      description: Retrieve detailed information about a specific task
+      operationId: getTask
+      tags:
+        - Tasks
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '200':
+          description: Task details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      summary: Update task
+      description: Update one or more fields of an existing task
+      operationId: updateTask
+      tags:
+        - Tasks
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskRequest'
+            examples:
+              status_update:
+                summary: Update status
+                value:
+                  status: "completed"
+              reassign:
+                summary: Reassign task
+                value:
+                  assignee_id: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+                  status: "in_progress"
+      responses:
+        '200':
+          description: Task updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    delete:
+      summary: Delete task
+      description: Permanently delete a task
+      operationId: deleteTask
+      tags:
+        - Tasks
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '204':
+          description: Task deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /tasks/{task_id}/comments:
+    get:
+      summary: List task comments
+      description: Retrieve all comments for a specific task
+      operationId: listTaskComments
+      tags:
+        - Comments
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '200':
+          description: Comments retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Comment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      summary: Add task comment
+      description: Add a new comment to a task
+      operationId: createTaskComment
+      tags:
+        - Comments
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+              properties:
+                content:
+                  type: string
+                  minLength: 1
+                  maxLength: 5000
+                  example: "Great progress! Let's discuss the API design in tomorrow's standup."
+      responses:
+        '201':
+          description: Comment added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /projects:
+    get:
+      summary: List projects
+      description: Retrieve all projects
+      operationId: listProjects
+      tags:
+        - Projects
+      responses:
+        '200':
+          description: Projects retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Project'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Create project
+      description: Create a new project
+      operationId: createProject
+      tags:
+        - Projects
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectRequest'
+      responses:
+        '201':
+          description: Project created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  schemas:
+    Task:
+      type: object
+      required:
+        - id
+        - title
+        - status
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique task identifier
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Task title
+          example: "Implement user authentication"
+        description:
+          type: string
+          nullable: true
+          maxLength: 5000
+          description: Detailed task description (Markdown supported)
+          example: "Add JWT-based authentication to the API with email/password and OAuth2 (Google, GitHub)"
+        status:
+          type: string
+          enum: [pending, in_progress, in_review, completed]
+          description: Current task status
+          example: "in_progress"
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+          default: medium
+          description: Task priority
+          example: "high"
+        assignee_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: User ID of the person assigned to this task
+          example: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+        project_id:
+          type: string
+          format: uuid
+          description: Project ID this task belongs to
+          example: "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"
+        due_date:
+          type: string
+          format: date
+          nullable: true
+          description: Task deadline (ISO 8601 date)
+          example: "2025-01-30"
+        tags:
+          type: array
+          items:
+            type: string
+          description: Array of tags for categorization
+          example: ["backend", "authentication", "security"]
+        created_at:
+          type: string
+          format: date-time
+          description: Task creation timestamp
+          example: "2025-01-15T10:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          example: "2025-01-15T14:22:00Z"
+
+    CreateTaskRequest:
+      type: object
+      required:
+        - title
+        - project_id
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 5000
+        status:
+          type: string
+          enum: [pending, in_progress, in_review, completed]
+          default: pending
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+          default: medium
+        assignee_id:
+          type: string
+          format: uuid
+          nullable: true
+        project_id:
+          type: string
+          format: uuid
+        due_date:
+          type: string
+          format: date
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+
+    UpdateTaskRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 5000
+        status:
+          type: string
+          enum: [pending, in_progress, in_review, completed]
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+        assignee_id:
+          type: string
+          format: uuid
+          nullable: true
+        due_date:
+          type: string
+          format: date
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+
+    Project:
+      type: object
+      required:
+        - id
+        - name
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: "API v2.0 Development"
+        description:
+          type: string
+          nullable: true
+          example: "Complete rewrite of REST API with GraphQL support"
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-01-01T00:00:00Z"
+
+    CreateProjectRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 1000
+
+    Comment:
+      type: object
+      required:
+        - id
+        - task_id
+        - author_id
+        - content
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        task_id:
+          type: string
+          format: uuid
+        author_id:
+          type: string
+          format: uuid
+        content:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    Pagination:
+      type: object
+      required:
+        - total
+        - limit
+        - offset
+        - has_more
+      properties:
+        total:
+          type: integer
+          description: Total number of items
+          example: 42
+        limit:
+          type: integer
+          description: Number of items returned
+          example: 20
+        offset:
+          type: integer
+          description: Number of items skipped
+          example: 0
+        has_more:
+          type: boolean
+          description: Whether more items are available
+          example: true
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Task title is required"
+        details:
+          type: object
+          description: Additional error context
+          nullable: true
+
+  parameters:
+    TaskId:
+      name: task_id
+      in: path
+      required: true
+      description: Task UUID
+      schema:
+        type: string
+        format: uuid
+        example: "550e8400-e29b-41d4-a716-446655440000"
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: "BAD_REQUEST"
+            message: "Invalid request parameters"
+
+    Unauthorized:
+      description: Missing or invalid authentication token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: "UNAUTHORIZED"
+            message: "Authentication required. Please provide a valid Bearer token."
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: "NOT_FOUND"
+            message: "Task not found"
+
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: "VALIDATION_ERROR"
+            message: "Task title must be between 1 and 255 characters"
+            details:
+              field: "title"
+              constraint: "length"
+
+    RateLimitExceeded:
+      description: Rate limit exceeded
+      headers:
+        X-RateLimit-Limit:
+          description: Requests allowed per hour
+          schema:
+            type: integer
+            example: 1000
+        X-RateLimit-Remaining:
+          description: Remaining requests in current window
+          schema:
+            type: integer
+            example: 0
+        X-RateLimit-Reset:
+          description: Timestamp when rate limit resets
+          schema:
+            type: integer
+            example: 1705334400
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: "RATE_LIMIT_EXCEEDED"
+            message: "API rate limit exceeded. Try again in 15 minutes."
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token obtained from the `/auth/login` endpoint.
+
+        **Example:**
+        ```
+        Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        ```
+
+security:
+  - BearerAuth: []

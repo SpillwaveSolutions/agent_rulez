@@ -1,0 +1,179 @@
+#!/bin/bash
+
+# Phase Summary Script for SDD Tasks
+# Analyzes tasks.md from SDD spec directories and shows progress across all phases
+
+set -euo pipefail
+
+# Usage message
+usage() {
+    echo "Usage: $0 <path-to-tasks.md>"
+    echo ""
+    echo "Example: $0 specs/003-keyboard-shortcuts/tasks.md"
+    echo ""
+    echo "Analyzes SDD tasks.md and shows progress across all phases"
+    exit 1
+}
+
+# Check arguments
+if [ $# -eq 0 ]; then
+    usage
+fi
+
+TASKS_FILE="$1"
+
+# Verify file exists
+if [ ! -f "$TASKS_FILE" ]; then
+    echo "Error: File not found: $TASKS_FILE"
+    exit 1
+fi
+
+# Verify it's a tasks.md file
+if [[ ! "$TASKS_FILE" =~ tasks\.md$ ]]; then
+    echo "Warning: File doesn't end with 'tasks.md': $TASKS_FILE"
+    echo "Continuing anyway..."
+fi
+
+echo "# 📊 SDD FEATURE PHASES - PROGRESS SUMMARY"
+echo ""
+echo "**File**: $TASKS_FILE"
+echo ""
+
+# Extract feature name from path
+feature_name=$(basename "$(dirname "$TASKS_FILE")")
+echo "**Feature**: $feature_name"
+echo ""
+echo "---"
+echo ""
+
+# Count total phases
+total_phases=$(grep -c "^## Phase [0-9]" "$TASKS_FILE" || echo 0)
+
+if [ "$total_phases" -eq 0 ]; then
+    echo "⚠️  No phases found in tasks.md"
+    exit 1
+fi
+
+# Iterate through each phase
+for phase in $(seq 1 "$total_phases"); do
+    echo "## Phase $phase"
+
+    # Get phase title
+    title=$(grep "^## Phase $phase:" "$TASKS_FILE" | sed "s/^## Phase $phase: //" || echo "Unknown")
+    echo "$title"
+    echo ""
+
+    # Find phase boundaries
+    phase_start=$(grep -n "^## Phase $phase:" "$TASKS_FILE" | cut -d: -f1)
+    next_phase=$((phase + 1))
+    phase_end=$(grep -n "^## Phase $next_phase:" "$TASKS_FILE" | cut -d: -f1 || echo "")
+
+    # If no next phase, find Dependencies section or end of file
+    if [ -z "$phase_end" ]; then
+        phase_end=$(grep -n "^## Dependencies" "$TASKS_FILE" | head -1 | cut -d: -f1 || echo "")
+    fi
+
+    if [ -z "$phase_end" ]; then
+        phase_end=$(wc -l < "$TASKS_FILE")
+    fi
+
+    # Extract phase content to temp file
+    temp_file=$(mktemp)
+    sed -n "${phase_start},${phase_end}p" "$TASKS_FILE" > "$temp_file"
+
+    # Count tasks
+    total=$(grep -c "^- \[" "$temp_file" 2>/dev/null || true)
+    [ -z "$total" ] && total=0
+
+    complete=$(grep -c "^- \[x\]" "$temp_file" 2>/dev/null || true)
+    [ -z "$complete" ] && complete=0
+
+    pending=$(grep -c "^- \[ \]" "$temp_file" 2>/dev/null || true)
+    [ -z "$pending" ] && pending=0
+
+    simplified=$(grep -c "^- \[~\]" "$temp_file" 2>/dev/null || true)
+    [ -z "$simplified" ] && simplified=0
+
+    if [ "$total" -gt 0 ]; then
+        percent=$((complete * 100 / total))
+
+        # Determine status emoji
+        if [ "$percent" -eq 100 ]; then
+            status_emoji="✅"
+        elif [ "$percent" -gt 50 ]; then
+            status_emoji="🟡"
+        else
+            status_emoji="⚪️"
+        fi
+
+        echo "$status_emoji **Status**: $complete/$total tasks complete ($percent%)"
+
+        if [ "$simplified" -gt 0 ]; then
+            echo "   ⚠️  $simplified tasks simplified/modified"
+        fi
+
+        # Show pending tasks if any
+        if [ "$pending" -gt 0 ]; then
+            echo ""
+            echo "**Pending Tasks**:"
+            grep "^- \[ \]" "$temp_file" | head -5
+            if [ "$pending" -gt 5 ]; then
+                remaining=$((pending - 5))
+                echo "  ... and $remaining more"
+            fi
+        fi
+
+        # Show simplified tasks if any
+        if [ "$simplified" -gt 0 ]; then
+            echo ""
+            echo "**Simplified Tasks**:"
+            grep "^- \[~\]" "$temp_file" | head -3
+            if [ "$simplified" -gt 3 ]; then
+                remaining=$((simplified - 3))
+                echo "  ... and $remaining more"
+            fi
+        fi
+    else
+        echo "⚠️  No tasks found in this phase"
+    fi
+
+    # Clean up temp file
+    rm -f "$temp_file"
+
+    echo ""
+    echo "---"
+    echo ""
+done
+
+# Summary statistics
+echo "## 📈 Overall Progress"
+echo ""
+
+total_all_tasks=$(grep -c "^- \[" "$TASKS_FILE" 2>/dev/null || true)
+[ -z "$total_all_tasks" ] && total_all_tasks=0
+
+complete_all_tasks=$(grep -c "^- \[x\]" "$TASKS_FILE" 2>/dev/null || true)
+[ -z "$complete_all_tasks" ] && complete_all_tasks=0
+
+pending_all_tasks=$(grep -c "^- \[ \]" "$TASKS_FILE" 2>/dev/null || true)
+[ -z "$pending_all_tasks" ] && pending_all_tasks=0
+
+simplified_all_tasks=$(grep -c "^- \[~\]" "$TASKS_FILE" 2>/dev/null || true)
+[ -z "$simplified_all_tasks" ] && simplified_all_tasks=0
+
+if [ "$total_all_tasks" -gt 0 ]; then
+    overall_percent=$((complete_all_tasks * 100 / total_all_tasks))
+    echo "**Total Tasks**: $total_all_tasks"
+    echo "**Completed**: $complete_all_tasks ($overall_percent%)"
+    echo "**Pending**: $pending_all_tasks"
+    if [ "$simplified_all_tasks" -gt 0 ]; then
+        echo "**Simplified**: $simplified_all_tasks"
+    fi
+else
+    echo "⚠️  No tasks found in file"
+fi
+
+echo ""
+echo "---"
+echo ""
+echo "Generated by SDD Phase Summary Script"

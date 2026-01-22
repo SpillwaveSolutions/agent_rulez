@@ -1,0 +1,217 @@
+@startuml fastapi-deployment
+!theme cerulean
+
+<style>
+node {
+  BackgroundColor LightSteelBlue
+  BorderColor Navy
+  FontColor DarkBlue
+  FontSize 12
+}
+database {
+  BackgroundColor LightYellow
+  BorderColor DarkGoldenrod
+}
+component {
+  BackgroundColor LightGreen
+  BorderColor DarkGreen
+}
+</style>
+
+title ⚡ FastAPI Microservice Deployment Architecture
+
+' Kubernetes Cluster
+cloud "☸️ Kubernetes Cluster (GKE)" as k8s {
+
+  ' Ingress
+  node "⚖️ Nginx Ingress Controller" as ingress {
+    component "🌐 Ingress\nTLS Termination\nRate Limiting" as ingress_comp
+  }
+
+  ' FastAPI Pods
+  node "🚀 FastAPI Deployment" as fastapi_deploy {
+    rectangle "Pod 1" as pod1 {
+      component "⚡ FastAPI App\n🐍 Python 3.12\n🚀 Uvicorn (ASGI)\n4 Workers" as app1
+      component "📊 Prometheus\nExporter" as metrics1
+    }
+
+    rectangle "Pod 2" as pod2 {
+      component "⚡ FastAPI App\n🐍 Python 3.12\n🚀 Uvicorn (ASGI)\n4 Workers" as app2
+      component "📊 Prometheus\nExporter" as metrics2
+    }
+
+    rectangle "Pod 3" as pod3 {
+      component "⚡ FastAPI App\n🐍 Python 3.12\n🚀 Uvicorn (ASGI)\n4 Workers" as app3
+      component "📊 Prometheus\nExporter" as metrics3
+    }
+  }
+
+  ' Background Worker Pods
+  node "⏱️ Celery Workers" as celery_deploy {
+    rectangle "Worker Pod 1" as worker1 {
+      component "🐍 Celery Worker\nAsync Task Processing" as celery1
+    }
+    rectangle "Worker Pod 2" as worker2 {
+      component "🐍 Celery Worker\nAsync Task Processing" as celery2
+    }
+  }
+
+  ' Service
+  node "🎯 Kubernetes Service" as k8s_svc {
+    component "ClusterIP Service\nLoad Balancing" as svc_comp
+  }
+}
+
+' External Cloud Resources
+cloud "🌐 Google Cloud Platform" as gcp {
+  ' Cloud SQL
+  database "💾 Cloud SQL\n(PostgreSQL 15)" as cloudsql {
+    component "Primary Instance\n4 vCPUs, 16GB RAM" as sql_primary
+    component "Read Replica\n2 vCPUs, 8GB RAM" as sql_replica
+  }
+
+  ' Memorystore Redis
+  database "⚡ Memorystore\n(Redis 7)" as redis {
+    component "Cache Layer\nSession Store\nRate Limiting" as redis_comp
+  }
+
+  ' Pub/Sub
+  queue "📬 Cloud Pub/Sub" as pubsub {
+    component "Message Topics\nEvent Streaming" as pubsub_comp
+  }
+
+  ' Cloud Storage
+  storage "📁 Cloud Storage" as gcs {
+    component "File Storage\nStatic Assets\nBackups" as gcs_comp
+  }
+
+  ' Secret Manager
+  node "🔑 Secret Manager" as secrets {
+    component "API Keys\nDB Passwords\nJWT Secrets" as secrets_comp
+  }
+
+  ' Cloud Monitoring
+  node "📊 Cloud Monitoring" as monitoring {
+    component "Logs\nMetrics\nTraces\nAlerts" as monitoring_comp
+  }
+}
+
+' External Services
+cloud "🔌 External APIs" as external {
+  component "Stripe API\n(Payments)" as stripe
+  component "SendGrid\n(Email)" as sendgrid
+  component "Twilio\n(SMS)" as twilio
+  component "Auth0\n(OAuth2)" as auth0
+}
+
+' Connections - Ingress to Service
+ingress_comp --> svc_comp : HTTP/HTTPS
+
+' Service to Pods
+svc_comp --> app1 : Load balanced\nHTTP
+svc_comp --> app2 : Load balanced\nHTTP
+svc_comp --> app3 : Load balanced\nHTTP
+
+' FastAPI to Database
+app1 --> sql_primary : 🐍 asyncpg\nConnection Pool\nPort 5432
+app2 --> sql_primary : 🐍 asyncpg\nConnection Pool\nPort 5432
+app3 --> sql_primary : 🐍 asyncpg\nConnection Pool\nPort 5432
+
+' Read queries to replica
+app1 ..> sql_replica : Read queries
+app2 ..> sql_replica : Read queries
+app3 ..> sql_replica : Read queries
+
+sql_primary -[#red,dashed]-> sql_replica : Streaming\nReplication
+
+' FastAPI to Redis
+app1 --> redis_comp : 🐍 aioredis\nAsync I/O\nPort 6379
+app2 --> redis_comp : 🐍 aioredis\nAsync I/O\nPort 6379
+app3 --> redis_comp : 🐍 aioredis\nAsync I/O\nPort 6379
+
+' FastAPI to Pub/Sub
+app1 --> pubsub_comp : Publish events
+app2 --> pubsub_comp : Publish events
+app3 --> pubsub_comp : Publish events
+
+' Workers consume from Pub/Sub
+pubsub_comp --> celery1 : Subscribe\nto topics
+pubsub_comp --> celery2 : Subscribe\nto topics
+
+' Workers to Database
+celery1 --> sql_primary : Process jobs
+celery2 --> sql_primary : Process jobs
+
+' FastAPI to Cloud Storage
+app1 --> gcs_comp : 🐍 google-cloud-storage\nAsync uploads
+app2 --> gcs_comp : 🐍 google-cloud-storage\nAsync uploads
+app3 --> gcs_comp : 🐍 google-cloud-storage\nAsync uploads
+
+' Secrets
+app1 ..> secrets_comp : Fetch at startup
+app2 ..> secrets_comp : Fetch at startup
+app3 ..> secrets_comp : Fetch at startup
+celery1 ..> secrets_comp : Fetch at startup
+celery2 ..> secrets_comp : Fetch at startup
+
+' External API calls (async)
+app1 --> stripe : 🐍 httpx async
+app2 --> sendgrid : 🐍 httpx async
+app3 --> twilio : 🐍 httpx async
+app1 --> auth0 : OAuth2 validation
+
+' Monitoring
+metrics1 --> monitoring_comp : Prometheus metrics
+metrics2 --> monitoring_comp : Prometheus metrics
+metrics3 --> monitoring_comp : Prometheus metrics
+app1 --> monitoring_comp : Structured logs\nOpenTelemetry traces
+app2 --> monitoring_comp : Structured logs\nOpenTelemetry traces
+app3 --> monitoring_comp : Structured logs\nOpenTelemetry traces
+
+note right of fastapi_deploy
+  HorizontalPodAutoscaler
+  Min: 2, Max: 10 replicas
+  CPU target: 70%
+  Memory target: 80%
+
+  Readiness probe: /health
+  Liveness probe: /health
+end note
+
+note bottom of cloudsql
+  Automated backups
+  Point-in-time recovery
+  Connection pooling: PgBouncer
+  Max connections: 100 per instance
+end note
+
+note bottom of redis
+  Eviction policy: allkeys-lru
+  Max memory: 4GB
+  Persistence: RDB snapshots
+  High availability: Replica
+end note
+
+note right of app1
+  ASGI server: Uvicorn
+  Workers: 4 (CPU cores)
+  Worker class: uvicorn.workers.UvicornWorker
+  Timeout: 30s
+  Keepalive: 5s
+
+  Middleware:
+  - CORS
+  - GZip compression
+  - Request ID tracking
+  - Rate limiting
+end note
+
+note left of celery1
+  Celery with Redis backend
+  Concurrency: 10
+  Task queue: default, priority
+  Max retries: 3
+  Task timeout: 600s
+end note
+
+@enduml

@@ -1,0 +1,746 @@
+# Spring Boot Code-to-Documentation Mapping
+# This file defines how to extract documentation from Spring Boot applications
+
+framework: Spring Boot
+language: Java
+versions:
+  - "2.x"
+  - "3.x"
+documentation_types:
+  - Software Design Document (SDD)
+  - OpenAPI/REST API Specification
+  - Deployment Documentation
+
+# ============================================================================
+# DETECTION: How to identify a Spring Boot project
+# ============================================================================
+detection:
+  required_files:
+    - pattern: "pom.xml"
+      description: "Maven build file"
+      alternative: "build.gradle"
+    - pattern: "**/src/main/java/**/*Application.java"
+      description: "Main application class"
+
+  required_dependencies:
+    maven:
+      - "org.springframework.boot:spring-boot-starter"
+      - "org.springframework.boot:spring-boot-starter-web"
+    gradle:
+      - "implementation 'org.springframework.boot:spring-boot-starter'"
+
+  key_annotations:
+    - "@SpringBootApplication"
+    - "@RestController"
+    - "@Service"
+    - "@Repository"
+
+# ============================================================================
+# ARCHITECTURE MAPPING: Code → SDD Section 5 (Building Block View)
+# ============================================================================
+architecture_mappings:
+
+  # Main Application Class
+  - source_pattern: "@SpringBootApplication"
+    grep_command: "grep -r \"@SpringBootApplication\" src/"
+    target_document: "design-sdd.md"
+    target_section: "5.1 Application Entry Point"
+    extraction_rules:
+      - element: "class_name"
+        method: "Extract class name"
+        example: "TaskManagerApplication"
+      - element: "component_scan_packages"
+        method: "Extract from @ComponentScan or infer from package"
+        example: "com.example.taskmanager"
+      - element: "enabled_features"
+        method: "Extract from annotations like @EnableScheduling"
+        example: "@EnableScheduling, @EnableAsync"
+
+    documentation_template: |
+      ## 5.1 Application Entry Point
+
+      **Application Class**: {class_name}
+      **Base Package**: {component_scan_packages}
+      **Enabled Features**:
+      {enabled_features}
+
+      This is the main entry point for the Spring Boot application. It bootstraps
+      the Spring context and enables component scanning for the entire application.
+
+  # Configuration Classes
+  - source_pattern: "@Configuration"
+    grep_command: "grep -r \"@Configuration\" src/"
+    target_document: "design-sdd.md"
+    target_section: "5.2 Configuration Components"
+    extraction_rules:
+      - element: "config_class_name"
+        method: "Extract class name"
+      - element: "bean_definitions"
+        method: "Extract methods with @Bean annotation"
+      - element: "property_sources"
+        method: "Extract @PropertySource annotations"
+
+    documentation_template: |
+      ### Configuration: {config_class_name}
+
+      **Purpose**: {infer from class name and bean types}
+      **Bean Definitions**:
+      {list of @Bean methods}
+
+      **Configuration Properties**:
+      {property_sources}
+
+  # Application Properties
+  - source_pattern: "application.properties | application.yml"
+    grep_command: "find src/main/resources -name 'application*.properties' -o -name 'application*.yml'"
+    target_document: "design-sdd.md"
+    target_section: "7. Deployment View"
+    extraction_rules:
+      - element: "server_port"
+        property: "server.port"
+        default: "8080"
+      - element: "database_url"
+        property: "spring.datasource.url"
+      - element: "database_driver"
+        property: "spring.datasource.driver-class-name"
+      - element: "external_services"
+        property: "*.url"
+        note: "Extract any properties ending in .url"
+
+    documentation_template: |
+      ## 7. Deployment View
+
+      ### 7.1 Application Configuration
+
+      **Server Port**: {server_port}
+      **Database**: {database_driver} at {database_url}
+      **External Services**:
+      {external_services}
+
+# ============================================================================
+# API MAPPING: Code → OpenAPI Specification
+# ============================================================================
+api_mappings:
+
+  # REST Controllers
+  - source_pattern: "@RestController"
+    grep_command: "grep -r \"@RestController\" src/"
+    target_document: "api-reference-openapi.yaml"
+    target_section: "paths"
+    extraction_rules:
+      - element: "controller_class"
+        method: "Extract class name"
+      - element: "base_path"
+        method: "Extract from @RequestMapping at class level"
+        example: "/api/v1/tasks"
+      - element: "endpoints"
+        method: "Extract all @GetMapping, @PostMapping, @PutMapping, @DeleteMapping, @PatchMapping methods"
+
+    endpoint_extraction:
+      - annotation: "@GetMapping"
+        http_method: "get"
+        extract:
+          - path: "annotation value or method-level @RequestMapping"
+          - parameters: "@RequestParam, @PathVariable"
+          - response_type: "method return type"
+          - response_status: "@ResponseStatus or default 200"
+
+      - annotation: "@PostMapping"
+        http_method: "post"
+        extract:
+          - path: "annotation value"
+          - request_body: "@RequestBody parameter type"
+          - response_type: "method return type"
+          - response_status: "@ResponseStatus or default 201"
+
+      - annotation: "@PutMapping"
+        http_method: "put"
+        extract:
+          - path: "annotation value with {id} path variables"
+          - path_parameters: "@PathVariable"
+          - request_body: "@RequestBody parameter type"
+          - response_type: "method return type"
+
+      - annotation: "@DeleteMapping"
+        http_method: "delete"
+        extract:
+          - path: "annotation value"
+          - path_parameters: "@PathVariable"
+          - response_status: "@ResponseStatus or default 204"
+
+    example_code: |
+      @RestController
+      @RequestMapping("/api/v1/tasks")
+      public class TaskController {
+
+          @GetMapping
+          public List<TaskDTO> listTasks(@RequestParam(required = false) String status) {
+              return taskService.findByStatus(status);
+          }
+
+          @PostMapping
+          @ResponseStatus(HttpStatus.CREATED)
+          public TaskDTO createTask(@Valid @RequestBody CreateTaskRequest request) {
+              return taskService.create(request);
+          }
+
+          @PutMapping("/{id}")
+          public TaskDTO updateTask(
+              @PathVariable Long id,
+              @RequestBody UpdateTaskRequest request) {
+              return taskService.update(id, request);
+          }
+      }
+
+    generated_openapi: |
+      paths:
+        /api/v1/tasks:
+          get:
+            summary: List tasks
+            operationId: listTasks
+            parameters:
+              - name: status
+                in: query
+                required: false
+                schema:
+                  type: string
+            responses:
+              '200':
+                description: List of tasks
+                content:
+                  application/json:
+                    schema:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/TaskDTO'
+
+          post:
+            summary: Create a new task
+            operationId: createTask
+            requestBody:
+              required: true
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/CreateTaskRequest'
+            responses:
+              '201':
+                description: Task created successfully
+                content:
+                  application/json:
+                    schema:
+                      $ref: '#/components/schemas/TaskDTO'
+
+        /api/v1/tasks/{id}:
+          put:
+            summary: Update a task
+            operationId: updateTask
+            parameters:
+              - name: id
+                in: path
+                required: true
+                schema:
+                  type: integer
+                  format: int64
+            requestBody:
+              required: true
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/UpdateTaskRequest'
+            responses:
+              '200':
+                description: Task updated successfully
+
+  # DTO/Request/Response Classes
+  - source_pattern: "DTO | Request | Response classes"
+    grep_command: "find src/ -name '*DTO.java' -o -name '*Request.java' -o -name '*Response.java'"
+    target_document: "api-reference-openapi.yaml"
+    target_section: "components.schemas"
+    extraction_rules:
+      - element: "class_name"
+        method: "Extract class name"
+      - element: "fields"
+        method: "Extract all fields with types"
+      - element: "validation_annotations"
+        method: "Extract @NotNull, @NotBlank, @Size, @Min, @Max, @Pattern, @Email"
+
+    example_code: |
+      public class CreateTaskRequest {
+          @NotBlank(message = "Title is required")
+          @Size(max = 200)
+          private String title;
+
+          @Size(max = 2000)
+          private String description;
+
+          @Future
+          private LocalDate dueDate;
+
+          @NotNull
+          private TaskPriority priority;
+
+          // getters and setters
+      }
+
+    generated_openapi_schema: |
+      components:
+        schemas:
+          CreateTaskRequest:
+            type: object
+            required:
+              - title
+              - priority
+            properties:
+              title:
+                type: string
+                maxLength: 200
+                description: Title of the task
+              description:
+                type: string
+                maxLength: 2000
+                description: Detailed description
+              dueDate:
+                type: string
+                format: date
+                description: Task due date (must be in the future)
+              priority:
+                $ref: '#/components/schemas/TaskPriority'
+
+# ============================================================================
+# DATA MODEL MAPPING: Code → SDD Section 6 (Data Design)
+# ============================================================================
+data_mappings:
+
+  # JPA Entities
+  - source_pattern: "@Entity"
+    grep_command: "grep -r \"@Entity\" src/"
+    target_document: "design-sdd.md"
+    target_section: "6.1 Data Model"
+    extraction_rules:
+      - element: "entity_class_name"
+        method: "Extract class name"
+      - element: "table_name"
+        method: "Extract from @Table(name=...) or derive from class name"
+      - element: "primary_key"
+        method: "Extract field with @Id annotation"
+      - element: "columns"
+        method: "Extract all fields (ignoring @Transient)"
+      - element: "relationships"
+        method: "Extract @OneToMany, @ManyToOne, @ManyToMany, @OneToOne"
+
+    relationship_extraction:
+      - annotation: "@ManyToOne"
+        relationship_type: "Many-to-One"
+        extract:
+          - target_entity: "field type or @JoinColumn"
+          - join_column: "@JoinColumn(name=...)"
+          - fetch_type: "FetchType.LAZY or EAGER"
+
+      - annotation: "@OneToMany"
+        relationship_type: "One-to-Many"
+        extract:
+          - target_entity: "field type generic or mappedBy"
+          - mapped_by: "@OneToMany(mappedBy=...)"
+          - cascade: "CascadeType"
+
+      - annotation: "@ManyToMany"
+        relationship_type: "Many-to-Many"
+        extract:
+          - target_entity: "field type generic"
+          - join_table: "@JoinTable annotation"
+
+    example_code: |
+      @Entity
+      @Table(name = "tasks")
+      public class Task {
+          @Id
+          @GeneratedValue(strategy = GenerationType.IDENTITY)
+          private Long id;
+
+          @Column(nullable = false, length = 200)
+          private String title;
+
+          @Column(length = 2000)
+          private String description;
+
+          @Column(name = "due_date")
+          private LocalDate dueDate;
+
+          @Enumerated(EnumType.STRING)
+          private TaskStatus status;
+
+          @ManyToOne(fetch = FetchType.LAZY)
+          @JoinColumn(name = "assigned_user_id")
+          private User assignedUser;
+
+          @OneToMany(mappedBy = "task", cascade = CascadeType.ALL)
+          private List<Comment> comments;
+      }
+
+    generated_sdd_content: |
+      ### Entity: Task
+
+      **Table**: `tasks`
+      **Primary Key**: `id` (Long, auto-generated)
+
+      **Columns**:
+      | Column | Type | Constraints | Description |
+      |--------|------|-------------|-------------|
+      | id | BIGINT | PRIMARY KEY, AUTO_INCREMENT | Unique identifier |
+      | title | VARCHAR(200) | NOT NULL | Task title |
+      | description | VARCHAR(2000) | | Detailed description |
+      | due_date | DATE | | Target completion date |
+      | status | VARCHAR(50) | | Task status (PENDING, IN_PROGRESS, COMPLETED) |
+      | assigned_user_id | BIGINT | FOREIGN KEY → users.id | Assigned user |
+
+      **Relationships**:
+      - **Many-to-One** to `User` via `assigned_user_id`
+      - **One-to-Many** to `Comment` (mapped by `task`)
+
+    generated_er_diagram_plantuml: |
+      @startuml
+      entity "tasks" {
+        * id : BIGINT <<PK>>
+        --
+        * title : VARCHAR(200)
+        description : VARCHAR(2000)
+        due_date : DATE
+        status : VARCHAR(50)
+        assigned_user_id : BIGINT <<FK>>
+      }
+
+      entity "users" {
+        * id : BIGINT <<PK>>
+        --
+        email : VARCHAR(255)
+        name : VARCHAR(100)
+      }
+
+      entity "comments" {
+        * id : BIGINT <<PK>>
+        --
+        task_id : BIGINT <<FK>>
+        user_id : BIGINT <<FK>>
+        content : TEXT
+        created_at : TIMESTAMP
+      }
+
+      tasks }o--|| users : "assigned_user_id"
+      comments }o--|| tasks : "task_id"
+      comments }o--|| users : "user_id"
+      @enduml
+
+  # Repository Interfaces
+  - source_pattern: "@Repository | extends JpaRepository"
+    grep_command: "grep -r \"extends JpaRepository\\|extends CrudRepository\\|@Repository\" src/"
+    target_document: "design-sdd.md"
+    target_section: "6.2 Data Access Layer"
+    extraction_rules:
+      - element: "repository_name"
+        method: "Extract interface name"
+      - element: "entity_type"
+        method: "Extract generic parameter from JpaRepository<Entity, ID>"
+      - element: "custom_queries"
+        method: "Extract methods with @Query annotation"
+
+    example_code: |
+      @Repository
+      public interface TaskRepository extends JpaRepository<Task, Long> {
+
+          List<Task> findByAssignedUserId(Long userId);
+
+          List<Task> findByStatus(TaskStatus status);
+
+          @Query("SELECT t FROM Task t WHERE t.dueDate < :date AND t.status != 'COMPLETED'")
+          List<Task> findOverdueTasks(@Param("date") LocalDate date);
+      }
+
+    generated_sdd_content: |
+      ### Repository: TaskRepository
+
+      **Entity**: Task
+      **Type**: JPA Repository
+
+      **Query Methods**:
+      - `findByAssignedUserId(Long userId)` - Find all tasks for a specific user
+      - `findByStatus(TaskStatus status)` - Find tasks by status
+      - `findOverdueTasks(LocalDate date)` - Custom query for overdue tasks
+
+# ============================================================================
+# BUSINESS LOGIC MAPPING: Code → SDD Section 5 (Component Design)
+# ============================================================================
+business_logic_mappings:
+
+  # Service Classes
+  - source_pattern: "@Service"
+    grep_command: "grep -r \"@Service\" src/"
+    target_document: "design-sdd.md"
+    target_section: "5.3 Service Layer Components"
+    extraction_rules:
+      - element: "service_name"
+        method: "Extract class name"
+      - element: "public_methods"
+        method: "Extract all public methods (API)"
+      - element: "dependencies"
+        method: "Extract @Autowired or constructor-injected dependencies"
+      - element: "transactions"
+        method: "Extract methods with @Transactional"
+
+    example_code: |
+      @Service
+      public class TaskService {
+
+          private final TaskRepository taskRepository;
+          private final UserRepository userRepository;
+
+          @Autowired
+          public TaskService(TaskRepository taskRepository, UserRepository userRepository) {
+              this.taskRepository = taskRepository;
+              this.userRepository = userRepository;
+          }
+
+          @Transactional
+          public TaskDTO create(CreateTaskRequest request) {
+              Task task = new Task();
+              task.setTitle(request.getTitle());
+              task.setDescription(request.getDescription());
+              task.setStatus(TaskStatus.PENDING);
+
+              Task saved = taskRepository.save(task);
+              return TaskMapper.toDTO(saved);
+          }
+
+          @Transactional(readOnly = true)
+          public List<TaskDTO> findByStatus(TaskStatus status) {
+              return taskRepository.findByStatus(status)
+                  .stream()
+                  .map(TaskMapper::toDTO)
+                  .collect(Collectors.toList());
+          }
+      }
+
+    generated_sdd_content: |
+      ### Service: TaskService
+
+      **Responsibilities**: Core business logic for task management
+
+      **Dependencies**:
+      - TaskRepository (data access)
+      - UserRepository (user lookups)
+
+      **Public API**:
+      - `create(CreateTaskRequest)` → TaskDTO
+        - Creates a new task (transactional)
+      - `findByStatus(TaskStatus)` → List<TaskDTO>
+        - Queries tasks by status (read-only transaction)
+
+      **Transaction Boundaries**: Methods annotated with @Transactional
+
+# ============================================================================
+# SECURITY MAPPING: Code → SDD Section 8 (Crosscutting Concepts)
+# ============================================================================
+security_mappings:
+
+  - source_pattern: "SecurityConfig | WebSecurityConfigurerAdapter"
+    grep_command: "find src/ -name '*SecurityConfig.java'"
+    target_document: "design-sdd.md"
+    target_section: "8.1 Security"
+    extraction_rules:
+      - element: "authentication_method"
+        method: "Detect JWT, OAuth2, Basic Auth, Form Login"
+      - element: "authorization_rules"
+        method: "Extract from http.authorizeRequests()"
+      - element: "cors_config"
+        method: "Extract CORS configuration"
+
+    example_code: |
+      @Configuration
+      @EnableWebSecurity
+      public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
+          @Override
+          protected void configure(HttpSecurity http) throws Exception {
+              http
+                  .csrf().disable()
+                  .authorizeRequests()
+                      .antMatchers("/api/public/**").permitAll()
+                      .antMatchers("/api/admin/**").hasRole("ADMIN")
+                      .anyRequest().authenticated()
+                  .and()
+                  .oauth2ResourceServer().jwt();
+          }
+      }
+
+    generated_sdd_content: |
+      ## 8.1 Security
+
+      **Authentication**: OAuth2 JWT (Resource Server)
+      **Authorization**: Role-based access control
+
+      **Access Rules**:
+      - `/api/public/**` - No authentication required
+      - `/api/admin/**` - Requires ADMIN role
+      - All other endpoints - Requires authentication
+
+      **CSRF Protection**: Disabled (stateless API)
+
+# ============================================================================
+# DIAGRAM GENERATION RULES
+# ============================================================================
+diagram_generation:
+
+  # C4 Level 2: Container Diagram
+  - diagram_type: "C4 Container"
+    tool: "mermaid-architect"
+    inputs:
+      - "@SpringBootApplication class"
+      - "application.properties/yml (database, external services)"
+      - "Dockerfile or deployment config"
+    output_file: "docs/diagrams/c4-container.md"
+    description: "Shows Spring Boot application, database, and external systems"
+
+  # Component Diagram
+  - diagram_type: "Component Diagram"
+    tool: "plantuml"
+    inputs:
+      - "All @RestController classes"
+      - "All @Service classes"
+      - "All @Repository interfaces"
+    output_file: "docs/diagrams/component-diagram.puml"
+    description: "Shows internal architecture layers and dependencies"
+    template: |
+      @startuml
+      package "Controller Layer" {
+        [TaskController]
+        [UserController]
+      }
+
+      package "Service Layer" {
+        [TaskService]
+        [UserService]
+      }
+
+      package "Repository Layer" {
+        [TaskRepository]
+        [UserRepository]
+      }
+
+      database "PostgreSQL" {
+        [tasks]
+        [users]
+      }
+
+      [TaskController] --> [TaskService]
+      [TaskService] --> [TaskRepository]
+      [TaskRepository] --> [tasks]
+      @enduml
+
+  # Sequence Diagram
+  - diagram_type: "Sequence Diagram"
+    tool: "plantuml"
+    inputs:
+      - "Trace a user flow (e.g., 'Create Task')"
+      - "Controller → Service → Repository → Database"
+    output_file: "docs/diagrams/sequence-create-task.puml"
+    description: "Shows message flow for a specific use case"
+    template: |
+      @startuml
+      actor User
+      participant "TaskController" as Controller
+      participant "TaskService" as Service
+      participant "TaskRepository" as Repo
+      database "PostgreSQL" as DB
+
+      User -> Controller: POST /api/v1/tasks
+      Controller -> Service: create(request)
+      Service -> Service: validate(request)
+      Service -> Repo: save(task)
+      Repo -> DB: INSERT INTO tasks
+      DB --> Repo: saved task entity
+      Repo --> Service: Task entity
+      Service --> Controller: TaskDTO
+      Controller --> User: 201 Created + TaskDTO
+      @enduml
+
+  # ER Diagram
+  - diagram_type: "ER Diagram"
+    tool: "plantuml"
+    inputs:
+      - "All @Entity classes with relationships"
+    output_file: "docs/diagrams/er-diagram.puml"
+    description: "Database schema with relationships"
+
+# ============================================================================
+# EXECUTION WORKFLOW
+# ============================================================================
+workflow:
+  steps:
+    - step: 1
+      name: "Detect Framework"
+      action: "Verify this is a Spring Boot project"
+      commands:
+        - "find . -name 'pom.xml' -o -name 'build.gradle'"
+        - "grep -r '@SpringBootApplication' src/"
+
+    - step: 2
+      name: "Scan Architecture"
+      action: "Find all major components"
+      commands:
+        - "grep -r '@RestController' src/"
+        - "grep -r '@Service' src/"
+        - "grep -r '@Repository' src/"
+        - "grep -r '@Entity' src/"
+        - "grep -r '@Configuration' src/"
+
+    - step: 3
+      name: "Read Configuration"
+      action: "Extract deployment details"
+      commands:
+        - "find src/main/resources -name 'application*.properties' -o -name 'application*.yml'"
+
+    - step: 4
+      name: "Generate SDD"
+      action: "Create arc42 Software Design Document"
+      sections:
+        - "5. Building Block View (from @Service, @Repository, @Controller)"
+        - "6. Data Design (from @Entity)"
+        - "7. Deployment (from application.yml)"
+        - "8. Crosscutting Concepts (from SecurityConfig, error handling)"
+
+    - step: 5
+      name: "Generate OpenAPI Spec"
+      action: "Extract API specification"
+      sections:
+        - "paths (from @RestController)"
+        - "components.schemas (from DTO/Request/Response classes)"
+        - "securitySchemes (from SecurityConfig)"
+
+    - step: 6
+      name: "Generate Diagrams"
+      action: "Create visual documentation"
+      diagrams:
+        - "C4 Container (mermaid-architect)"
+        - "Component Diagram (plantuml)"
+        - "ER Diagram (plantuml)"
+        - "Sequence Diagram for key flows (plantuml)"
+
+    - step: 7
+      name: "Post-Processing"
+      action: "Offer conversions and enhancements"
+      options:
+        - "Convert SDD to Word (docx skill)"
+        - "Generate PDF package (pdf skill)"
+        - "Render PlantUML diagrams to PNG"
+
+# ============================================================================
+# NOTES AND BEST PRACTICES
+# ============================================================================
+notes:
+  - "Always read application.properties/yml for deployment context"
+  - "Extract validation annotations for OpenAPI schema constraints"
+  - "Look for custom exception handlers (@ControllerAdvice) for error response documentation"
+  - "Check for @ApiOperation and Swagger annotations (might already have partial API docs)"
+  - "For microservices, scan for Eureka, Consul, or other service discovery"
+  - "Check for @Async and @Scheduled for background processing documentation"
+  - "Look for @Cacheable for caching strategy documentation"

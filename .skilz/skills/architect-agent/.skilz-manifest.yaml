@@ -1,0 +1,8 @@
+installed_at: '2026-01-22T04:24:12+00:00'
+skill_id: git/architect-agent
+git_repo: https://github.com/SpillwaveSolutions/architect-agent
+skill_path: /private/var/folders/tm/chrvt43s3rbdld20ghw1qtc40000gn/T/skilz-git-pm2zg_e7
+git_sha: 647c04f9d4ca560798c5d74377c14abe6ba086a6
+skilz_version: 1.9.1
+install_mode: copy
+canonical_path: null

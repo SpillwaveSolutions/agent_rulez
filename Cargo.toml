@@ -1,0 +1,29 @@
+[package]
+name = "cch"
+version = "1.0.0"
+edition = "2021"
+authors = ["Your Name <your.email@example.com>"]
+description = "Claude Code Hooks - High-performance policy engine for development workflows"
+license = "MIT OR Apache-2.0"
+keywords = ["claude", "hooks", "policy", "security"]
+categories = ["development-tools"]
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+clap = { version = "4.0", features = ["derive"] }
+regex = "1.10"
+tokio = { version = "1.0", features = ["full"] }
+anyhow = "1.0"
+thiserror = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+chrono = { version = "0.4", features = ["serde"] }
+async-trait = "0.1"
+uuid = { version = "1.0", features = ["v4", "serde"] }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
