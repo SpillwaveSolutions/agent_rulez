@@ -17,6 +17,9 @@ CCH provides a robust hook system that replaces fragile JSON configurations with
 - [The CCH Skill](#the-cch-skill)
 - [Governance & Policy](#governance--policy)
 - [Development](#development)
+- [CLI User Guide](USER_GUIDE_CLI.md)
+- [Agent Skill User Guide](USER_GUIDE_SKILL.md)
+
 
 ---
 
