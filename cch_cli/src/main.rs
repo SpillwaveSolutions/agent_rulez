@@ -107,7 +107,10 @@ async fn main() -> Result<()> {
     let config = config::Config::load(None)?;
 
     match cli.command {
-        Some(Commands::Init { force, with_examples }) => {
+        Some(Commands::Init {
+            force,
+            with_examples,
+        }) => {
             cli::init::run(force, with_examples).await?;
         }
         Some(Commands::Install { global, binary }) => {

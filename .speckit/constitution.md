@@ -1,5 +1,48 @@
 # Project Constitution
 
+## Git Workflow Principles
+
+### Feature Branch Requirement
+- **NEVER commit directly to `main`** - This is a non-negotiable principle
+- All feature work MUST be done in a dedicated feature branch
+- Pull Requests are REQUIRED for all changes to `main`
+- Code review via PR ensures quality and knowledge sharing
+
+### Branch Naming Convention
+- Features: `feature/<feature-name>` (e.g., `feature/add-debug-command`)
+- Bugfixes: `fix/<bug-description>` (e.g., `fix/config-parsing-error`)
+- Documentation: `docs/<doc-topic>` (e.g., `docs/update-readme`)
+- Releases: `release/<version>` (e.g., `release/v1.0.0`)
+
+### PR Workflow
+1. Create feature branch from `main`
+2. Implement changes with atomic, conventional commits
+3. **Run all pre-commit checks locally** (see below)
+4. Push branch and create Pull Request
+5. Request review and address feedback
+6. Merge via GitHub (squash or merge commit as appropriate)
+7. Delete feature branch after merge
+
+### Pre-Commit Checks (MANDATORY)
+Before every commit, ALL of the following checks MUST pass locally:
+
+```bash
+cd cch_cli
+cargo fmt --check                                          # Formatting
+cargo clippy --all-targets --all-features -- -D warnings   # Linting
+cargo test                                                 # All tests
+```
+
+**NEVER commit if any check fails.** This is non-negotiable. CI will reject PRs that fail these checks, wasting time and creating noise.
+
+Quick one-liner to run all checks:
+```bash
+cd cch_cli && cargo fmt && cargo clippy --all-targets --all-features -- -D warnings && cargo test
+```
+
+### Rationale
+Direct commits to `main` bypass code review, risk introducing bugs, and make it difficult to revert changes. Feature branches enable parallel development, clean history, and proper CI/CD validation before merge.
+
 ## Core Principles
 
 ### Safety First

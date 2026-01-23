@@ -85,7 +85,7 @@ rules:
 "#;
 
 /// Example Python standards context file
-const PYTHON_STANDARDS_EXAMPLE: &str = r#"# Python Coding Standards
+const PYTHON_STANDARDS_EXAMPLE: &str = r"# Python Coding Standards
 
 ## Style Guide
 - Follow PEP 8 style conventions
@@ -101,7 +101,7 @@ const PYTHON_STANDARDS_EXAMPLE: &str = r#"# Python Coding Standards
 - Write tests for new functionality
 - Use pytest fixtures for setup/teardown
 - Aim for 80%+ coverage
-"#;
+";
 
 /// Example secret checker script
 const SECRET_CHECKER_EXAMPLE: &str = r#"#!/bin/bash

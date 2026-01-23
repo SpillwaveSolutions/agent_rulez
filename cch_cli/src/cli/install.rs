@@ -18,7 +18,7 @@ struct ClaudeSettings {
 }
 
 /// Hooks configuration in Claude Code settings
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 struct HooksConfig {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pre_tool_use: Vec<HookEntry>,
@@ -28,17 +28,6 @@ struct HooksConfig {
     session_start: Vec<HookEntry>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     permission_request: Vec<HookEntry>,
-}
-
-impl Default for HooksConfig {
-    fn default() -> Self {
-        Self {
-            pre_tool_use: Vec::new(),
-            post_tool_use: Vec::new(),
-            session_start: Vec::new(),
-            permission_request: Vec::new(),
-        }
-    }
 }
 
 /// Individual hook entry
@@ -96,10 +85,7 @@ pub async fn run(scope: Scope, binary_path: Option<String>) -> Result<()> {
     let hooks = settings.hooks.get_or_insert_with(HooksConfig::default);
 
     // Check if already installed
-    let already_installed = hooks
-        .pre_tool_use
-        .iter()
-        .any(|h| h.command.contains("cch"));
+    let already_installed = hooks.pre_tool_use.iter().any(|h| h.command.contains("cch"));
 
     if already_installed {
         println!("✓ CCH is already installed");
@@ -137,7 +123,7 @@ fn resolve_binary_path(explicit_path: Option<String>) -> Result<PathBuf> {
     if let Some(path) = explicit_path {
         let p = PathBuf::from(&path);
         if p.exists() {
-            return Ok(p.canonicalize().context("Failed to resolve binary path")?);
+            return p.canonicalize().context("Failed to resolve binary path");
         }
         anyhow::bail!("Specified binary not found: {}", path);
     }
@@ -212,8 +198,7 @@ fn save_settings(path: &Path, settings: &ClaudeSettings) -> Result<()> {
         }
     }
 
-    let content =
-        serde_json::to_string_pretty(settings).context("Failed to serialize settings")?;
+    let content = serde_json::to_string_pretty(settings).context("Failed to serialize settings")?;
     fs::write(path, content).context("Failed to write settings file")?;
 
     Ok(())

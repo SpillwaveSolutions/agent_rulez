@@ -21,7 +21,7 @@ pub enum SimEventType {
 }
 
 impl SimEventType {
-    fn to_model_event_type(&self) -> ModelEventType {
+    fn as_model_event_type(self) -> ModelEventType {
         match self {
             SimEventType::PreToolUse => ModelEventType::PreToolUse,
             SimEventType::PostToolUse => ModelEventType::PostToolUse,
@@ -146,7 +146,7 @@ fn build_event(
     };
 
     Event {
-        event_type: event_type.to_model_event_type(),
+        event_type: event_type.as_model_event_type(),
         session_id,
         tool_name: Some(tool_name),
         tool_input: Some(tool_input),
@@ -162,16 +162,11 @@ fn print_rule_summary(config: &Config) {
 
     for rule in &config.rules {
         let metadata = rule.metadata.as_ref();
-        let enabled = metadata.map_or(true, |m| m.enabled);
+        let enabled = metadata.is_none_or(|m| m.enabled);
         let priority = metadata.map_or(50, |m| m.priority);
         let status = if enabled { "✓" } else { "○" };
-        
-        println!(
-            "  {} [P{}] {}",
-            status,
-            priority,
-            rule.name,
-        );
+
+        println!("  {} [P{}] {}", status, priority, rule.name,);
         if let Some(desc) = &rule.description {
             println!("      {}", desc);
         }
@@ -223,7 +218,7 @@ pub async fn interactive() -> Result<()> {
         let parts: Vec<&str> = input.splitn(2, ' ').collect();
         match parts.first().map(|s| s.to_lowercase()).as_deref() {
             Some("bash") => {
-                let cmd = parts.get(1).unwrap_or(&"echo test").to_string();
+                let cmd = (*parts.get(1).unwrap_or(&"echo test")).to_string();
                 run(
                     "PreToolUse".to_string(),
                     Some("Bash".to_string()),
@@ -234,7 +229,7 @@ pub async fn interactive() -> Result<()> {
                 .await?;
             }
             Some("write") => {
-                let path = parts.get(1).unwrap_or(&"test.txt").to_string();
+                let path = (*parts.get(1).unwrap_or(&"test.txt")).to_string();
                 run(
                     "PreToolUse".to_string(),
                     Some("Write".to_string()),
@@ -245,7 +240,7 @@ pub async fn interactive() -> Result<()> {
                 .await?;
             }
             Some("read") => {
-                let path = parts.get(1).unwrap_or(&"test.txt").to_string();
+                let path = (*parts.get(1).unwrap_or(&"test.txt")).to_string();
                 run(
                     "PreToolUse".to_string(),
                     Some("Read".to_string()),
@@ -267,8 +262,7 @@ pub async fn interactive() -> Result<()> {
                 match serde_json::from_str::<Event>(input) {
                     Ok(event) => {
                         let config = Config::load(None)?;
-                        let debug_config =
-                            DebugConfig::new(true, config.settings.debug_logs);
+                        let debug_config = DebugConfig::new(true, config.settings.debug_logs);
                         let response = hooks::process_event(event, &debug_config).await?;
                         println!("{}", serde_json::to_string_pretty(&response)?);
                     }
