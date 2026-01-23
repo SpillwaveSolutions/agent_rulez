@@ -1,5 +1,6 @@
 # QWEN.md
 
+**NOTE:** All project specifications, implementation plans, and feature tracking are now consolidated in the `.speckit/` directory. The legacy `specs/` and `.specify/` directories have been removed.
 
 <skills_system priority="1">
 

@@ -8,21 +8,29 @@ use tokio::time::{Duration, timeout};
 use crate::config::Config;
 use crate::logging::log_entry;
 use crate::models::LogMetadata;
-use crate::models::{Event, LogEntry, LogTiming, Outcome, Response, Rule, Timing};
+use crate::models::{
+    DebugConfig, Event, EventDetails, LogEntry, LogTiming, MatcherResults, Outcome, Response,
+    ResponseSummary, Rule, RuleEvaluation, Timing,
+};
 
 /// Process a hook event and return the appropriate response
-pub async fn process_event(event: Event) -> Result<Response> {
+pub async fn process_event(event: Event, debug_config: &DebugConfig) -> Result<Response> {
     let start_time = std::time::Instant::now();
 
     // Load configuration
     let config = Config::load(None)?;
 
-    // Evaluate rules
-    let (matched_rules, response) = evaluate_rules(&event, &config).await?;
+    // Evaluate rules (with optional debug tracking)
+    let (matched_rules, response, rule_evaluations) =
+        evaluate_rules(&event, &config, debug_config).await?;
 
     let processing_time = start_time.elapsed().as_millis() as u64;
 
-    // Log the event
+    // Build enhanced logging fields
+    let event_details = EventDetails::extract(&event);
+    let response_summary = ResponseSummary::from_response(&response);
+
+    // Log the event with enhanced fields
     let entry = LogEntry {
         timestamp: event.timestamp,
         event_type: format!("{:?}", event.event_type),
@@ -45,6 +53,19 @@ pub async fn process_event(event: Event) -> Result<Response> {
                 .map(|_| vec!["injected".to_string()]),
             validator_output: None,
         }),
+        // New enhanced logging fields
+        event_details: Some(event_details),
+        response: Some(response_summary),
+        raw_event: if debug_config.enabled {
+            Some(serde_json::to_value(&event).unwrap_or_default())
+        } else {
+            None
+        },
+        rule_evaluations: if debug_config.enabled {
+            Some(rule_evaluations)
+        } else {
+            None
+        },
     };
 
     // Log asynchronously (don't fail the response if logging fails)
@@ -64,12 +85,27 @@ pub async fn process_event(event: Event) -> Result<Response> {
 async fn evaluate_rules<'a>(
     event: &'a Event,
     config: &'a Config,
-) -> Result<(Vec<&'a Rule>, Response)> {
+    debug_config: &DebugConfig,
+) -> Result<(Vec<&'a Rule>, Response, Vec<RuleEvaluation>)> {
     let mut matched_rules = Vec::new();
     let mut response = Response::allow();
+    let mut rule_evaluations = Vec::new();
 
     for rule in config.enabled_rules() {
-        if matches_rule(event, rule) {
+        let (matched, matcher_results) = if debug_config.enabled {
+            matches_rule_with_debug(event, rule)
+        } else {
+            (matches_rule(event, rule), None)
+        };
+
+        let rule_evaluation = RuleEvaluation {
+            rule_name: rule.name.clone(),
+            matched,
+            matcher_results,
+        };
+        rule_evaluations.push(rule_evaluation);
+
+        if matched {
             matched_rules.push(rule);
 
             // Execute rule actions
@@ -80,7 +116,7 @@ async fn evaluate_rules<'a>(
         }
     }
 
-    Ok((matched_rules, response))
+    Ok((matched_rules, response, rule_evaluations))
 }
 
 /// Check if a rule matches the given event
@@ -157,6 +193,106 @@ fn matches_rule(event: &Event, rule: &Rule) -> bool {
     }
 
     true
+}
+
+/// Check if a rule matches the given event (debug version with matcher results)
+fn matches_rule_with_debug(event: &Event, rule: &Rule) -> (bool, Option<MatcherResults>) {
+    let matchers = &rule.matchers;
+    let mut matcher_results = MatcherResults::default();
+    let mut overall_match = true;
+
+    // Check tool name
+    if let Some(ref tools) = matchers.tools {
+        matcher_results.tools_matched = Some(if let Some(ref tool_name) = event.tool_name {
+            tools.contains(tool_name)
+        } else {
+            false // Rule requires tool but event has none
+        });
+        if !matcher_results.tools_matched.unwrap() {
+            overall_match = false;
+        }
+    }
+
+    // Check command patterns (for Bash tool)
+    if let Some(ref pattern) = matchers.command_match {
+        matcher_results.command_match_matched =
+            Some(if let Some(ref tool_input) = event.tool_input {
+                if let Some(command) = tool_input.get("command").and_then(|c| c.as_str()) {
+                    if let Ok(regex) = Regex::new(pattern) {
+                        regex.is_match(command)
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                }
+            } else {
+                false
+            });
+        if !matcher_results.command_match_matched.unwrap() {
+            overall_match = false;
+        }
+    }
+
+    // Check file extensions
+    if let Some(ref extensions) = matchers.extensions {
+        matcher_results.extensions_matched = Some(if let Some(ref tool_input) = event.tool_input {
+            if let Some(file_path) = tool_input.get("filePath").and_then(|p| p.as_str()) {
+                let path_ext = Path::new(file_path)
+                    .extension()
+                    .and_then(|ext| ext.to_str())
+                    .unwrap_or("");
+
+                extensions
+                    .iter()
+                    .any(|ext| ext == &format!(".{}", path_ext))
+            } else {
+                false
+            }
+        } else {
+            false
+        });
+        if !matcher_results.extensions_matched.unwrap() {
+            overall_match = false;
+        }
+    }
+
+    // Check directory patterns
+    if let Some(ref directories) = matchers.directories {
+        matcher_results.directories_matched =
+            Some(if let Some(ref tool_input) = event.tool_input {
+                if let Some(file_path) = tool_input.get("filePath").and_then(|p| p.as_str()) {
+                    let path = Path::new(file_path);
+                    let path_str = path.to_string_lossy();
+
+                    directories.iter().any(|dir| {
+                        // Simple glob matching - in production, use a proper glob library
+                        path_str.contains(dir.trim_end_matches("/**"))
+                            || path_str.contains(dir.trim_end_matches("/*"))
+                    })
+                } else {
+                    false
+                }
+            } else {
+                false
+            });
+        if !matcher_results.directories_matched.unwrap() {
+            overall_match = false;
+        }
+    }
+
+    // Check operations (event types)
+    if let Some(ref operations) = matchers.operations {
+        matcher_results.operations_matched = Some({
+            let event_type_str = event.event_type.to_string();
+            operations.contains(&event_type_str)
+        });
+        if !matcher_results.operations_matched.unwrap() {
+            overall_match = false;
+        }
+    }
+
+    (overall_match, Some(matcher_results))
 }
 
 /// Execute actions for a matching rule

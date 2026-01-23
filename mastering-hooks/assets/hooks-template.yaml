@@ -1,0 +1,128 @@
+# CCH Configuration Template
+# Location: .claude/hooks.yaml
+#
+# This template provides a starting point for CCH configuration.
+# Uncomment and customize rules as needed.
+
+version: "1"
+
+hooks:
+  # ============================================================
+  # SESSION HOOKS
+  # ============================================================
+  
+  # Load project context at session start
+  # - name: project-context
+  #   event: SessionStart
+  #   description: Load project overview and conventions
+  #   match: {}
+  #   action:
+  #     type: inject
+  #     source: file
+  #     path: .claude/context/project-overview.md
+
+  # ============================================================
+  # CODE QUALITY HOOKS
+  # ============================================================
+  
+  # Inject Python coding standards
+  - name: python-standards
+    event: PreToolUse
+    description: Inject Python coding standards for .py files
+    match:
+      tools: [Write, Edit]
+      extensions: [.py]
+    action:
+      type: inject
+      source: file
+      path: .claude/context/python-standards.md
+
+  # Inject TypeScript/JavaScript standards
+  # - name: typescript-standards
+  #   event: PreToolUse
+  #   description: Inject TypeScript standards
+  #   match:
+  #     tools: [Write, Edit]
+  #     extensions: [.ts, .tsx, .js, .jsx]
+  #   action:
+  #     type: inject
+  #     source: file
+  #     path: .claude/context/typescript-standards.md
+
+  # ============================================================
+  # SECURITY HOOKS
+  # ============================================================
+  
+  # Block force push to main/master
+  - name: block-force-push
+    event: PreToolUse
+    priority: 10
+    description: Prevent force push to protected branches
+    match:
+      tools: [Bash]
+      command_match: "git push.*(--force|-f).*(main|master)"
+    action:
+      type: block
+      reason: "Force push to main/master is prohibited. Use a PR workflow."
+
+  # Warn about recursive delete
+  # - name: warn-rm-rf
+  #   event: PreToolUse
+  #   priority: 20
+  #   description: Warn before recursive delete operations
+  #   match:
+  #     tools: [Bash]
+  #     command_match: "rm\\s+(-rf|-fr)"
+  #   action:
+  #     type: inject
+  #     source: inline
+  #     content: |
+  #       **Warning**: Recursive delete detected. Verify target path carefully.
+
+  # ============================================================
+  # VALIDATION HOOKS
+  # ============================================================
+  
+  # Run secret scanner before commits
+  # - name: pre-commit-secrets
+  #   event: PreToolUse
+  #   description: Check for secrets before git commit
+  #   match:
+  #     tools: [Bash]
+  #     command_match: "git commit"
+  #   action:
+  #     type: run
+  #     command: .claude/validators/check-secrets.sh
+  #     timeout: 30
+
+  # ============================================================
+  # PERMISSION HOOKS
+  # ============================================================
+  
+  # Auto-approve read operations
+  # - name: auto-approve-read
+  #   event: PermissionRequest
+  #   description: Auto-approve read-only operations
+  #   match:
+  #     tools: [Read, Glob, Grep]
+  #   action:
+  #     type: inject
+  #     source: inline
+  #     content: "Auto-approved: read-only operation"
+
+  # ============================================================
+  # WORKFLOW HOOKS
+  # ============================================================
+  
+  # Remind about tests after source changes
+  # - name: test-reminder
+  #   event: PostToolUse
+  #   description: Remind to run tests after modifying source
+  #   match:
+  #     tools: [Write, Edit]
+  #     directories: [src/]
+  #   action:
+  #     type: inject
+  #     source: inline
+  #     content: |
+  #       **Reminder**: Source code modified. Consider running tests.

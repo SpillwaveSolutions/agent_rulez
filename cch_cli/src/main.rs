@@ -14,6 +14,10 @@ mod models;
 #[command(about = "Claude Code Hooks - High-performance policy engine")]
 #[command(version = env!("CARGO_PKG_VERSION"))]
 struct Cli {
+    /// Enable debug logging with full event and rule details
+    #[arg(long, global = true)]
+    debug_logs: bool,
+
     #[command(subcommand)]
     command: Option<Commands>,
 }
@@ -56,6 +60,9 @@ async fn main() -> Result<()> {
 
     let cli = Cli::parse();
 
+    // Load config to get settings for DebugConfig
+    let config = config::Config::load(None)?;
+
     match cli.command {
         Some(Commands::Validate { config }) => {
             cli::validate::run(config).await?;
@@ -68,14 +75,14 @@ async fn main() -> Result<()> {
         }
         None => {
             // No subcommand provided, read from stdin for hook processing
-            process_hook_event().await?;
+            process_hook_event(&cli, &config).await?;
         }
     }
 
     Ok(())
 }
 
-async fn process_hook_event() -> Result<()> {
+async fn process_hook_event(cli: &Cli, config: &config::Config) -> Result<()> {
     let mut buffer = String::new();
     io::stdin().read_to_string(&mut buffer)?;
 
@@ -94,7 +101,8 @@ async fn process_hook_event() -> Result<()> {
         event.event_type, event.session_id
     );
 
-    let response = hooks::process_event(event).await?;
+    let debug_config = models::DebugConfig::new(cli.debug_logs, config.settings.debug_logs);
+    let response = hooks::process_event(event, &debug_config).await?;
 
     let json = serde_json::to_string(&response)?;
     println!("{}", json);
