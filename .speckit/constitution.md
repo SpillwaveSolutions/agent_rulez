@@ -17,10 +17,28 @@
 ### PR Workflow
 1. Create feature branch from `main`
 2. Implement changes with atomic, conventional commits
-3. Push branch and create Pull Request
-4. Request review and address feedback
-5. Merge via GitHub (squash or merge commit as appropriate)
-6. Delete feature branch after merge
+3. **Run all pre-commit checks locally** (see below)
+4. Push branch and create Pull Request
+5. Request review and address feedback
+6. Merge via GitHub (squash or merge commit as appropriate)
+7. Delete feature branch after merge
+
+### Pre-Commit Checks (MANDATORY)
+Before every commit, ALL of the following checks MUST pass locally:
+
+```bash
+cd cch_cli
+cargo fmt --check                                          # Formatting
+cargo clippy --all-targets --all-features -- -D warnings   # Linting
+cargo test                                                 # All tests
+```
+
+**NEVER commit if any check fails.** This is non-negotiable. CI will reject PRs that fail these checks, wasting time and creating noise.
+
+Quick one-liner to run all checks:
+```bash
+cd cch_cli && cargo fmt && cargo clippy --all-targets --all-features -- -D warnings && cargo test
+```
 
 ### Rationale
 Direct commits to `main` bypass code review, risk introducing bugs, and make it difficult to revert changes. Feature branches enable parallel development, clean history, and proper CI/CD validation before merge.

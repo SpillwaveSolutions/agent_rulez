@@ -19,9 +19,26 @@
 **Workflow:**
 1. `git checkout -b feature/<name>` - Create feature branch
 2. Make changes and commit with conventional commit messages
-3. `git push -u origin feature/<name>` - Push to remote
-4. Create PR via `gh pr create` or GitHub UI
-5. Merge after review
+3. **Run all checks before committing** (see Pre-Commit Checks below)
+4. `git push -u origin feature/<name>` - Push to remote
+5. Create PR via `gh pr create` or GitHub UI
+6. Merge after review
+
+**Pre-Commit Checks (MANDATORY):**
+Before every commit, run these checks locally to avoid CI failures:
+```bash
+cd cch_cli
+cargo fmt --check        # Check formatting
+cargo clippy --all-targets --all-features -- -D warnings  # Linting
+cargo test               # All tests must pass
+```
+
+Or run all checks with:
+```bash
+cd cch_cli && cargo fmt && cargo clippy --all-targets --all-features -- -D warnings && cargo test
+```
+
+**NEVER commit if any of these checks fail.** Fix all issues first.
 
 <skills_system priority="1">
 

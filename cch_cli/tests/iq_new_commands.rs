@@ -1,13 +1,14 @@
 //! Integration tests for new CLI commands: init, install, debug, uninstall
 
-use assert_cmd::cargo::CommandCargoExt;
+#![allow(deprecated)] // cargo_bin deprecation - matches other test files
+
+use assert_cmd::Command;
 use predicates::prelude::*;
 use std::fs;
-use std::process::Command;
 use tempfile::TempDir;
 
-fn cch_cmd() -> assert_cmd::Command {
-    Command::cargo_bin("cch").unwrap().into()
+fn cch_cmd() -> Command {
+    Command::cargo_bin("cch").unwrap()
 }
 
 // =============================================================================
