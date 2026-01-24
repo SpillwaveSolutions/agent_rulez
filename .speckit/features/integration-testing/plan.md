@@ -1,25 +1,73 @@
-# Integration Testing Framework - Technical Plan
+# Integration Testing Framework with IQ/OQ/PQ - Technical Plan
 
 **Feature ID:** integration-testing  
-**Status:** Implemented  
+**Status:** Implemented - IQ/OQ/PQ Enhancement In Progress  
 **Created:** 2025-01-23  
+**Updated:** 2025-01-24  
 **Source:** [specify.md](./specify.md)
 
 ---
 
 ## 1. Architecture Overview
 
+The validation framework consists of three layers:
+
 ```
-test/integration/
-├── run-all.sh                    # Master orchestrator
-├── lib/
-│   └── test-helpers.sh           # Shared bash library (445 LOC)
-├── use-cases/
-│   ├── 01-block-force-push/      # Blocking test
-│   ├── 02-context-injection/     # Context injection test
-│   ├── 03-session-logging/       # Audit logging test
-│   └── 04-permission-explanations/  # Permission context test
-└── results/                      # JSON test outputs
+┌─────────────────────────────────────────────────────────────────────┐
+│                     CCH Validation Framework                         │
+├─────────────────────────────────────────────────────────────────────┤
+│  Layer 1: IQ (Installation Qualification)                           │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌─────────────┐│
+│  │macOS ARM64   │ │macOS x86_64  │ │  Windows     │ │   Linux     ││
+│  │(M1/M2/M3)    │ │(Intel/AMD)   │ │(x64)         │ │(Multi-dist) ││
+│  └──────────────┘ └──────────────┘ └──────────────┘ └─────────────┘│
+├─────────────────────────────────────────────────────────────────────┤
+│  Layer 2: OQ (Operational Qualification)                             │
+│  ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────────────┐│
+│  │ Blocking   │ │ Injection  │ │  Logging   │ │   Permissions      ││
+│  │ (US-001)   │ │ (US-002)   │ │  (US-003)  │ │   (US-004)         ││
+│  └────────────┘ └────────────┘ └────────────┘ └────────────────────┘│
+├─────────────────────────────────────────────────────────────────────┤
+│  Layer 3: PQ (Performance Qualification)                             │
+│  ┌────────────────┐ ┌────────────────┐ ┌───────────────────────────┐│
+│  │  Cold Start    │ │  Event Latency │ │  Throughput & Memory      ││
+│  │  (<15ms)       │ │  (<50ms)       │ │  (>100 evt/s, <10MB)      ││
+│  └────────────────┘ └────────────────┘ └───────────────────────────┘│
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Directory Structure
+
+```
+project-root/
+├── cch_cli/tests/
+│   ├── common/mod.rs              # Shared test utilities
+│   ├── iq_installation.rs         # IQ tests (Rust)
+│   ├── iq_new_commands.rs         # IQ command tests
+│   ├── oq_us1_blocking.rs         # OQ blocking tests
+│   ├── oq_us2_injection.rs        # OQ injection tests
+│   ├── oq_us3_validators.rs       # OQ validator tests
+│   ├── oq_us4_permissions.rs      # OQ permission tests
+│   ├── oq_us5_logging.rs          # OQ logging tests
+│   └── pq_performance.rs          # PQ benchmark tests
+│
+├── test/integration/
+│   ├── run-all.sh                 # Master orchestrator
+│   ├── lib/test-helpers.sh        # Shared bash library (445 LOC)
+│   ├── use-cases/
+│   │   ├── 01-block-force-push/   # OQ with real Claude
+│   │   ├── 02-context-injection/  # OQ with real Claude
+│   │   ├── 03-session-logging/    # OQ with real Claude
+│   │   └── 04-permission-explanations/
+│   └── results/                   # JSON test outputs
+│
+└── docs/validation/
+    ├── README.md                  # Validation framework docs
+    ├── iq/                        # IQ evidence by date
+    ├── oq/                        # OQ evidence by date
+    ├── pq/                        # PQ evidence by date
+    └── sign-off/
+        └── TEMPLATE-validation-report.md
 ```
 
 ---
@@ -28,247 +76,434 @@ test/integration/
 
 | Component | Technology | Rationale |
 |-----------|------------|-----------|
-| Test Runner | Bash | Simple, portable, no external dependencies |
-| Assertions | Custom functions | Tailored to CCH log verification |
+| IQ/OQ/PQ Tests | Rust (cargo test) | Type-safe, fast, integrated with CCH |
+| Integration Tests | Bash scripts | Simple, portable, real Claude invocation |
 | Claude Invocation | `claude -p` CLI | Real end-to-end validation |
-| Log Format | JSON Lines | One JSON object per line for easy parsing |
-| Result Storage | JSON files | Machine-readable, CI/CD compatible |
+| Evidence Format | JSON + Markdown | Machine-readable + human-readable |
+| CI/CD | GitHub Actions | Multi-platform runners |
 | Task Runner | Taskfile | Consistent with project conventions |
 
 ---
 
-## 3. Key Components
+## 3. Installation Qualification (IQ) Design
 
-### 3.1 Master Test Runner (`run-all.sh`)
+### 3.1 IQ Test Categories
 
-**Purpose:** Orchestrate all test cases and aggregate results
+| Category | Tests | Purpose |
+|----------|-------|---------|
+| Binary Verification | Version, help, binary exists | Confirm installation |
+| Configuration | Init, install, validate | Confirm setup works |
+| File System | Paths, permissions, logs | Confirm file operations |
+| Platform-Specific | Code signing, registry | Platform compliance |
 
-**Capabilities:**
-- Parse command-line arguments (`--quick`, `--test`)
-- Auto-discover test cases in `use-cases/` directory
-- Skip slow tests in quick mode (`.slow` marker file)
-- Aggregate pass/fail counts
-- Exit with appropriate code for CI/CD
+### 3.2 IQ Implementation (Rust)
 
-**Implementation:** 106 lines of Bash
+**File:** `cch_cli/tests/iq_installation.rs`
 
-### 3.2 Test Helper Library (`lib/test-helpers.sh`)
+```rust
+/// IQ-TC-001: Binary exists and returns version
+#[test]
+fn test_iq_binary_version() {
+    let output = Command::cargo_bin("cch")
+        .expect("binary exists")
+        .arg("--version")
+        .output()
+        .expect("runs");
+    
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("cch"));
+}
 
-**Purpose:** Shared functions for test setup, execution, and assertions
+/// IQ-TC-002: Init creates configuration
+#[test]
+fn test_iq_init_creates_config() {
+    let temp = tempfile::tempdir().unwrap();
+    let output = Command::cargo_bin("cch")
+        .current_dir(&temp)
+        .arg("init")
+        .output()
+        .expect("runs");
+    
+    assert!(output.status.success());
+    assert!(temp.path().join(".claude/hooks.yaml").exists());
+}
+```
 
-**Function Categories:**
+### 3.3 Platform-Specific IQ
 
-| Category | Functions |
-|----------|-----------|
-| Prerequisites | `check_prerequisites`, `build_cch` |
-| Setup/Teardown | `start_test`, `setup_workspace`, `install_cch`, `cleanup_workspace` |
-| Log Management | `clear_cch_logs`, `get_log_line_count`, `get_new_log_entries`, `log_contains`, `log_contains_since` |
-| Claude CLI | `run_claude` (captures stdout/stderr) |
-| Assertions | `assert_true`, `assert_log_contains`, `assert_log_contains_since`, `assert_claude_output_contains`, `assert_success`, `assert_file_exists` |
-| Results | `end_test`, `save_result` |
-| Utilities | `section`, `debug`, `wait_for` |
+| Platform | Specific Checks |
+|----------|-----------------|
+| macOS ARM64 | Native binary, code signing, Gatekeeper |
+| macOS Intel | x86_64 binary, Rosetta not required |
+| Windows | Path separators, AppData locations, registry |
+| Linux | Multiple distros, systemd integration |
 
-**Implementation:** 445 lines of Bash
-
-### 3.3 Test Case Structure
-
-Each test case follows a consistent structure:
+### 3.4 IQ Evidence Generation
 
 ```bash
 #!/bin/bash
-set -euo pipefail
+# scripts/collect-iq-evidence.sh
 
-# Source helper library
-source "$SCRIPT_DIR/../../lib/test-helpers.sh"
+EVIDENCE_DIR="docs/validation/iq/$(date +%Y-%m-%d)"
+mkdir -p "$EVIDENCE_DIR"
 
-# Lifecycle
-start_test "test-name"
-check_prerequisites
+# Capture installation evidence
+cargo test --release iq_ -- --nocapture 2>&1 | tee "$EVIDENCE_DIR/test-output.log"
 
-# Setup
+# Capture environment
+echo "Platform: $(uname -a)" > "$EVIDENCE_DIR/environment.txt"
+echo "Rust: $(rustc --version)" >> "$EVIDENCE_DIR/environment.txt"
+echo "CCH: $(cch --version)" >> "$EVIDENCE_DIR/environment.txt"
+
+# Generate report
+cat > "$EVIDENCE_DIR/report.md" << EOF
+# IQ Evidence Report - CCH $(cch --version | cut -d' ' -f2)
+
+**Date:** $(date)
+**Platform:** $(uname -s) $(uname -m)
+**Tester:** Automated CI
+
+## Test Results
+$(grep -E "^test|PASSED|FAILED" "$EVIDENCE_DIR/test-output.log")
+
+## Status: $(grep -c FAILED "$EVIDENCE_DIR/test-output.log" && echo "❌ FAILED" || echo "✅ PASSED")
+EOF
+```
+
+---
+
+## 4. Operational Qualification (OQ) Design
+
+### 4.1 OQ Test Categories
+
+| Category | US | Tests | Purpose |
+|----------|-----|-------|---------|
+| Blocking | US-001 | Block force push, hard reset | Verify block action |
+| Injection | US-002 | CDK context, Terraform context | Verify inject action |
+| Validators | US-003 | Script execution, error handling | Verify run action |
+| Permissions | US-004 | PermissionRequest events | Verify event handling |
+| Logging | US-005 | JSON Lines format, timing | Verify audit trail |
+
+### 4.2 OQ Implementation (Rust)
+
+**File:** `cch_cli/tests/oq_us1_blocking.rs`
+
+```rust
+/// OQ-US1-001: Block force push command
+#[test]
+fn test_oq_block_force_push() {
+    let temp = setup_test_workspace("block-force-push");
+    let event = json!({
+        "event_type": "PreToolUse",
+        "tool_name": "Bash",
+        "tool_input": {"command": "git push --force origin main"},
+        "session_id": "test-001"
+    });
+    
+    let output = run_cch_with_event(&temp, &event);
+    
+    assert!(output.contains("\"continue\":false"));
+    assert!(output.contains("block-force-push"));
+}
+```
+
+### 4.3 OQ Integration Tests (Bash)
+
+Real Claude CLI validation for end-to-end scenarios:
+
+```bash
+# test/integration/use-cases/01-block-force-push/test.sh
+
+start_test "01-block-force-push"
 WORKSPACE=$(setup_workspace "$SCRIPT_DIR")
 install_cch "$WORKSPACE"
 
-# Execute
-run_claude "$WORKSPACE" "<prompt>" "<tools>" <max_turns>
+# Capture log position
+LOG_LINE_BEFORE=$(get_log_line_count)
 
-# Verify
-assert_log_contains "<pattern>" "<message>"
+# Run Claude with dangerous command
+run_claude "$WORKSPACE" "Run: git push --force origin main" "Bash" 2
 
-# Cleanup
+# Verify CCH blocked
+assert_log_contains_since "$LOG_LINE_BEFORE" "block-force-push" \
+    "CCH should match block-force-push rule"
+    
 cleanup_workspace
 end_test
 ```
 
----
+### 4.4 OQ Evidence Generation
 
-## 4. Test Cases - Technical Details
-
-### TC-001: Block Force Push
-
-**Hooks Configuration:**
-```yaml
-rules:
-  - name: block-force-push
-    matchers:
-      tools: ["Bash"]
-      command_match: "git push.*--force|git push.*-f"
-    actions:
-      block: true
-```
-
-**Verification Strategy:**
-- Check CCH log for `block-force-push` rule match
-- Verify `"Block"` outcome in log
-- Handle case where Claude refuses before CCH intercepts
-
-### TC-002: Context Injection
-
-**Hooks Configuration:**
-```yaml
-rules:
-  - name: cdk-context-injection
-    matchers:
-      tools: ["Read"]
-      file_match: ".*\\.cdk\\.ts$"
-    actions:
-      inject_context: ".claude/context/cdk-best-practices.md"
-```
-
-**Verification Strategy:**
-- Check for `cdk-context-injection` rule in logs
-- Verify `injected_files` field present
-- Negative test: non-CDK file should not trigger injection
-
-### TC-003: Session Logging
-
-**Verification Strategy:**
-- Clear logs before test
-- Run Claude command
-- Verify log file exists
-- Validate JSON Lines format (each line parseable as JSON)
-- Check for required fields: `timestamp`, `event_type`, `session_id`
-- Check for timing fields: `processing_ms` or `duration`
-
-### TC-004: Permission Explanations
-
-**Hooks Configuration:**
-```yaml
-rules:
-  - name: explain-write-permissions
-    event_types: ["PermissionRequest"]
-    matchers:
-      tools: ["Write"]
-    actions:
-      inject_context: ".claude/context/write-permission-context.md"
-```
-
-**Verification Strategy:**
-- Run Claude with limited `--allowedTools` to trigger permission request
-- Use timeout to prevent hanging
-- Check for `PermissionRequest` event in logs
-- Verify permission explanation rules matched
-
----
-
-## 5. Taskfile Integration
-
-```yaml
-integration-test:
-  desc: Run CCH + Claude CLI integration tests
-  aliases: [itest]
-  deps: [build]  # Auto-build CCH before running
-  cmds:
-    - ./{{.INTEGRATION_DIR}}/run-all.sh
-  preconditions:
-    - sh: command -v claude
-      msg: "Claude CLI not found. Install it first."
-
-integration-test-quick:
-  desc: Run quick integration tests (skip slow ones)
-  aliases: [itest-quick]
-  deps: [build]
-  cmds:
-    - ./{{.INTEGRATION_DIR}}/run-all.sh --quick
-
-integration-test-single:
-  desc: Run a single integration test
-  deps: [build]
-  cmds:
-    - ./{{.INTEGRATION_DIR}}/run-all.sh --test {{.TEST_NAME}}
-
-test-all:
-  desc: Run all tests (unit + integration)
-  cmds:
-    - task: test
-    - task: integration-test
-```
-
----
-
-## 6. Error Handling Strategy
-
-| Scenario | Handling |
-|----------|----------|
-| Claude CLI missing | Fail fast with clear installation instructions |
-| CCH binary missing | Auto-build via `cargo build --release` |
-| Permission prompt hang | Timeout after configurable duration |
-| Test assertion failure | Soft failure - continue to next assertion |
-| Workspace cleanup | Always runs, even on failure |
-| Log directory missing | Auto-create as needed |
-
----
-
-## 7. Result Artifacts
-
-### Test Result JSON
 ```json
 {
-  "test_name": "01-block-force-push",
-  "status": "PASS",
-  "assertions_passed": 5,
-  "assertions_failed": 0,
-  "timestamp": "2025-01-23T10:30:00Z",
-  "duration_seconds": 15
+  "test_id": "OQ-US1-001",
+  "test_name": "Block Force Push",
+  "date": "2025-01-24T10:30:00Z",
+  "scenario": {
+    "given": "Rule configured to block git push.*--force",
+    "when": "Claude attempts git push origin main --force",
+    "then": "Operation blocked with warning message"
+  },
+  "evidence": {
+    "hooks_yaml": "...",
+    "event_payload": {...},
+    "cch_log_entry": {...},
+    "result": "PASSED"
+  }
 }
 ```
 
-### Console Output
-- Color-coded pass/fail indicators
-- Assertion-level detail
-- Summary with totals
-- Exit code: 0 (all pass) or 1 (any fail)
+---
+
+## 5. Performance Qualification (PQ) Design
+
+### 5.1 PQ Metrics
+
+| Metric | Target | Measurement |
+|--------|--------|-------------|
+| Cold Start (version) | <15ms (release) | 10 iterations, p95 |
+| Cold Start (help) | <15ms (release) | 10 iterations, p95 |
+| Event Processing | <50ms | 10 iterations, p95 |
+| Throughput | >100 events/sec | Sustained 10 seconds |
+| Memory Usage | <10MB RSS | Peak during load |
+
+### 5.2 PQ Implementation (Rust)
+
+**File:** `cch_cli/tests/pq_performance.rs`
+
+```rust
+/// Target cold start time (release build)
+const COLD_START_TARGET_MS: u64 = 15;
+
+/// Debug builds are ~10x slower
+const DEBUG_MULTIPLIER: u64 = 10;
+
+fn cold_start_threshold() -> u64 {
+    if cfg!(debug_assertions) {
+        COLD_START_TARGET_MS * DEBUG_MULTIPLIER
+    } else {
+        COLD_START_TARGET_MS
+    }
+}
+
+#[test]
+fn test_pq_cold_start_version() {
+    let mut times = Vec::with_capacity(10);
+    
+    for _ in 0..10 {
+        let start = Instant::now();
+        let output = Command::cargo_bin("cch")
+            .arg("--version")
+            .output()
+            .expect("runs");
+        times.push(start.elapsed());
+        assert!(output.status.success());
+    }
+    
+    let avg_ms = times.iter().sum::<Duration>().as_millis() / 10;
+    let threshold = cold_start_threshold();
+    
+    assert!(avg_ms < threshold * 3,
+        "Cold start {}ms exceeds {}ms threshold",
+        avg_ms, threshold * 3);
+}
+```
+
+### 5.3 PQ Evidence Generation
+
+```markdown
+## PQ Benchmark Results - CCH v1.0.0
+
+**Test Environment:** macOS ARM64, M2 8-core, 16GB RAM
+**Date:** 2025-01-24
+**Build:** Release
+
+### Latency Results (10 iterations each)
+| Test | p50 | p95 | p99 | Target | Status |
+|------|-----|-----|-----|--------|--------|
+| Cold Start (version) | 8ms | 12ms | 14ms | <15ms | ✅ |
+| Cold Start (help) | 9ms | 13ms | 15ms | <15ms | ✅ |
+| Event Processing | 7ms | 11ms | 14ms | <50ms | ✅ |
+
+### Throughput Results
+- Sustained: 1,200 events/sec
+- Peak: 2,100 events/sec
+- Target: >100 events/sec ✅
+
+### Memory Usage
+- Baseline: 4MB RSS
+- Under Load: 8MB RSS
+- Target: <10MB ✅
+
+**Status:** ✅ PASSED - All performance requirements met
+```
 
 ---
 
-## 8. Dependencies
+## 6. CI/CD Integration
 
-| Dependency | Type | Required |
-|------------|------|----------|
-| Claude CLI | External | Yes |
-| CCH Binary | Internal | Yes (auto-built) |
-| Bash | System | Yes |
-| Python3 | System | Optional (JSON validation) |
-| jq | External | Optional (log inspection) |
+### 6.1 GitHub Actions Workflow
+
+```yaml
+# .github/workflows/validation.yml
+name: IQ/OQ/PQ Validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  iq-macos-arm64:
+    runs-on: macos-14  # M1 runner
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test --release iq_ -- --nocapture
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iq-evidence-macos-arm64
+          path: docs/validation/iq/
+
+  iq-macos-intel:
+    runs-on: macos-13  # Intel runner
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test --release iq_ -- --nocapture
+
+  iq-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test --release iq_ -- --nocapture
+
+  iq-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test --release iq_ -- --nocapture
+
+  oq:
+    needs: [iq-macos-arm64, iq-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test --release oq_ -- --nocapture
+
+  pq:
+    needs: [oq]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test --release pq_ -- --nocapture
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pq-evidence
+          path: docs/validation/pq/
+```
+
+### 6.2 Release Validation Gate
+
+```yaml
+# In release workflow
+validate:
+  runs-on: ubuntu-latest
+  steps:
+    - run: task validation-all
+    - run: |
+        # Check all validations passed
+        if grep -r "FAILED" docs/validation/*/report.md; then
+          echo "❌ Validation failed - blocking release"
+          exit 1
+        fi
+        echo "✅ All validations passed"
+```
 
 ---
 
-## 9. Performance Considerations
+## 7. Taskfile Integration
 
-| Aspect | Design Decision |
-|--------|-----------------|
-| Test Isolation | Each test uses temp workspace, cleaned after |
-| Parallel Execution | Not supported (Claude CLI limitation) |
-| Quick Mode | Skip slow tests via `.slow` marker file |
-| Timeout | Prevent hanging on permission prompts |
-| Log Tracking | Record position before test, check only new entries |
+```yaml
+# Taskfile.yml additions
+
+iq-test:
+  desc: Run Installation Qualification tests
+  cmds:
+    - cargo test --release iq_ -- --nocapture
+    - ./scripts/collect-iq-evidence.sh
+
+oq-test:
+  desc: Run Operational Qualification tests
+  cmds:
+    - cargo test --release oq_ -- --nocapture
+
+pq-test:
+  desc: Run Performance Qualification tests  
+  cmds:
+    - cargo test --release pq_ -- --nocapture
+
+validation-all:
+  desc: Run full IQ/OQ/PQ validation suite
+  deps: [build]
+  cmds:
+    - task: iq-test
+    - task: oq-test
+    - task: pq-test
+    - task: integration-test
+    - ./scripts/generate-validation-report.sh
+
+integration-test:
+  desc: Run CCH + Claude CLI integration tests
+  aliases: [itest]
+  deps: [build]
+  cmds:
+    - ./test/integration/run-all.sh
+
+integration-test-strict:
+  desc: Run integration tests in strict mode (fail on any issue)
+  deps: [build]
+  cmds:
+    - STRICT_MODE=1 ./test/integration/run-all.sh
+```
 
 ---
 
-## 10. Future Enhancements (Planned)
+## 8. Error Handling Strategy
 
-1. **Parallel Test Execution** - Use process pools when Claude supports it
-2. **CI/CD GitHub Actions** - Workflow for automated testing
-3. **Performance Benchmarks** - Track CCH processing times over releases
-4. **Coverage Reports** - Map test cases to CCH code paths
-5. **Snapshot Testing** - Compare log output against golden files
+| Scenario | IQ Handling | OQ Handling | PQ Handling |
+|----------|-------------|-------------|-------------|
+| Binary missing | Fail fast | Fail fast | Fail fast |
+| Config error | Report error | Report error | Report error |
+| Timeout | N/A | 60s limit | Mark degraded |
+| Performance miss | N/A | N/A | Warn if debug, fail if release |
+| Platform issue | Platform-specific skip | Continue | Continue |
+
+---
+
+## 9. Evidence Retention Policy
+
+| Evidence Type | Retention | Storage |
+|---------------|-----------|---------|
+| Release validation | Indefinite | Git + artifacts |
+| PR validation | 90 days | CI artifacts only |
+| Nightly builds | 30 days | CI artifacts only |
+| Local dev runs | Session | Not stored |
+
+---
+
+## 10. Future Enhancements
+
+| Enhancement | Priority | Rationale |
+|-------------|----------|-----------|
+| Parallel IQ across platforms | High | Faster CI |
+| OQ with real Claude in CI | Medium | Full end-to-end in CI |
+| PQ stress testing (7-day) | Medium | Long-term stability |
+| Evidence dashboard | Low | Visual reporting |
+| Compliance export (FDA format) | Low | Regulated industries |
