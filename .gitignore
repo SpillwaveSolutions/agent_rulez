@@ -40,3 +40,10 @@ coverage/
 # Backup files
 *.bak
 *.backup
+
+# Integration test results
+test/integration/results/*.json
+!test/integration/results/.gitkeep
+
+# Task cache
+.task/

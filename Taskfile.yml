@@ -1,0 +1,250 @@
+# Taskfile.yml - CCH (Claude Context Hooks) Project
+#
+# Task runner for building, testing, and managing CCH.
+# Install Task: https://taskfile.dev/installation/
+#
+# Quick start:
+#   task --list        # Show all available tasks
+#   task build         # Build CCH binary
+#   task test          # Run all tests
+#   task integration-test  # Run integration tests
+
+version: '3'
+
+vars:
+  PROJECT_NAME: cch
+  CCH_CLI_DIR: cch_cli
+  INTEGRATION_DIR: test/integration
+  CCH_BINARY: "{{.CCH_CLI_DIR}}/target/release/cch"
+
+tasks:
+  # ===========================================================================
+  # Core Development Tasks
+  # ===========================================================================
+
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  build:
+    desc: Build CCH binary (release mode)
+    dir: "{{.CCH_CLI_DIR}}"
+    cmds:
+      - cargo build --release
+    sources:
+      - src/**/*.rs
+      - Cargo.toml
+    generates:
+      - target/release/cch
+
+  build-debug:
+    desc: Build CCH binary (debug mode)
+    dir: "{{.CCH_CLI_DIR}}"
+    cmds:
+      - cargo build
+    sources:
+      - src/**/*.rs
+      - Cargo.toml
+    generates:
+      - target/debug/cch
+
+  clean:
+    desc: Remove build artifacts and test results
+    cmds:
+      - rm -rf {{.CCH_CLI_DIR}}/target
+      - rm -rf {{.INTEGRATION_DIR}}/results/*.json
+      - echo "Cleaned build artifacts and test results"
+
+  # ===========================================================================
+  # Testing Tasks
+  # ===========================================================================
+
+  test:
+    desc: Run all Rust unit tests
+    dir: "{{.CCH_CLI_DIR}}"
+    cmds:
+      - cargo test
+
+  test-verbose:
+    desc: Run Rust tests with verbose output
+    dir: "{{.CCH_CLI_DIR}}"
+    cmds:
+      - cargo test -- --nocapture
+
+  integration-test:
+    desc: Run CCH + Claude CLI integration tests
+    aliases: [itest]
+    deps: [build]
+    cmds:
+      - ./{{.INTEGRATION_DIR}}/run-all.sh
+    preconditions:
+      - sh: command -v claude
+        msg: "Claude CLI not found. Install it first."
+
+  integration-test-quick:
+    desc: Run quick integration tests (skip slow ones)
+    aliases: [itest-quick]
+    deps: [build]
+    cmds:
+      - ./{{.INTEGRATION_DIR}}/run-all.sh --quick
+
+  integration-test-single:
+    desc: Run a single integration test
+    deps: [build]
+    cmds:
+      - ./{{.INTEGRATION_DIR}}/run-all.sh --test {{.TEST_NAME}}
+    vars:
+      TEST_NAME: '{{.TEST_NAME | default "01-block-force-push"}}'
+
+  test-all:
+    desc: Run all tests (unit + integration)
+    cmds:
+      - task: test
+      - task: integration-test
+
+  coverage:
+    desc: Generate test coverage report
+    dir: "{{.CCH_CLI_DIR}}"
+    cmds:
+      - cargo tarpaulin --out Html --output-dir target/coverage
+    status:
+      - command -v cargo-tarpaulin
+
+  # ===========================================================================
+  # Code Quality Tasks
+  # ===========================================================================
+
+  lint:
+    desc: Run clippy linter
+    dir: "{{.CCH_CLI_DIR}}"
+    cmds:
+      - cargo clippy --all-targets --all-features -- -D warnings
+
+  format:
+    desc: Format code with rustfmt
+    dir: "{{.CCH_CLI_DIR}}"
+    cmds:
+      - cargo fmt
+
+  format-check:
+    desc: Check code formatting without changes
+    dir: "{{.CCH_CLI_DIR}}"
+    cmds:
+      - cargo fmt --check
+
+  check:
+    desc: Run all quality checks (format, lint, test)
+    cmds:
+      - task: format-check
+      - task: lint
+      - task: test
+
+  # ===========================================================================
+  # Installation Tasks
+  # ===========================================================================
+
+  install:
+    desc: Install CCH globally via cargo
+    dir: "{{.CCH_CLI_DIR}}"
+    cmds:
+      - cargo install --path .
+
+  install-local:
+    desc: Install CCH for current project
+    deps: [build]
+    cmds:
+      - ./{{.CCH_BINARY}} install --binary ./{{.CCH_BINARY}}
+
+  uninstall-local:
+    desc: Uninstall CCH from current project
+    deps: [build]
+    cmds:
+      - ./{{.CCH_BINARY}} uninstall
+
+  # ===========================================================================
+  # Development Utilities
+  # ===========================================================================
+
+  run:
+    desc: Run CCH with arguments
+    deps: [build-debug]
+    cmds:
+      - ./{{.CCH_CLI_DIR}}/target/debug/cch {{.CLI_ARGS}}
+    vars:
+      CLI_ARGS: '{{.CLI_ARGS | default "--help"}}'
+
+  debug:
+    desc: Run CCH debug mode with test event
+    deps: [build-debug]
+    cmds:
+      - ./{{.CCH_CLI_DIR}}/target/debug/cch debug PreToolUse --tool Bash --command "echo test" --verbose
+
+  repl:
+    desc: Start CCH interactive REPL
+    deps: [build-debug]
+    cmds:
+      - ./{{.CCH_CLI_DIR}}/target/debug/cch repl
+
+  logs:
+    desc: Show recent CCH logs
+    cmds:
+      - "{{.CCH_BINARY}} logs --limit 20 2>/dev/null || tail -20 ~/.claude/logs/cch.log"
+
+  logs-tail:
+    desc: Tail CCH logs in real-time
+    cmds:
+      - tail -f ~/.claude/logs/cch.log
+
+  validate:
+    desc: Validate hooks.yaml configuration
+    deps: [build]
+    cmds:
+      - ./{{.CCH_BINARY}} validate
+
+  # ===========================================================================
+  # CI/CD Tasks
+  # ===========================================================================
+
+  ci:
+    desc: Run full CI pipeline locally
+    cmds:
+      - task: clean
+      - task: build
+      - task: check
+      - task: test
+      - echo "CI pipeline completed successfully"
+
+  ci-full:
+    desc: Run full CI pipeline including integration tests
+    cmds:
+      - task: ci
+      - task: integration-test
+
+  # ===========================================================================
+  # Documentation Tasks
+  # ===========================================================================
+
+  doc:
+    desc: Generate Rust documentation
+    dir: "{{.CCH_CLI_DIR}}"
+    cmds:
+      - cargo doc --no-deps --open
+
+  # ===========================================================================
+  # Release Tasks
+  # ===========================================================================
+
+  release-build:
+    desc: Build release binary with optimizations
+    dir: "{{.CCH_CLI_DIR}}"
+    env:
+      RUSTFLAGS: "-C target-cpu=native"
+    cmds:
+      - cargo build --release
+
+  version:
+    desc: Show CCH version
+    deps: [build]
+    cmds:
+      - ./{{.CCH_BINARY}} --version
