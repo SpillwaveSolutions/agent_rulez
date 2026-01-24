@@ -135,6 +135,18 @@ Step-by-step process:
 <location>mastering-hooks/SKILL.md</location>
 </skill>
 
+<skill>
+<name>release-cch</name>
+<description>CCH release workflow automation. Use when asked to "release CCH", "create a release", "prepare release", "tag version", "hotfix release", or "publish CCH". Covers version management from Cargo.toml, changelog generation from conventional commits, PR creation, tagging, hotfix workflows, and GitHub Actions release monitoring.</description>
+<location>.opencode/skill/release-cch/SKILL.md</location>
+</skill>
+
+<skill>
+<name>using-claude-code-cli</name>
+<description>Invoke Claude Code CLI from Python orchestrators and shell scripts. Use when asked to "spawn claude as subprocess", "automate claude cli", "run claude headless", "configure --allowedTools", "set up claude hooks", or "parallel claude invocation". Covers permissions, directory access (--add-dir), hooks, sandbox mode, and async patterns.</description>
+<location>.opencode/skill/using-claude-code-cli/SKILL.md</location>
+</skill>
+
 </available_skills>
 <!-- SKILLS_TABLE_END -->
 
