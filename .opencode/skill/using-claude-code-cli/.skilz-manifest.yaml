@@ -1,0 +1,8 @@
+installed_at: '2026-01-24T00:19:12+00:00'
+skill_id: git/using-claude-code-cli
+git_repo: https://github.com/SpillwaveSolutions/using-claude-code-cli-agent-skill.git
+skill_path: /private/var/folders/tm/chrvt43s3rbdld20ghw1qtc40000gn/T/skilz-git-tp8o6g_v
+git_sha: 2422ce3900c350092fcc587a3d0efe06ddd7bb1f
+skilz_version: 1.9.4
+install_mode: copy
+canonical_path: null
