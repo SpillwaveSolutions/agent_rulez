@@ -44,8 +44,8 @@
 
 ---
 
-## phase2-governance (Specified)
-**Status**: Specified
+## phase2-governance (Planned)
+**Status**: Planned
 **Priority**: P2 (Enterprise Readiness)
 **Description**: Policy governance layer with modes, metadata, priorities, and enhanced explainability
 **Location**: cch_cli/ (Rust implementation extension)
@@ -54,6 +54,7 @@
 ### SDD Artifacts
 - **Spec:** `.speckit/features/phase2-governance/spec.md`
 - **Tasks:** `.speckit/features/phase2-governance/tasks.md`
+- **Plan:** `.speckit/features/phase2-governance/plan.md`
 - **Status:** Ready for Implementation
 
 ### User Stories
