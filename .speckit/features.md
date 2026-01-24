@@ -51,14 +51,29 @@
 **Location**: cch_cli/ (Rust implementation extension)
 **PRD**: docs/prds/phase2_prd.md
 
-### Key Features (Not Yet Implemented)
-- [ ] Policy Modes: `enforce | warn | audit`
-- [ ] Rule Priority: Higher numbers run first
-- [ ] Rule Metadata: author, created_by, reason, confidence, tags
-- [ ] Enhanced `cch explain rule` command
-- [ ] Conflict Resolution: Deterministic mode/priority ordering
-- [ ] Trust Levels: local, verified, untrusted (informational only)
-- [ ] Policy Packs concept (roadmap)
+### SDD Artifacts
+- **Spec:** `.speckit/features/phase2-governance/spec.md`
+- **Tasks:** `.speckit/features/phase2-governance/tasks.md`
+- **Status:** Ready for Implementation
+
+### User Stories
+- [ ] US-GOV-01: Rule Metadata (Provenance)
+- [ ] US-GOV-02: Policy Modes (enforce | warn | audit)
+- [ ] US-GOV-03: Rule Priority
+- [ ] US-GOV-04: Policy Conflict Resolution
+- [ ] US-GOV-05: Enhanced `cch explain rule` Command
+- [ ] US-GOV-06: Enhanced Logging Schema
+- [ ] US-GOV-07: Validator Trust Levels (Informational)
+
+### Implementation Phases
+| Phase | Description | Est. Days |
+|-------|-------------|-----------|
+| P2.1 | Core Governance (modes, priority, metadata) | 3-4 |
+| P2.2 | Enhanced Logging | 1-2 |
+| P2.3 | CLI Enhancements | 1-2 |
+| P2.4 | Trust Levels | 0.5-1 |
+
+**Total: 5.5-9 days estimated**
 
 ### Design Philosophy
 - **Backward Compatible**: All new features are optional
