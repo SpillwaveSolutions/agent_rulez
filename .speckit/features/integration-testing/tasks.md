@@ -371,15 +371,18 @@
 - [x] `task integration-test-strict` Taskfile task
 
 ### Task 8.2: Add Claude CLI Timeout
-**Status:** [ ] Pending  
+**Status:** [x] Complete  
 **Complexity:** Low  
-**Gap:** GAP-003 (No timeout)  
-**Files:** `test/integration/lib/test-helpers.sh`
+**Gap:** GAP-003 (No timeout) - RESOLVED  
+**Files:** `test/integration/lib/test-helpers.sh`, `test/integration/run-all.sh`
+**PR:** #65 (feature/claude-cli-timeout)
 
 **Acceptance Criteria:**
-- [ ] 60-second default timeout
-- [ ] Configurable via environment
-- [ ] Clear timeout error message
+- [x] 60-second default timeout
+- [x] Configurable via environment (CLAUDE_TIMEOUT)
+- [x] Configurable via command-line (--timeout)
+- [x] Clear timeout error message
+- [x] Cross-platform support (timeout/gtimeout)
 
 ### Task 8.3: Update Release Workflow
 **Status:** [x] Complete  

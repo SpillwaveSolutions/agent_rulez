@@ -5,8 +5,10 @@
 #   ./run-all.sh              # Run all tests (soft assertions)
 #   ./run-all.sh --strict     # Run with strict mode (fail-fast)
 #   ./run-all.sh --quick      # Run only quick tests (skip slow ones)
+#   ./run-all.sh --timeout 120  # Set custom timeout (seconds)
 #   DEBUG=1 ./run-all.sh      # Run with debug output
 #   STRICT_MODE=1 ./run-all.sh  # Alternative strict mode via env var
+#   CLAUDE_TIMEOUT=120 ./run-all.sh  # Alternative timeout via env var
 
 set -euo pipefail
 
@@ -27,13 +29,17 @@ while [[ $# -gt 0 ]]; do
             export STRICT_MODE=1
             shift
             ;;
+        --timeout)
+            export CLAUDE_TIMEOUT="$2"
+            shift 2
+            ;;
         --test)
             SPECIFIC_TEST="$2"
             shift 2
             ;;
         *)
             echo "Unknown option - $1"
-            echo "Usage - ./run-all.sh [--quick] [--strict] [--test <test-name>]"
+            echo "Usage - ./run-all.sh [--quick] [--strict] [--timeout <seconds>] [--test <test-name>]"
             exit 1
             ;;
     esac
@@ -49,6 +55,7 @@ if [ "${STRICT_MODE:-0}" = "1" ]; then
 else
     echo -e "|       MODE: Normal (soft assertions)                       |"
 fi
+echo -e "|       TIMEOUT: ${CLAUDE_TIMEOUT}s per Claude CLI call                        |"
 echo -e "${BLUE}+============================================================+${NC}"
 echo ""
 
