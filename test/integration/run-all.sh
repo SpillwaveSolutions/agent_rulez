@@ -2,9 +2,11 @@
 # Run all CCH integration tests
 #
 # Usage:
-#   ./run-all.sh           # Run all tests
-#   ./run-all.sh --quick   # Run only quick tests (skip slow ones)
-#   DEBUG=1 ./run-all.sh   # Run with debug output
+#   ./run-all.sh              # Run all tests (soft assertions)
+#   ./run-all.sh --strict     # Run with strict mode (fail-fast)
+#   ./run-all.sh --quick      # Run only quick tests (skip slow ones)
+#   DEBUG=1 ./run-all.sh      # Run with debug output
+#   STRICT_MODE=1 ./run-all.sh  # Alternative strict mode via env var
 
 set -euo pipefail
 
@@ -21,13 +23,17 @@ while [[ $# -gt 0 ]]; do
             QUICK_MODE=true
             shift
             ;;
+        --strict)
+            export STRICT_MODE=1
+            shift
+            ;;
         --test)
             SPECIFIC_TEST="$2"
             shift 2
             ;;
         *)
             echo "Unknown option - $1"
-            echo "Usage - ./run-all.sh [--quick] [--test <test-name>]"
+            echo "Usage - ./run-all.sh [--quick] [--strict] [--test <test-name>]"
             exit 1
             ;;
     esac
@@ -37,6 +43,12 @@ done
 echo ""
 echo -e "${BLUE}+============================================================+${NC}"
 echo -e "${BLUE}|       CCH Integration Test Suite                           |${NC}"
+echo -e "${BLUE}+============================================================+${NC}"
+if [ "${STRICT_MODE:-0}" = "1" ]; then
+    echo -e "${YELLOW}|       MODE: STRICT (fail-fast on first assertion failure) |${NC}"
+else
+    echo -e "|       MODE: Normal (soft assertions)                       |"
+fi
 echo -e "${BLUE}+============================================================+${NC}"
 echo ""
 

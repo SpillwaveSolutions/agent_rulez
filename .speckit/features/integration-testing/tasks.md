@@ -357,15 +357,18 @@
 ## Phase 8: Gap Resolution
 
 ### Task 8.1: Add Strict Assertion Mode
-**Status:** [ ] Pending  
+**Status:** [x] Complete  
 **Complexity:** Medium  
-**Gap:** GAP-001 (Soft assertions)  
-**Files:** `test/integration/lib/test-helpers.sh`
+**Gap:** GAP-001 (Soft assertions) - RESOLVED  
+**Files:** `test/integration/lib/test-helpers.sh`, `test/integration/run-all.sh`, `Taskfile.yml`
+**PR:** #64 (feature/strict-assertion-mode)
 
 **Acceptance Criteria:**
-- [ ] STRICT_MODE environment variable
-- [ ] Fail test on first assertion failure
-- [ ] Clear distinction between soft and hard failures
+- [x] STRICT_MODE environment variable
+- [x] Fail test on first assertion failure
+- [x] Clear distinction between soft and hard failures
+- [x] `--strict` command-line flag
+- [x] `task integration-test-strict` Taskfile task
 
 ### Task 8.2: Add Claude CLI Timeout
 **Status:** [ ] Pending  

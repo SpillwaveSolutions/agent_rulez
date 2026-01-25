@@ -75,6 +75,7 @@
 - [x] Rust test suite (`cargo test`)
 - [x] Bash integration tests (`./test/integration/run-all.sh`)
 - [x] Taskfile integration (`task integration-test`)
+- [x] Strict assertion mode (`task integration-test-strict` or `--strict` flag)
 - [ ] CI/CD workflow
 - [ ] Evidence collection scripts
 - [x] Debug vs release threshold handling
@@ -83,7 +84,7 @@
 
 | GAP-ID | Description | Severity | Resolution |
 |--------|-------------|----------|------------|
-| GAP-001 | Soft assertions in integration tests | High | Add `--strict` mode |
+| GAP-001 | Soft assertions in integration tests | High | ✅ RESOLVED: Added `--strict` mode (#59) |
 | GAP-002 | No CI/CD workflow for IQ/OQ/PQ | High | Create GitHub Actions |
 | GAP-003 | No timeout on Claude CLI calls | Medium | Add 60s timeout |
 | GAP-004 | No memory usage tests | Medium | Add pq_memory.rs |

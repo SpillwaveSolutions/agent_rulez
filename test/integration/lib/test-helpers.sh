@@ -30,6 +30,45 @@ TEST_START_TIME=""
 ASSERTIONS_PASSED=0
 ASSERTIONS_FAILED=0
 
+# Strict mode - exit immediately on first assertion failure
+# Enable with: STRICT_MODE=1 ./test.sh
+STRICT_MODE="${STRICT_MODE:-0}"
+
+# ============================================================================
+# Strict Mode Support
+# ============================================================================
+
+# Handle assertion failure based on mode
+# Usage: handle_assertion_failure <message> [details]
+handle_assertion_failure() {
+    local message="$1"
+    local details="${2:-}"
+    
+    ASSERTIONS_FAILED=$((ASSERTIONS_FAILED + 1))
+    echo -e "  ${RED}x${NC} FAIL - $message"
+    
+    if [ -n "$details" ]; then
+        echo -e "      $details"
+    fi
+    
+    if [ "$STRICT_MODE" = "1" ]; then
+        echo ""
+        echo -e "${RED}STRICT MODE: Exiting immediately on first failure${NC}"
+        echo -e "  Test: $TEST_NAME"
+        echo -e "  Failed assertion: $message"
+        
+        # Save result before exiting
+        save_result "FAIL"
+        
+        # Cleanup if we have a temp dir
+        cleanup_workspace 2>/dev/null || true
+        
+        exit 1
+    fi
+    
+    return 1
+}
+
 # ============================================================================
 # Prerequisites
 # ============================================================================
@@ -87,6 +126,11 @@ start_test() {
     echo ""
     echo -e "${BLUE}================================================================${NC}"
     echo -e "${BLUE}TEST - $TEST_NAME${NC}"
+    if [ "$STRICT_MODE" = "1" ]; then
+        echo -e "${YELLOW}MODE - STRICT (fail-fast enabled)${NC}"
+    else
+        echo -e "MODE - Normal (soft assertions)"
+    fi
     echo -e "${BLUE}================================================================${NC}"
     echo ""
 }
@@ -248,8 +292,7 @@ assert_true() {
         echo -e "  ${GREEN}+${NC} PASS - $message"
         return 0
     else
-        ASSERTIONS_FAILED=$((ASSERTIONS_FAILED + 1))
-        echo -e "  ${RED}x${NC} FAIL - $message"
+        handle_assertion_failure "$message"
         return 1
     fi
 }
@@ -265,9 +308,7 @@ assert_log_contains() {
         echo -e "  ${GREEN}+${NC} PASS - $message"
         return 0
     else
-        ASSERTIONS_FAILED=$((ASSERTIONS_FAILED + 1))
-        echo -e "  ${RED}x${NC} FAIL - $message"
-        echo -e "      Pattern not found - $pattern"
+        handle_assertion_failure "$message" "Pattern not found - $pattern"
         return 1
     fi
 }
@@ -284,9 +325,7 @@ assert_log_contains_since() {
         echo -e "  ${GREEN}+${NC} PASS - $message"
         return 0
     else
-        ASSERTIONS_FAILED=$((ASSERTIONS_FAILED + 1))
-        echo -e "  ${RED}x${NC} FAIL - $message"
-        echo -e "      Pattern not found in new log entries - $pattern"
+        handle_assertion_failure "$message" "Pattern not found in new log entries - $pattern"
         return 1
     fi
 }
@@ -302,8 +341,7 @@ assert_claude_output_contains() {
         echo -e "  ${GREEN}+${NC} PASS - $message"
         return 0
     else
-        ASSERTIONS_FAILED=$((ASSERTIONS_FAILED + 1))
-        echo -e "  ${RED}x${NC} FAIL - $message"
+        handle_assertion_failure "$message" "Pattern not found in Claude output"
         return 1
     fi
 }
@@ -319,8 +357,7 @@ assert_claude_output_not_contains() {
         echo -e "  ${GREEN}+${NC} PASS - $message"
         return 0
     else
-        ASSERTIONS_FAILED=$((ASSERTIONS_FAILED + 1))
-        echo -e "  ${RED}x${NC} FAIL - $message"
+        handle_assertion_failure "$message" "Unexpected pattern found in Claude output"
         return 1
     fi
 }
@@ -336,8 +373,7 @@ assert_success() {
         echo -e "  ${GREEN}+${NC} PASS - $message"
         return 0
     else
-        ASSERTIONS_FAILED=$((ASSERTIONS_FAILED + 1))
-        echo -e "  ${RED}x${NC} FAIL - $message (exit code - $exit_code)"
+        handle_assertion_failure "$message" "Exit code was $exit_code, expected 0"
         return 1
     fi
 }
@@ -353,8 +389,7 @@ assert_file_exists() {
         echo -e "  ${GREEN}+${NC} PASS - $message"
         return 0
     else
-        ASSERTIONS_FAILED=$((ASSERTIONS_FAILED + 1))
-        echo -e "  ${RED}x${NC} FAIL - $message"
+        handle_assertion_failure "$message" "File not found - $file_path"
         return 1
     fi
 }

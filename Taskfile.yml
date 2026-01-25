@@ -89,11 +89,26 @@ tasks:
     cmds:
       - ./{{.INTEGRATION_DIR}}/run-all.sh --quick
 
+  integration-test-strict:
+    desc: Run integration tests with strict mode (fail-fast on first assertion failure)
+    aliases: [itest-strict]
+    deps: [build]
+    cmds:
+      - ./{{.INTEGRATION_DIR}}/run-all.sh --strict
+
   integration-test-single:
     desc: Run a single integration test
     deps: [build]
     cmds:
       - ./{{.INTEGRATION_DIR}}/run-all.sh --test {{.TEST_NAME}}
+    vars:
+      TEST_NAME: '{{.TEST_NAME | default "01-block-force-push"}}'
+
+  integration-test-single-strict:
+    desc: Run a single integration test with strict mode
+    deps: [build]
+    cmds:
+      - ./{{.INTEGRATION_DIR}}/run-all.sh --strict --test {{.TEST_NAME}}
     vars:
       TEST_NAME: '{{.TEST_NAME | default "01-block-force-push"}}'
 
