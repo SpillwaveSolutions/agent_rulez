@@ -641,6 +641,116 @@ pub fn determine_decision(response: &Response, mode: PolicyMode) -> Decision {
     }
 }
 
+// =============================================================================
+// Phase 2 Governance: Conflict Resolution
+// =============================================================================
+
+/// Mode precedence for conflict resolution
+/// Returns a numeric value where higher = wins
+#[allow(dead_code)] // Used in conflict resolution tests and future enhancements
+pub fn mode_precedence(mode: PolicyMode) -> u8 {
+    match mode {
+        PolicyMode::Enforce => 3, // Highest - always wins
+        PolicyMode::Warn => 2,    // Middle
+        PolicyMode::Audit => 1,   // Lowest - only logs
+    }
+}
+
+/// Represents a potential rule response for conflict resolution
+#[allow(dead_code)] // Used in conflict resolution tests and future multi-rule scenarios
+#[derive(Debug, Clone)]
+pub struct RuleConflictEntry<'a> {
+    pub rule: &'a Rule,
+    pub response: Response,
+    pub mode: PolicyMode,
+    pub priority: i32,
+}
+
+/// Resolve conflicts between multiple matched rules
+///
+/// Resolution order:
+/// 1. Enforce mode wins over warn and audit (regardless of priority)
+/// 2. Among same modes, higher priority wins
+/// 3. For multiple blocks, use highest priority block's message
+/// 4. Warnings and injections are accumulated
+#[allow(dead_code)] // Used when multiple rules need explicit conflict resolution
+pub fn resolve_conflicts(entries: &[RuleConflictEntry]) -> Response {
+    if entries.is_empty() {
+        return Response::allow();
+    }
+
+    // Separate by mode
+    let enforce_entries: Vec<_> = entries
+        .iter()
+        .filter(|e| e.mode == PolicyMode::Enforce)
+        .collect();
+    let warn_entries: Vec<_> = entries
+        .iter()
+        .filter(|e| e.mode == PolicyMode::Warn)
+        .collect();
+
+    // Check for enforce blocks (highest precedence)
+    for entry in &enforce_entries {
+        if !entry.response.continue_ {
+            // First enforce block wins (entries are pre-sorted by priority)
+            return entry.response.clone();
+        }
+    }
+
+    // Accumulate all injections (from enforce and warn modes)
+    let mut accumulated_context: Option<String> = None;
+
+    // Add enforce injections first
+    for entry in &enforce_entries {
+        if let Some(ref ctx) = entry.response.context {
+            if let Some(ref mut acc) = accumulated_context {
+                acc.push_str("\n\n");
+                acc.push_str(ctx);
+            } else {
+                accumulated_context = Some(ctx.clone());
+            }
+        }
+    }
+
+    // Add warn injections
+    for entry in &warn_entries {
+        if let Some(ref ctx) = entry.response.context {
+            if let Some(ref mut acc) = accumulated_context {
+                acc.push_str("\n\n");
+                acc.push_str(ctx);
+            } else {
+                accumulated_context = Some(ctx.clone());
+            }
+        }
+    }
+
+    // Return accumulated response
+    if let Some(context) = accumulated_context {
+        Response::inject(context)
+    } else {
+        Response::allow()
+    }
+}
+
+/// Compare two rules for conflict resolution
+/// Returns true if rule_a should take precedence over rule_b
+#[allow(dead_code)] // Used in conflict resolution tests and future multi-rule scenarios
+pub fn rule_takes_precedence(rule_a: &Rule, rule_b: &Rule) -> bool {
+    let mode_a = rule_a.effective_mode();
+    let mode_b = rule_b.effective_mode();
+
+    // First compare by mode precedence
+    let prec_a = mode_precedence(mode_a);
+    let prec_b = mode_precedence(mode_b);
+
+    if prec_a != prec_b {
+        return prec_a > prec_b;
+    }
+
+    // Same mode: compare by priority
+    rule_a.effective_priority() > rule_b.effective_priority()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -843,5 +953,169 @@ mod tests {
             metadata: None,
         };
         assert_eq!(rule.effective_mode(), PolicyMode::Audit);
+    }
+
+    // =========================================================================
+    // Phase 2 Governance: Conflict Resolution Tests
+    // =========================================================================
+
+    fn create_rule_with_mode(name: &str, mode: PolicyMode, priority: i32) -> Rule {
+        Rule {
+            name: name.to_string(),
+            description: Some(format!("{} rule", name)),
+            matchers: Matchers {
+                tools: None,
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+            },
+            actions: Actions {
+                inject: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: Some(mode),
+            priority: Some(priority),
+            governance: None,
+            metadata: None,
+        }
+    }
+
+    #[test]
+    fn test_mode_precedence() {
+        assert!(mode_precedence(PolicyMode::Enforce) > mode_precedence(PolicyMode::Warn));
+        assert!(mode_precedence(PolicyMode::Warn) > mode_precedence(PolicyMode::Audit));
+        assert!(mode_precedence(PolicyMode::Enforce) > mode_precedence(PolicyMode::Audit));
+    }
+
+    #[test]
+    fn test_rule_takes_precedence_mode_wins() {
+        let enforce_rule = create_rule_with_mode("enforce", PolicyMode::Enforce, 0);
+        let warn_rule = create_rule_with_mode("warn", PolicyMode::Warn, 100);
+
+        // Enforce wins over warn even with lower priority
+        assert!(rule_takes_precedence(&enforce_rule, &warn_rule));
+        assert!(!rule_takes_precedence(&warn_rule, &enforce_rule));
+    }
+
+    #[test]
+    fn test_rule_takes_precedence_same_mode_priority_wins() {
+        let high_priority = create_rule_with_mode("high", PolicyMode::Enforce, 100);
+        let low_priority = create_rule_with_mode("low", PolicyMode::Enforce, 0);
+
+        assert!(rule_takes_precedence(&high_priority, &low_priority));
+        assert!(!rule_takes_precedence(&low_priority, &high_priority));
+    }
+
+    #[test]
+    fn test_resolve_conflicts_enforce_block_wins() {
+        let enforce_rule = create_rule_with_mode("enforce", PolicyMode::Enforce, 100);
+        let warn_rule = create_rule_with_mode("warn", PolicyMode::Warn, 50);
+
+        let entries = vec![
+            RuleConflictEntry {
+                rule: &enforce_rule,
+                response: Response::block("Blocked by enforce rule"),
+                mode: PolicyMode::Enforce,
+                priority: 100,
+            },
+            RuleConflictEntry {
+                rule: &warn_rule,
+                response: Response::inject("Warning from warn rule"),
+                mode: PolicyMode::Warn,
+                priority: 50,
+            },
+        ];
+
+        let resolved = resolve_conflicts(&entries);
+        assert!(!resolved.continue_); // Block wins
+        assert!(resolved.reason.as_ref().unwrap().contains("enforce"));
+    }
+
+    #[test]
+    fn test_resolve_conflicts_warnings_accumulate() {
+        let warn_rule1 = create_rule_with_mode("warn1", PolicyMode::Warn, 100);
+        let warn_rule2 = create_rule_with_mode("warn2", PolicyMode::Warn, 50);
+
+        let entries = vec![
+            RuleConflictEntry {
+                rule: &warn_rule1,
+                response: Response::inject("Warning 1"),
+                mode: PolicyMode::Warn,
+                priority: 100,
+            },
+            RuleConflictEntry {
+                rule: &warn_rule2,
+                response: Response::inject("Warning 2"),
+                mode: PolicyMode::Warn,
+                priority: 50,
+            },
+        ];
+
+        let resolved = resolve_conflicts(&entries);
+        assert!(resolved.continue_); // No blocking in warn mode
+        let context = resolved.context.unwrap();
+        assert!(context.contains("Warning 1"));
+        assert!(context.contains("Warning 2"));
+    }
+
+    #[test]
+    fn test_resolve_conflicts_empty_allows() {
+        let resolved = resolve_conflicts(&[]);
+        assert!(resolved.continue_);
+        assert!(resolved.context.is_none());
+    }
+
+    #[test]
+    fn test_resolve_conflicts_audit_only_allows() {
+        let audit_rule = create_rule_with_mode("audit", PolicyMode::Audit, 100);
+
+        let entries = vec![RuleConflictEntry {
+            rule: &audit_rule,
+            response: Response::allow(), // Audit mode produces allow
+            mode: PolicyMode::Audit,
+            priority: 100,
+        }];
+
+        let resolved = resolve_conflicts(&entries);
+        assert!(resolved.continue_);
+    }
+
+    #[test]
+    fn test_resolve_conflicts_mixed_modes() {
+        let enforce_rule = create_rule_with_mode("enforce", PolicyMode::Enforce, 50);
+        let warn_rule = create_rule_with_mode("warn", PolicyMode::Warn, 100);
+        let audit_rule = create_rule_with_mode("audit", PolicyMode::Audit, 200);
+
+        // Enforce injects, warn injects, audit does nothing
+        let entries = vec![
+            RuleConflictEntry {
+                rule: &enforce_rule,
+                response: Response::inject("Enforce context"),
+                mode: PolicyMode::Enforce,
+                priority: 50,
+            },
+            RuleConflictEntry {
+                rule: &warn_rule,
+                response: Response::inject("Warning context"),
+                mode: PolicyMode::Warn,
+                priority: 100,
+            },
+            RuleConflictEntry {
+                rule: &audit_rule,
+                response: Response::allow(),
+                mode: PolicyMode::Audit,
+                priority: 200,
+            },
+        ];
+
+        let resolved = resolve_conflicts(&entries);
+        assert!(resolved.continue_);
+        let context = resolved.context.unwrap();
+        // Enforce comes first, then warn
+        assert!(context.contains("Enforce context"));
+        assert!(context.contains("Warning context"));
     }
 }
