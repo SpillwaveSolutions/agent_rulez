@@ -6,39 +6,78 @@
 
 **CRITICAL: Always use feature branches for all work.**
 
-- **NEVER commit directly to `main`** - All feature work MUST be done in a feature branch
-- Create a feature branch before starting any work: `git checkout -b feature/<feature-name>`
-- Push the feature branch and create a Pull Request for review
-- Only merge to `main` via PR after review
+### Branching Model
 
-**Branch Naming Convention:**
+```
+main (protected)          <- Production-ready, fully validated
+  ^
+  |
+develop (default)         <- Integration branch, fast CI (~2-3 min)
+  ^
+  |
+feature/* | fix/*         <- Short-lived working branches
+```
+
+### Branch Rules
+- **NEVER commit directly to `main` or `develop`**
+- Create feature branches from `develop`: `git checkout develop && git checkout -b feature/<name>`
+- PRs to `develop` run Fast CI (~2-3 min)
+- PRs to `main` run Full Validation (~10-15 min) - use for releases only
+
+### Branch Naming Convention
 - Features: `feature/<feature-name>` (e.g., `feature/add-debug-command`)
 - Bugfixes: `fix/<bug-description>` (e.g., `fix/config-parsing-error`)
 - Documentation: `docs/<doc-topic>` (e.g., `docs/update-readme`)
+- Hotfixes: `hotfix/<issue>` (for emergency fixes to main)
 
-**Workflow:**
-1. `git checkout -b feature/<name>` - Create feature branch
-2. Make changes and commit with conventional commit messages
-3. **Run all checks before committing** (see Pre-Commit Checks below)
-4. `git push -u origin feature/<name>` - Push to remote
-5. Create PR via `gh pr create` or GitHub UI
-6. Merge after review
-
-**Pre-Commit Checks (MANDATORY):**
-Before every commit, run these checks locally to avoid CI failures:
+### Daily Development Workflow
 ```bash
-cd cch_cli
-cargo fmt --check        # Check formatting
-cargo clippy --all-targets --all-features -- -D warnings  # Linting
-cargo test               # All tests must pass
+# 1. Start from develop
+git checkout develop && git pull origin develop
+
+# 2. Create feature branch
+git checkout -b feature/<name>
+
+# 3. Make changes, run pre-commit checks
+cd cch_cli && cargo fmt && cargo clippy --all-targets --all-features -- -D warnings && cargo test
+
+# 4. Push and create PR targeting develop
+git push -u origin feature/<name>
+gh pr create --base develop
+
+# 5. After merge, clean up
+git checkout develop && git pull && git branch -d feature/<name>
 ```
 
-Or run all checks with:
+### Release Workflow (to main)
+```bash
+# Create PR from develop to main
+gh pr create --base main --head develop --title "Release: v1.x.x"
+# Wait for Full Validation (~10-15 min)
+# Merge after all IQ/OQ/PQ tests pass
+```
+
+### Hotfix Workflow
+```bash
+# Create hotfix from main
+git checkout main && git checkout -b hotfix/<issue>
+# Fix, PR to main, then backport to develop
+```
+
+### Pre-Commit Checks (MANDATORY)
 ```bash
 cd cch_cli && cargo fmt && cargo clippy --all-targets --all-features -- -D warnings && cargo test
 ```
 
-**NEVER commit if any of these checks fail.** Fix all issues first.
+**NEVER commit if any check fails.** Fix all issues first.
+
+### CI Tiers
+| Target | CI Level | Time | What Runs |
+|--------|----------|------|-----------|
+| PR to `develop` | Fast CI | ~2-3 min | fmt, clippy, unit tests, Linux IQ |
+| PR to `main` | Full Validation | ~10-15 min | Fast CI + IQ (4 platforms) + OQ + PQ |
+
+Reference: [docs/devops/BRANCHING.md](docs/devops/BRANCHING.md) | [docs/devops/CI_TIERS.md](docs/devops/CI_TIERS.md)
 
 <skills_system priority="1">
 

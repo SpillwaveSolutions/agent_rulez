@@ -3,6 +3,13 @@
 # Validates CCH installation and basic functionality across all supported platforms.
 # This is the first phase of IQ/OQ/PQ validation framework.
 #
+# NOTE: This workflow is MANUAL-ONLY. It does not run automatically.
+# Use this for formal validation runs and compliance audits.
+#
+# For automatic validation, use:
+# - Fast CI (ci.yml) - runs on PRs to develop
+# - Full Validation (validation.yml) - runs on PRs to main
+#
 # Platforms tested:
 # - macOS ARM64 (M1/M2/M3)
 # - macOS Intel (x86_64)
@@ -11,19 +18,16 @@
 #
 # Reference: docs/IQ_OQ_PQ_IntegrationTesting.md
 
-name: IQ Validation
+name: IQ Validation (Manual)
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  # Manual trigger only - for formal validation runs
   workflow_dispatch:
     inputs:
       evidence_collection:
         description: 'Collect formal evidence for validation report'
         type: boolean
-        default: false
+        default: true
 
 env:
   CARGO_TERM_COLOR: always

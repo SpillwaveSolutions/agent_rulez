@@ -26,10 +26,31 @@ This positions CCH as comparable to:
 
 ## Git Workflow Principles
 
+### Branching Model
+
+```
+main (protected)          <- Production-ready, fully validated
+  ^
+  |
+develop (default)         <- Integration branch, fast CI
+  ^
+  |
+feature/* | fix/*         <- Short-lived working branches
+```
+
+| Branch | Purpose | CI Level | Protection |
+|--------|---------|----------|------------|
+| `main` | Production-ready releases | Full Validation | Protected, requires IQ/OQ/PQ |
+| `develop` | Integration branch (default) | Fast CI | Protected, requires Fast CI |
+| `feature/*` | Active development | Fast CI | None |
+| `fix/*` | Bug fixes | Fast CI | None |
+| `release/*` | Release candidates | Full Validation | None |
+| `hotfix/*` | Emergency fixes to main | Full Validation | None |
+
 ### Feature Branch Requirement
-- **NEVER commit directly to `main`** - This is a non-negotiable principle
+- **NEVER commit directly to `main` or `develop`** - This is a non-negotiable principle
 - All feature work MUST be done in a dedicated feature branch
-- Pull Requests are REQUIRED for all changes to `main`
+- Pull Requests are REQUIRED for all changes
 - Code review via PR ensures quality and knowledge sharing
 
 ### Branch Naming Convention
@@ -37,15 +58,31 @@ This positions CCH as comparable to:
 - Bugfixes: `fix/<bug-description>` (e.g., `fix/config-parsing-error`)
 - Documentation: `docs/<doc-topic>` (e.g., `docs/update-readme`)
 - Releases: `release/<version>` (e.g., `release/v1.0.0`)
+- Hotfixes: `hotfix/<issue>` (e.g., `hotfix/critical-security-fix`)
 
-### PR Workflow
-1. Create feature branch from `main`
+### Standard PR Workflow (Daily Development)
+1. Create feature branch from `develop`
 2. Implement changes with atomic, conventional commits
-3. **Run all pre-commit checks locally** (see below)
-4. Push branch and create Pull Request
-5. Request review and address feedback
-6. Merge via GitHub (squash or merge commit as appropriate)
-7. Delete feature branch after merge
+3. **Run pre-commit checks locally** (see below)
+4. Push branch and create Pull Request **targeting `develop`**
+5. Fast CI runs (~2-3 minutes)
+6. Request review and address feedback
+7. Merge to `develop` via GitHub
+8. Delete feature branch after merge
+
+### Release Workflow (Production Deployment)
+1. Create PR from `develop` to `main`
+2. Full IQ/OQ/PQ validation runs (~10-15 minutes)
+3. All 4 platforms tested (macOS ARM64, Intel, Linux, Windows)
+4. Evidence artifacts collected
+5. Merge to `main` only after all validation passes
+6. Tag release from `main`
+
+### Hotfix Workflow (Emergency Fixes)
+1. Create `hotfix/*` branch from `main`
+2. Implement fix with minimal changes
+3. Create PR to `main` (triggers full validation)
+4. After merge to `main`, backport to `develop`
 
 ### Pre-Commit Checks (MANDATORY)
 
@@ -73,7 +110,69 @@ cd cch_cli && cargo fmt && cargo clippy --all-targets --all-features -- -D warni
 ```
 
 ### Rationale
-Direct commits to `main` bypass code review, risk introducing bugs, and make it difficult to revert changes. Feature branches enable parallel development, clean history, and proper CI/CD validation before merge.
+- **Two-branch model** enables fast iteration on `develop` while maintaining production stability on `main`
+- **Fast CI on develop** provides rapid feedback (~2-3 min) during active development
+- **Full validation on main** ensures releases are thoroughly tested across all platforms
+- Direct commits bypass code review, risk introducing bugs, and make it difficult to revert changes
+
+---
+
+## CI/CD Policy
+
+### CI Tiers
+
+| Tier | Trigger | Duration | What Runs |
+|------|---------|----------|-----------|
+| **Fast CI** | Push to `develop`, `feature/*`; PRs to `develop` | ~2-3 min | fmt, clippy, unit tests, Linux IQ smoke test |
+| **Full Validation** | PRs to `main`, release tags, manual dispatch | ~10-15 min | Fast CI + IQ (4 platforms) + OQ + PQ + evidence |
+
+### Fast CI (~2-3 minutes)
+**Purpose:** Rapid feedback during active development
+
+**Jobs:**
+- Format check (`cargo fmt --check`)
+- Linting (`cargo clippy`)
+- Unit tests (`cargo test --lib`)
+- Linux IQ smoke test (`cargo test iq_`)
+- Code coverage (report only, non-blocking)
+
+**When it runs:**
+- Every push to `develop` or `feature/*` branches
+- Every PR targeting `develop`
+
+### Full Validation (~10-15 minutes)
+**Purpose:** Release gate validation ensuring production readiness
+
+**Jobs:**
+- All Fast CI jobs
+- IQ on 4 platforms (macOS ARM64, macOS Intel, Linux, Windows)
+- Full OQ test suite (US1-US5)
+- PQ benchmarks (performance, memory)
+- Evidence collection and artifact upload
+
+**When it runs:**
+- PRs targeting `main`
+- Release tags (`v*`)
+- Manual workflow dispatch
+
+### Validation Gates
+
+| Event | Required Checks | Blocking |
+|-------|-----------------|----------|
+| PR to `develop` | Fast CI passes | Yes |
+| PR to `main` | Full IQ/OQ/PQ Validation passes | Yes |
+| Release tag | Full Validation already passed on `main` | Yes |
+
+### Evidence Collection
+Full validation automatically collects and uploads:
+- IQ evidence per platform
+- OQ test results
+- PQ benchmark data
+- Combined validation report
+
+Evidence is stored as GitHub Actions artifacts and can be downloaded for compliance audits.
+
+Reference: [CI Tiers Documentation](docs/devops/CI_TIERS.md)
 
 ---
 

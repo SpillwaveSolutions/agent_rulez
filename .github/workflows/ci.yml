@@ -1,27 +1,30 @@
-# CI Pipeline for CCH (Claude Code Hooks)
+# Fast CI Pipeline for CCH (Claude Code Hooks)
 #
-# This workflow runs on every push and PR to ensure code quality:
+# This workflow provides rapid feedback during daily development:
 # - Formatting check (rustfmt)
 # - Linting (clippy)
 # - Unit tests
-# - Integration tests (IQ/OQ/PQ)
-# - Code coverage (cargo-llvm-cov)
-# - Upload test evidence as artifacts
+# - Linux IQ smoke test
+# - Code coverage (informational)
+#
+# Target time: ~2-3 minutes
+#
+# For full IQ/OQ/PQ validation, see validation.yml (runs on PRs to main)
 
-name: CI
+name: Fast CI
 
 on:
   push:
-    branches: [main, "feature/**", "001-*"]
+    branches: [develop, "feature/**", "fix/**", "docs/**"]
   pull_request:
-    branches: [main]
+    branches: [develop]
 
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
 
 jobs:
-  # Format check
+  # Format check (~30s)
   fmt:
     name: Format
     runs-on: ubuntu-latest
@@ -33,7 +36,7 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all --check
 
-  # Linting with clippy
+  # Linting with clippy (~1 min)
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
@@ -46,7 +49,7 @@ jobs:
       - name: Run clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
 
-  # Unit tests
+  # Unit tests (~1 min)
   test-unit:
     name: Unit Tests
     runs-on: ubuntu-latest
@@ -57,32 +60,18 @@ jobs:
       - name: Run unit tests
         run: cargo test --lib
 
-  # Integration tests (IQ/OQ/PQ)
-  test-integration:
-    name: Integration Tests (${{ matrix.test }})
+  # Linux IQ smoke test (~1 min)
+  test-iq-smoke:
+    name: IQ Smoke Test (Linux)
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        test: [iq_installation, oq_us1_blocking, oq_us2_injection, oq_us3_validators, oq_us4_permissions, oq_us5_logging, pq_performance]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - name: Set up Python (for validators)
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Run integration test
-        run: cargo test --test ${{ matrix.test }}
-      - name: Upload test evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-evidence-${{ matrix.test }}
-          path: cch_cli/target/test-evidence/
-          if-no-files-found: ignore
+      - name: Run IQ tests
+        run: cargo test iq_ -- --nocapture
 
-  # Code coverage
+  # Code coverage (informational, ~2 min)
   coverage:
     name: Code Coverage
     runs-on: ubuntu-latest
@@ -113,38 +102,11 @@ jobs:
           name: coverage-report
           path: lcov.info
 
-  # Build release binary
-  build:
-    name: Build Release
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-          - os: macos-latest
-            target: x86_64-apple-darwin
-          - os: macos-latest
-            target: aarch64-apple-darwin
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
-      - uses: Swatinem/rust-cache@v2
-      - name: Build release
-        run: cargo build --release --target ${{ matrix.target }}
-      - name: Upload binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: cch-${{ matrix.target }}
-          path: target/${{ matrix.target }}/release/cch
-
   # Summary job that requires all others to pass
   ci-success:
-    name: CI Success
+    name: Fast CI Success
     runs-on: ubuntu-latest
-    needs: [fmt, clippy, test-unit, test-integration, coverage, build]
+    needs: [fmt, clippy, test-unit, test-iq-smoke]
     if: always()
     steps:
       - name: Check all jobs passed
@@ -152,9 +114,8 @@ jobs:
           if [[ "${{ needs.fmt.result }}" != "success" ]] || \
              [[ "${{ needs.clippy.result }}" != "success" ]] || \
              [[ "${{ needs.test-unit.result }}" != "success" ]] || \
-             [[ "${{ needs.test-integration.result }}" != "success" ]] || \
-             [[ "${{ needs.build.result }}" != "success" ]]; then
-            echo "One or more jobs failed"
+             [[ "${{ needs.test-iq-smoke.result }}" != "success" ]]; then
+            echo "One or more Fast CI jobs failed"
             exit 1
           fi
-          echo "All CI jobs passed successfully"
+          echo "All Fast CI jobs passed successfully"

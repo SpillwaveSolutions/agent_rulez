@@ -1,22 +1,28 @@
-# Combined IQ/OQ/PQ Validation Workflow
+# Full IQ/OQ/PQ Validation Workflow
 #
 # Orchestrates the full validation sequence:
 # 1. IQ (Installation Qualification) - Cross-platform installation verification
 # 2. OQ (Operational Qualification) - Functional testing of all features
 # 3. PQ (Performance Qualification) - Performance benchmarks and limits
 #
-# This workflow serves as the release gate - all phases must pass.
+# This workflow serves as the RELEASE GATE - all phases must pass.
+# Only runs on PRs to main, release tags, or manual dispatch.
+#
+# For daily development, use Fast CI (ci.yml) which runs on develop.
 #
 # Reference: docs/IQ_OQ_PQ_IntegrationTesting.md
+# Reference: docs/devops/CI_TIERS.md
 
-name: IQ/OQ/PQ Validation
+name: Full Validation
 
 on:
-  push:
-    branches: [main]
-    tags: ['v*']
+  # Only PRs targeting main trigger full validation
   pull_request:
     branches: [main]
+  # Release tags trigger full validation
+  push:
+    tags: ['v*']
+  # Manual trigger for formal validation runs
   workflow_dispatch:
     inputs:
       skip_iq:
