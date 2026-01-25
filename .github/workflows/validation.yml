@@ -68,7 +68,9 @@ jobs:
   iq-macos-intel:
     name: IQ - macOS Intel
     if: ${{ github.event.inputs.skip_iq != 'true' }}
-    runs-on: macos-13
+    # Note: macos-13 was retired Jan 2026 (see actions/runner-images#13046)
+    # Using macos-15-intel - last supported x86_64 image (until Aug 2027)
+    runs-on: macos-15-intel
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
