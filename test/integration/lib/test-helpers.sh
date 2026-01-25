@@ -238,30 +238,64 @@ log_contains_since() {
 # Claude CLI Invocation
 # ============================================================================
 
+# Default timeout for Claude CLI calls (in seconds)
+# Override with CLAUDE_TIMEOUT environment variable
+CLAUDE_TIMEOUT="${CLAUDE_TIMEOUT:-60}"
+
+# Get the timeout command (gtimeout on macOS via coreutils, timeout on Linux)
+get_timeout_cmd() {
+    if command -v timeout &> /dev/null; then
+        echo "timeout"
+    elif command -v gtimeout &> /dev/null; then
+        echo "gtimeout"
+    else
+        echo ""
+    fi
+}
+
 # Run Claude CLI with a prompt in a specific directory
 # Usage: run_claude <workspace> <prompt> [allowed_tools] [max_turns]
 # Returns: exit code, stdout captured in CLAUDE_STDOUT, stderr in CLAUDE_STDERR
+# Exit codes:
+#   0   - Success
+#   124 - Timeout (Claude did not respond in time)
+#   Other - Claude CLI error
 run_claude() {
     local workspace="$1"
     local prompt="$2"
     local allowed_tools="${3:-Bash Read Write Edit Glob}"
     local max_turns="${4:-3}"
+    local timeout_seconds="${CLAUDE_TIMEOUT}"
+    local timeout_cmd=$(get_timeout_cmd)
     
     echo -e "  ${BLUE}*${NC} Running Claude CLI..."
     echo -e "      Prompt - $prompt"
     echo -e "      Tools - $allowed_tools"
     echo -e "      Max turns - $max_turns"
+    echo -e "      Timeout - ${timeout_seconds}s"
     
     # Capture stdout and stderr separately
     local stdout_file=$(mktemp)
     local stderr_file=$(mktemp)
     
     local exit_code=0
-    (cd "$workspace" && claude -p "$prompt" \
-        --allowedTools $allowed_tools \
-        --max-turns "$max_turns" \
-        --output-format text \
-        > "$stdout_file" 2> "$stderr_file") || exit_code=$?
+    
+    if [ -n "$timeout_cmd" ]; then
+        # Use timeout command if available
+        (cd "$workspace" && "$timeout_cmd" "$timeout_seconds" claude -p "$prompt" \
+            --allowedTools $allowed_tools \
+            --max-turns "$max_turns" \
+            --output-format text \
+            > "$stdout_file" 2> "$stderr_file") || exit_code=$?
+    else
+        # Fallback: run without timeout (warn user)
+        echo -e "  ${YELLOW}!${NC} Warning: timeout command not available, running without timeout"
+        (cd "$workspace" && claude -p "$prompt" \
+            --allowedTools $allowed_tools \
+            --max-turns "$max_turns" \
+            --output-format text \
+            > "$stdout_file" 2> "$stderr_file") || exit_code=$?
+    fi
     
     CLAUDE_STDOUT=$(cat "$stdout_file")
     CLAUDE_STDERR=$(cat "$stderr_file")
@@ -270,6 +304,9 @@ run_claude() {
     
     if [ $exit_code -eq 0 ]; then
         echo -e "  ${GREEN}+${NC} Claude completed successfully"
+    elif [ $exit_code -eq 124 ]; then
+        echo -e "  ${RED}x${NC} TIMEOUT: Claude CLI did not respond within ${timeout_seconds}s"
+        CLAUDE_STDERR="TIMEOUT: Claude CLI exceeded ${timeout_seconds}s timeout"
     else
         echo -e "  ${YELLOW}!${NC} Claude exited with code $exit_code"
     fi
