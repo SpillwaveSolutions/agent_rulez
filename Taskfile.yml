@@ -118,6 +118,38 @@ tasks:
       - task: test
       - task: integration-test
 
+  # ===========================================================================
+  # IQ/OQ/PQ Validation Tasks
+  # ===========================================================================
+
+  collect-iq:
+    desc: Collect Installation Qualification evidence
+    cmds:
+      - ./scripts/collect-iq-evidence.sh --release
+
+  collect-oq:
+    desc: Collect Operational Qualification evidence
+    cmds:
+      - ./scripts/collect-oq-evidence.sh --release
+
+  collect-pq:
+    desc: Collect Performance Qualification evidence
+    cmds:
+      - ./scripts/collect-pq-evidence.sh --release
+
+  collect-all:
+    desc: Collect all IQ/OQ/PQ evidence
+    cmds:
+      - task: collect-iq
+      - task: collect-oq
+      - task: collect-pq
+      - ./scripts/generate-validation-report.sh
+
+  validation-report:
+    desc: Generate combined validation report from existing evidence
+    cmds:
+      - ./scripts/generate-validation-report.sh
+
   coverage:
     desc: Generate test coverage report
     dir: "{{.CCH_CLI_DIR}}"

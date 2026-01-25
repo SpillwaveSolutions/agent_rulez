@@ -76,8 +76,8 @@
 - [x] Bash integration tests (`./test/integration/run-all.sh`)
 - [x] Taskfile integration (`task integration-test`)
 - [x] Strict assertion mode (`task integration-test-strict` or `--strict` flag)
-- [ ] CI/CD workflow
-- [ ] Evidence collection scripts
+- [x] CI/CD workflow (`iq-validation.yml`, `validation.yml`)
+- [x] Evidence collection scripts (`scripts/collect-*.sh`)
 - [x] Debug vs release threshold handling
 
 ### 2.3 Known Implementation Gaps
@@ -85,12 +85,12 @@
 | GAP-ID | Description | Severity | Resolution |
 |--------|-------------|----------|------------|
 | GAP-001 | Soft assertions in integration tests | High | ✅ RESOLVED: Added `--strict` mode (#59) |
-| GAP-002 | No CI/CD workflow for IQ/OQ/PQ | High | Create GitHub Actions |
+| GAP-002 | No CI/CD workflow for IQ/OQ/PQ | High | ✅ RESOLVED: Added validation workflows (#57, #58) |
 | GAP-003 | No timeout on Claude CLI calls | Medium | ✅ RESOLVED: Added 60s timeout (#60) |
-| GAP-004 | No memory usage tests | Medium | Add pq_memory.rs |
-| GAP-005 | No stress/endurance tests | Medium | Add pq_stress.rs |
-| GAP-006 | Limited cross-platform IQ | Medium | Add CI runners |
-| GAP-007 | No evidence collection automation | Medium | Add scripts |
+| GAP-004 | No memory usage tests | Medium | ✅ RESOLVED: Added pq_memory.rs (#61) |
+| GAP-005 | No stress/endurance tests | Medium | Deferred (not critical for v1) |
+| GAP-006 | Limited cross-platform IQ | Medium | ✅ RESOLVED: 4-platform CI (#57) |
+| GAP-007 | No evidence collection automation | Medium | ✅ RESOLVED: Added scripts (#62) |
 
 ---
 

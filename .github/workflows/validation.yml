@@ -1,0 +1,360 @@
+# Combined IQ/OQ/PQ Validation Workflow
+#
+# Orchestrates the full validation sequence:
+# 1. IQ (Installation Qualification) - Cross-platform installation verification
+# 2. OQ (Operational Qualification) - Functional testing of all features
+# 3. PQ (Performance Qualification) - Performance benchmarks and limits
+#
+# This workflow serves as the release gate - all phases must pass.
+#
+# Reference: docs/IQ_OQ_PQ_IntegrationTesting.md
+
+name: IQ/OQ/PQ Validation
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      skip_iq:
+        description: 'Skip IQ tests (use for quick OQ/PQ validation)'
+        type: boolean
+        default: false
+      strict_mode:
+        description: 'Use strict mode for integration tests'
+        type: boolean
+        default: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  STRICT_MODE: ${{ github.event.inputs.strict_mode == 'true' && '1' || '0' }}
+
+jobs:
+  # ============================================================================
+  # Phase 1: Installation Qualification (IQ)
+  # ============================================================================
+  
+  iq-macos-arm64:
+    name: IQ - macOS ARM64
+    if: ${{ github.event.inputs.skip_iq != 'true' }}
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+      - uses: Swatinem/rust-cache@v2
+      - name: Build and test
+        run: |
+          cargo build --release --target aarch64-apple-darwin
+          cargo test --release iq_ -- --nocapture 2>&1 | tee iq-output.log
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: iq-macos-arm64
+          path: iq-output.log
+
+  iq-macos-intel:
+    name: IQ - macOS Intel
+    if: ${{ github.event.inputs.skip_iq != 'true' }}
+    runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin
+      - uses: Swatinem/rust-cache@v2
+      - name: Build and test
+        run: |
+          cargo build --release --target x86_64-apple-darwin
+          cargo test --release iq_ -- --nocapture 2>&1 | tee iq-output.log
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: iq-macos-intel
+          path: iq-output.log
+
+  iq-linux:
+    name: IQ - Linux
+    if: ${{ github.event.inputs.skip_iq != 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build and test
+        run: |
+          cargo build --release
+          cargo test --release iq_ -- --nocapture 2>&1 | tee iq-output.log
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: iq-linux
+          path: iq-output.log
+
+  iq-windows:
+    name: IQ - Windows
+    if: ${{ github.event.inputs.skip_iq != 'true' }}
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build and test
+        shell: pwsh
+        run: |
+          cargo build --release
+          cargo test --release iq_ -- --nocapture 2>&1 | Tee-Object -FilePath iq-output.log
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: iq-windows
+          path: iq-output.log
+
+  # ============================================================================
+  # Phase 2: Operational Qualification (OQ)
+  # ============================================================================
+  
+  oq:
+    name: OQ - Operational Tests
+    runs-on: ubuntu-latest
+    needs: [iq-linux]
+    if: always() && (needs.iq-linux.result == 'success' || github.event.inputs.skip_iq == 'true')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      
+      - name: Set up Python (for validators)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Build release binary
+        run: cargo build --release
+      
+      - name: Run OQ tests - Blocking (US1)
+        run: cargo test --release oq_us1 -- --nocapture 2>&1 | tee oq-us1.log
+      
+      - name: Run OQ tests - Injection (US2)
+        run: cargo test --release oq_us2 -- --nocapture 2>&1 | tee oq-us2.log
+      
+      - name: Run OQ tests - Validators (US3)
+        run: cargo test --release oq_us3 -- --nocapture 2>&1 | tee oq-us3.log
+      
+      - name: Run OQ tests - Permissions (US4)
+        run: cargo test --release oq_us4 -- --nocapture 2>&1 | tee oq-us4.log
+      
+      - name: Run OQ tests - Logging (US5)
+        run: cargo test --release oq_us5 -- --nocapture 2>&1 | tee oq-us5.log
+      
+      - name: Combine OQ evidence
+        if: always()
+        run: |
+          mkdir -p evidence/oq
+          echo "# OQ Test Results" > evidence/oq/report.md
+          echo "" >> evidence/oq/report.md
+          echo "**Date:** $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> evidence/oq/report.md
+          echo "" >> evidence/oq/report.md
+          for log in oq-*.log; do
+            echo "## $(basename $log .log)" >> evidence/oq/report.md
+            echo '```' >> evidence/oq/report.md
+            cat $log >> evidence/oq/report.md
+            echo '```' >> evidence/oq/report.md
+            echo "" >> evidence/oq/report.md
+          done
+          cp oq-*.log evidence/oq/
+      
+      - name: Upload OQ evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oq-evidence
+          path: evidence/oq/
+
+  # ============================================================================
+  # Phase 3: Performance Qualification (PQ)
+  # ============================================================================
+  
+  pq:
+    name: PQ - Performance Tests
+    runs-on: ubuntu-latest
+    needs: [oq]
+    if: always() && needs.oq.result == 'success'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      
+      - name: Build release binary
+        run: cargo build --release
+      
+      - name: Run PQ performance tests
+        run: cargo test --release pq_ -- --nocapture 2>&1 | tee pq-performance.log
+      
+      - name: Measure binary size
+        run: |
+          echo "# Binary Size Analysis" > pq-binary-size.log
+          ls -lh target/release/cch >> pq-binary-size.log
+          size target/release/cch >> pq-binary-size.log 2>/dev/null || true
+      
+      - name: Run cold start benchmark
+        run: |
+          echo "# Cold Start Benchmarks" > pq-cold-start.log
+          for i in {1..5}; do
+            echo "Run $i:" >> pq-cold-start.log
+            { time ./target/release/cch --version; } 2>&1 | grep real >> pq-cold-start.log
+          done
+      
+      - name: Combine PQ evidence
+        if: always()
+        run: |
+          mkdir -p evidence/pq
+          echo "# PQ Test Results" > evidence/pq/report.md
+          echo "" >> evidence/pq/report.md
+          echo "**Date:** $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> evidence/pq/report.md
+          echo "" >> evidence/pq/report.md
+          for log in pq-*.log; do
+            echo "## $(basename $log .log)" >> evidence/pq/report.md
+            echo '```' >> evidence/pq/report.md
+            cat $log >> evidence/pq/report.md
+            echo '```' >> evidence/pq/report.md
+            echo "" >> evidence/pq/report.md
+          done
+          cp pq-*.log evidence/pq/
+      
+      - name: Upload PQ evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pq-evidence
+          path: evidence/pq/
+
+  # ============================================================================
+  # Validation Report
+  # ============================================================================
+  
+  validation-report:
+    name: Generate Validation Report
+    runs-on: ubuntu-latest
+    needs: [iq-macos-arm64, iq-macos-intel, iq-linux, iq-windows, oq, pq]
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+      
+      - name: Generate validation report
+        run: |
+          mkdir -p validation-report
+          
+          # Get version from Cargo.toml
+          VERSION=$(grep '^version' cch_cli/Cargo.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          
+          cat > validation-report/VALIDATION_REPORT.md << 'REPORT_HEADER'
+          # CCH Validation Report
+          
+          **Product:** Claude Context Hooks (CCH)
+          **Version:** VERSION_PLACEHOLDER
+          **Date:** DATE_PLACEHOLDER
+          **Workflow Run:** RUN_ID_PLACEHOLDER
+          
+          ---
+          
+          ## Executive Summary
+          
+          This report documents the Installation Qualification (IQ), Operational Qualification (OQ),
+          and Performance Qualification (PQ) validation results for CCH.
+          
+          ## Validation Results
+          
+          ### Installation Qualification (IQ)
+          
+          | Platform | Status |
+          |----------|--------|
+          | macOS ARM64 | IQ_ARM64_STATUS |
+          | macOS Intel | IQ_INTEL_STATUS |
+          | Linux | IQ_LINUX_STATUS |
+          | Windows | IQ_WINDOWS_STATUS |
+          
+          ### Operational Qualification (OQ)
+          
+          | Test Suite | Status |
+          |------------|--------|
+          | OQ Tests | OQ_STATUS |
+          
+          ### Performance Qualification (PQ)
+          
+          | Test Suite | Status |
+          |------------|--------|
+          | PQ Tests | PQ_STATUS |
+          
+          ---
+          
+          ## Conclusion
+          
+          CONCLUSION_PLACEHOLDER
+          
+          ---
+          
+          *This report was automatically generated by the IQ/OQ/PQ Validation Workflow.*
+          REPORT_HEADER
+          
+          # Replace placeholders
+          sed -i "s/VERSION_PLACEHOLDER/$VERSION/" validation-report/VALIDATION_REPORT.md
+          sed -i "s/DATE_PLACEHOLDER/$(date -u +%Y-%m-%dT%H:%M:%SZ)/" validation-report/VALIDATION_REPORT.md
+          sed -i "s/RUN_ID_PLACEHOLDER/${{ github.run_id }}/" validation-report/VALIDATION_REPORT.md
+          
+          # Status replacements
+          sed -i "s/IQ_ARM64_STATUS/${{ needs.iq-macos-arm64.result == 'success' && '✅ Pass' || (needs.iq-macos-arm64.result == 'skipped' && '⏭️ Skipped' || '❌ Fail') }}/" validation-report/VALIDATION_REPORT.md
+          sed -i "s/IQ_INTEL_STATUS/${{ needs.iq-macos-intel.result == 'success' && '✅ Pass' || (needs.iq-macos-intel.result == 'skipped' && '⏭️ Skipped' || '❌ Fail') }}/" validation-report/VALIDATION_REPORT.md
+          sed -i "s/IQ_LINUX_STATUS/${{ needs.iq-linux.result == 'success' && '✅ Pass' || (needs.iq-linux.result == 'skipped' && '⏭️ Skipped' || '❌ Fail') }}/" validation-report/VALIDATION_REPORT.md
+          sed -i "s/IQ_WINDOWS_STATUS/${{ needs.iq-windows.result == 'success' && '✅ Pass' || (needs.iq-windows.result == 'skipped' && '⏭️ Skipped' || '❌ Fail') }}/" validation-report/VALIDATION_REPORT.md
+          sed -i "s/OQ_STATUS/${{ needs.oq.result == 'success' && '✅ Pass' || '❌ Fail' }}/" validation-report/VALIDATION_REPORT.md
+          sed -i "s/PQ_STATUS/${{ needs.pq.result == 'success' && '✅ Pass' || '❌ Fail' }}/" validation-report/VALIDATION_REPORT.md
+          
+          # Conclusion
+          if [[ "${{ needs.oq.result }}" == "success" && "${{ needs.pq.result }}" == "success" ]]; then
+            sed -i "s/CONCLUSION_PLACEHOLDER/All validation phases completed successfully. CCH is qualified for release./" validation-report/VALIDATION_REPORT.md
+          else
+            sed -i "s/CONCLUSION_PLACEHOLDER/One or more validation phases failed. Review failures before release./" validation-report/VALIDATION_REPORT.md
+          fi
+          
+          cat validation-report/VALIDATION_REPORT.md
+      
+      - name: Upload validation report
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-report
+          path: validation-report/
+      
+      - name: Check validation status
+        run: |
+          # OQ and PQ must pass for validation to succeed
+          if [[ "${{ needs.oq.result }}" != "success" ]] || \
+             [[ "${{ needs.pq.result }}" != "success" ]]; then
+            echo "::error::Validation failed - OQ or PQ did not pass"
+            exit 1
+          fi
+          
+          # At least one IQ platform must pass (unless all skipped)
+          if [[ "${{ github.event.inputs.skip_iq }}" != "true" ]]; then
+            if [[ "${{ needs.iq-linux.result }}" != "success" ]] && \
+               [[ "${{ needs.iq-macos-arm64.result }}" != "success" ]]; then
+              echo "::error::Validation failed - No IQ platform passed"
+              exit 1
+            fi
+          fi
+          
+          echo "Validation completed successfully"

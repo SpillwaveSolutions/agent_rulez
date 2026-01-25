@@ -1,0 +1,316 @@
+# Installation Qualification (IQ) Validation Workflow
+#
+# Validates CCH installation and basic functionality across all supported platforms.
+# This is the first phase of IQ/OQ/PQ validation framework.
+#
+# Platforms tested:
+# - macOS ARM64 (M1/M2/M3)
+# - macOS Intel (x86_64)
+# - Linux (Ubuntu)
+# - Windows (x64)
+#
+# Reference: docs/IQ_OQ_PQ_IntegrationTesting.md
+
+name: IQ Validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      evidence_collection:
+        description: 'Collect formal evidence for validation report'
+        type: boolean
+        default: false
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # IQ-001: macOS ARM64 Installation Qualification
+  iq-macos-arm64:
+    name: IQ - macOS ARM64
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+      
+      - uses: Swatinem/rust-cache@v2
+      
+      - name: Verify platform
+        run: |
+          echo "=== Platform Verification ==="
+          uname -a
+          sysctl -n machdep.cpu.brand_string || echo "ARM processor"
+          rustc --version
+          cargo --version
+      
+      - name: Build CCH
+        run: cargo build --release --target aarch64-apple-darwin
+      
+      - name: Run IQ tests
+        run: |
+          cargo test --release iq_ -- --nocapture 2>&1 | tee iq-test-output.log
+      
+      - name: Collect evidence
+        if: always()
+        run: |
+          mkdir -p evidence/iq-macos-arm64
+          echo "# IQ Evidence - macOS ARM64" > evidence/iq-macos-arm64/report.md
+          echo "" >> evidence/iq-macos-arm64/report.md
+          echo "**Date:** $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> evidence/iq-macos-arm64/report.md
+          echo "**Platform:** macOS ARM64" >> evidence/iq-macos-arm64/report.md
+          echo "**Runner:** macos-14" >> evidence/iq-macos-arm64/report.md
+          echo "**Rust Version:** $(rustc --version)" >> evidence/iq-macos-arm64/report.md
+          echo "" >> evidence/iq-macos-arm64/report.md
+          echo "## Test Output" >> evidence/iq-macos-arm64/report.md
+          echo '```' >> evidence/iq-macos-arm64/report.md
+          cat iq-test-output.log >> evidence/iq-macos-arm64/report.md
+          echo '```' >> evidence/iq-macos-arm64/report.md
+          
+          # Environment info
+          uname -a > evidence/iq-macos-arm64/environment.txt
+          rustc --version >> evidence/iq-macos-arm64/environment.txt
+          cargo --version >> evidence/iq-macos-arm64/environment.txt
+          
+          cp iq-test-output.log evidence/iq-macos-arm64/
+      
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: iq-evidence-macos-arm64
+          path: evidence/iq-macos-arm64/
+
+  # IQ-002: macOS Intel Installation Qualification
+  iq-macos-intel:
+    name: IQ - macOS Intel
+    runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin
+      
+      - uses: Swatinem/rust-cache@v2
+      
+      - name: Verify platform
+        run: |
+          echo "=== Platform Verification ==="
+          uname -a
+          sysctl -n machdep.cpu.brand_string
+          rustc --version
+          cargo --version
+      
+      - name: Build CCH
+        run: cargo build --release --target x86_64-apple-darwin
+      
+      - name: Run IQ tests
+        run: |
+          cargo test --release iq_ -- --nocapture 2>&1 | tee iq-test-output.log
+      
+      - name: Collect evidence
+        if: always()
+        run: |
+          mkdir -p evidence/iq-macos-intel
+          echo "# IQ Evidence - macOS Intel" > evidence/iq-macos-intel/report.md
+          echo "" >> evidence/iq-macos-intel/report.md
+          echo "**Date:** $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> evidence/iq-macos-intel/report.md
+          echo "**Platform:** macOS Intel (x86_64)" >> evidence/iq-macos-intel/report.md
+          echo "**Runner:** macos-13" >> evidence/iq-macos-intel/report.md
+          echo "**Rust Version:** $(rustc --version)" >> evidence/iq-macos-intel/report.md
+          echo "" >> evidence/iq-macos-intel/report.md
+          echo "## Test Output" >> evidence/iq-macos-intel/report.md
+          echo '```' >> evidence/iq-macos-intel/report.md
+          cat iq-test-output.log >> evidence/iq-macos-intel/report.md
+          echo '```' >> evidence/iq-macos-intel/report.md
+          
+          uname -a > evidence/iq-macos-intel/environment.txt
+          rustc --version >> evidence/iq-macos-intel/environment.txt
+          cargo --version >> evidence/iq-macos-intel/environment.txt
+          
+          cp iq-test-output.log evidence/iq-macos-intel/
+      
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: iq-evidence-macos-intel
+          path: evidence/iq-macos-intel/
+
+  # IQ-004: Linux Installation Qualification
+  iq-linux:
+    name: IQ - Linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      
+      - uses: Swatinem/rust-cache@v2
+      
+      - name: Verify platform
+        run: |
+          echo "=== Platform Verification ==="
+          uname -a
+          cat /etc/os-release
+          rustc --version
+          cargo --version
+      
+      - name: Build CCH
+        run: cargo build --release
+      
+      - name: Run IQ tests
+        run: |
+          cargo test --release iq_ -- --nocapture 2>&1 | tee iq-test-output.log
+      
+      - name: Collect evidence
+        if: always()
+        run: |
+          mkdir -p evidence/iq-linux
+          echo "# IQ Evidence - Linux" > evidence/iq-linux/report.md
+          echo "" >> evidence/iq-linux/report.md
+          echo "**Date:** $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> evidence/iq-linux/report.md
+          echo "**Platform:** Linux (Ubuntu)" >> evidence/iq-linux/report.md
+          echo "**Runner:** ubuntu-latest" >> evidence/iq-linux/report.md
+          echo "**Rust Version:** $(rustc --version)" >> evidence/iq-linux/report.md
+          echo "" >> evidence/iq-linux/report.md
+          echo "## Test Output" >> evidence/iq-linux/report.md
+          echo '```' >> evidence/iq-linux/report.md
+          cat iq-test-output.log >> evidence/iq-linux/report.md
+          echo '```' >> evidence/iq-linux/report.md
+          
+          uname -a > evidence/iq-linux/environment.txt
+          cat /etc/os-release >> evidence/iq-linux/environment.txt
+          rustc --version >> evidence/iq-linux/environment.txt
+          cargo --version >> evidence/iq-linux/environment.txt
+          
+          cp iq-test-output.log evidence/iq-linux/
+      
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: iq-evidence-linux
+          path: evidence/iq-linux/
+
+  # IQ-003: Windows Installation Qualification
+  iq-windows:
+    name: IQ - Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      
+      - uses: Swatinem/rust-cache@v2
+      
+      - name: Verify platform
+        shell: pwsh
+        run: |
+          Write-Host "=== Platform Verification ==="
+          [System.Environment]::OSVersion
+          rustc --version
+          cargo --version
+      
+      - name: Build CCH
+        run: cargo build --release
+      
+      - name: Run IQ tests
+        shell: pwsh
+        run: |
+          cargo test --release iq_ -- --nocapture 2>&1 | Tee-Object -FilePath iq-test-output.log
+      
+      - name: Collect evidence
+        if: always()
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path evidence/iq-windows
+          
+          $report = @"
+          # IQ Evidence - Windows
+          
+          **Date:** $(Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+          **Platform:** Windows x64
+          **Runner:** windows-latest
+          **Rust Version:** $(rustc --version)
+          
+          ## Test Output
+          ``````
+          $(Get-Content iq-test-output.log -Raw)
+          ``````
+          "@
+          $report | Out-File -FilePath evidence/iq-windows/report.md -Encoding utf8
+          
+          [System.Environment]::OSVersion | Out-File -FilePath evidence/iq-windows/environment.txt
+          rustc --version | Add-Content evidence/iq-windows/environment.txt
+          cargo --version | Add-Content evidence/iq-windows/environment.txt
+          
+          Copy-Item iq-test-output.log evidence/iq-windows/
+      
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: iq-evidence-windows
+          path: evidence/iq-windows/
+
+  # Summary job
+  iq-summary:
+    name: IQ Summary
+    runs-on: ubuntu-latest
+    needs: [iq-macos-arm64, iq-macos-intel, iq-linux, iq-windows]
+    if: always()
+    steps:
+      - name: Download all evidence
+        uses: actions/download-artifact@v4
+        with:
+          pattern: iq-evidence-*
+          path: all-evidence/
+          merge-multiple: false
+      
+      - name: Generate IQ summary
+        run: |
+          echo "# IQ Validation Summary" > iq-summary.md
+          echo "" >> iq-summary.md
+          echo "**Date:** $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> iq-summary.md
+          echo "**Workflow Run:** ${{ github.run_id }}" >> iq-summary.md
+          echo "" >> iq-summary.md
+          echo "## Platform Results" >> iq-summary.md
+          echo "" >> iq-summary.md
+          echo "| Platform | Status |" >> iq-summary.md
+          echo "|----------|--------|" >> iq-summary.md
+          echo "| macOS ARM64 | ${{ needs.iq-macos-arm64.result == 'success' && '✅ Pass' || '❌ Fail' }} |" >> iq-summary.md
+          echo "| macOS Intel | ${{ needs.iq-macos-intel.result == 'success' && '✅ Pass' || '❌ Fail' }} |" >> iq-summary.md
+          echo "| Linux | ${{ needs.iq-linux.result == 'success' && '✅ Pass' || '❌ Fail' }} |" >> iq-summary.md
+          echo "| Windows | ${{ needs.iq-windows.result == 'success' && '✅ Pass' || '❌ Fail' }} |" >> iq-summary.md
+          
+          cat iq-summary.md
+      
+      - name: Upload summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: iq-validation-summary
+          path: iq-summary.md
+      
+      - name: Check all platforms passed
+        run: |
+          if [[ "${{ needs.iq-macos-arm64.result }}" != "success" ]] || \
+             [[ "${{ needs.iq-macos-intel.result }}" != "success" ]] || \
+             [[ "${{ needs.iq-linux.result }}" != "success" ]] || \
+             [[ "${{ needs.iq-windows.result }}" != "success" ]]; then
+            echo "::error::One or more IQ validation jobs failed"
+            exit 1
+          fi
+          echo "All IQ validation jobs passed"
