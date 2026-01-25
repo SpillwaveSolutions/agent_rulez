@@ -9,8 +9,8 @@ use crate::config::Config;
 use crate::logging::log_entry;
 use crate::models::LogMetadata;
 use crate::models::{
-    DebugConfig, Event, EventDetails, LogEntry, LogTiming, MatcherResults, Outcome, Response,
-    ResponseSummary, Rule, RuleEvaluation, Timing,
+    DebugConfig, Decision, Event, EventDetails, LogEntry, LogTiming, MatcherResults, Outcome,
+    PolicyMode, Response, ResponseSummary, Rule, RuleEvaluation, Timing,
 };
 
 /// Process a hook event and return the appropriate response
@@ -82,6 +82,7 @@ pub async fn process_event(event: Event, debug_config: &DebugConfig) -> Result<R
 }
 
 /// Evaluate all enabled rules against an event
+/// Rules are sorted by priority (higher first) by config.enabled_rules()
 async fn evaluate_rules<'a>(
     event: &'a Event,
     config: &'a Config,
@@ -91,6 +92,7 @@ async fn evaluate_rules<'a>(
     let mut response = Response::allow();
     let mut rule_evaluations = Vec::new();
 
+    // Get enabled rules (already sorted by priority in Config::enabled_rules)
     for rule in config.enabled_rules() {
         let (matched, matcher_results) = if debug_config.enabled {
             matches_rule_with_debug(event, rule)
@@ -108,11 +110,12 @@ async fn evaluate_rules<'a>(
         if matched {
             matched_rules.push(rule);
 
-            // Execute rule actions
-            let rule_response = execute_rule_actions(event, rule, config).await?;
+            // Execute rule actions based on mode (Phase 2 Governance)
+            let mode = rule.effective_mode();
+            let rule_response = execute_rule_actions_with_mode(event, rule, config, mode).await?;
 
-            // Merge responses (block takes precedence, inject accumulates)
-            response = merge_responses(response, rule_response);
+            // Merge responses based on mode (block takes precedence, inject accumulates)
+            response = merge_responses_with_mode(response, rule_response, mode);
         }
     }
 
@@ -479,6 +482,165 @@ fn merge_responses(mut existing: Response, new: Response) -> Response {
     existing
 }
 
+// =============================================================================
+// Phase 2 Governance: Mode-Based Action Execution
+// =============================================================================
+
+/// Execute rule actions respecting the policy mode
+///
+/// Mode behavior:
+/// - Enforce: Normal execution (block, inject, run validators)
+/// - Warn: Never blocks, injects warning context instead
+/// - Audit: Logs only, no blocking or injection
+async fn execute_rule_actions_with_mode(
+    event: &Event,
+    rule: &Rule,
+    config: &Config,
+    mode: PolicyMode,
+) -> Result<Response> {
+    match mode {
+        PolicyMode::Enforce => {
+            // Normal execution - delegate to existing function
+            execute_rule_actions(event, rule, config).await
+        }
+        PolicyMode::Warn => {
+            // Never block, inject warning instead
+            execute_rule_actions_warn_mode(event, rule, config).await
+        }
+        PolicyMode::Audit => {
+            // Log only, no blocking or injection
+            Ok(Response::allow())
+        }
+    }
+}
+
+/// Execute rule actions in warn mode (never blocks, injects warnings)
+async fn execute_rule_actions_warn_mode(
+    event: &Event,
+    rule: &Rule,
+    config: &Config,
+) -> Result<Response> {
+    let actions = &rule.actions;
+
+    // Convert blocks to warnings
+    if let Some(block) = actions.block {
+        if block {
+            let warning = format!(
+                "[WARNING] Rule '{}' would block this operation: {}\n\
+                 This rule is in 'warn' mode - operation will proceed.",
+                rule.name,
+                rule.description.as_deref().unwrap_or("No description")
+            );
+            return Ok(Response::inject(warning));
+        }
+    }
+
+    // Convert conditional blocks to warnings
+    if let Some(ref pattern) = actions.block_if_match {
+        if let Some(ref tool_input) = event.tool_input {
+            if let Some(content) = tool_input
+                .get("newString")
+                .or_else(|| tool_input.get("content"))
+                .and_then(|c| c.as_str())
+            {
+                if let Ok(regex) = Regex::new(pattern) {
+                    if regex.is_match(content) {
+                        let warning = format!(
+                            "[WARNING] Rule '{}' would block this content (matches pattern '{}').\n\
+                             This rule is in 'warn' mode - operation will proceed.",
+                            rule.name, pattern
+                        );
+                        return Ok(Response::inject(warning));
+                    }
+                }
+            }
+        }
+    }
+
+    // Context injection still works in warn mode
+    if let Some(ref inject_path) = actions.inject {
+        match read_context_file(inject_path).await {
+            Ok(context) => {
+                return Ok(Response::inject(context));
+            }
+            Err(e) => {
+                tracing::warn!("Failed to read context file '{}': {}", inject_path, e);
+            }
+        }
+    }
+
+    // Script execution - convert blocks to warnings
+    if let Some(ref script_path) = actions.run {
+        match execute_validator_script(event, script_path, rule, config).await {
+            Ok(script_response) => {
+                if !script_response.continue_ {
+                    // Convert block to warning
+                    let warning = format!(
+                        "[WARNING] Validator script '{}' would block this operation: {}\n\
+                         This rule is in 'warn' mode - operation will proceed.",
+                        script_path,
+                        script_response.reason.as_deref().unwrap_or("No reason")
+                    );
+                    return Ok(Response::inject(warning));
+                }
+                return Ok(script_response);
+            }
+            Err(e) => {
+                tracing::warn!("Script execution failed for rule '{}': {}", rule.name, e);
+                if !config.settings.fail_open {
+                    // Even in warn mode, respect fail_open setting
+                    return Err(e);
+                }
+            }
+        }
+    }
+
+    Ok(Response::allow())
+}
+
+/// Merge responses with mode awareness
+///
+/// Mode affects merge behavior:
+/// - Enforce: Normal merge (blocks take precedence)
+/// - Warn: Blocks become warnings (never blocks)
+/// - Audit: No merging (allow always)
+fn merge_responses_with_mode(existing: Response, new: Response, mode: PolicyMode) -> Response {
+    match mode {
+        PolicyMode::Enforce => {
+            // Normal merge behavior
+            merge_responses(existing, new)
+        }
+        PolicyMode::Warn | PolicyMode::Audit => {
+            // In warn/audit mode, new response should never block
+            // (execute_rule_actions_with_mode ensures this)
+            merge_responses(existing, new)
+        }
+    }
+}
+
+/// Determine the decision outcome based on response and mode
+#[allow(dead_code)] // Used in Phase 2.2 (enhanced logging)
+pub fn determine_decision(response: &Response, mode: PolicyMode) -> Decision {
+    match mode {
+        PolicyMode::Audit => Decision::Audited,
+        PolicyMode::Warn => {
+            if response.context.is_some() {
+                Decision::Warned
+            } else {
+                Decision::Allowed
+            }
+        }
+        PolicyMode::Enforce => {
+            if !response.continue_ {
+                Decision::Blocked
+            } else {
+                // Both injection and no-injection count as allowed
+                Decision::Allowed
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -575,5 +737,111 @@ mod tests {
         let merged = merge_responses(inject.clone(), inject.clone());
         assert!(merged.continue_);
         assert!(merged.context.as_ref().unwrap().contains("context"));
+    }
+
+    // =========================================================================
+    // Phase 2 Governance: Mode-Based Execution Tests
+    // =========================================================================
+
+    #[test]
+    fn test_determine_decision_enforce_blocked() {
+        let response = Response::block("blocked");
+        let decision = determine_decision(&response, PolicyMode::Enforce);
+        assert_eq!(decision, Decision::Blocked);
+    }
+
+    #[test]
+    fn test_determine_decision_enforce_allowed() {
+        let response = Response::allow();
+        let decision = determine_decision(&response, PolicyMode::Enforce);
+        assert_eq!(decision, Decision::Allowed);
+    }
+
+    #[test]
+    fn test_determine_decision_warn_mode() {
+        let response = Response::inject("warning context");
+        let decision = determine_decision(&response, PolicyMode::Warn);
+        assert_eq!(decision, Decision::Warned);
+    }
+
+    #[test]
+    fn test_determine_decision_audit_mode() {
+        // In audit mode, everything is Audited regardless of response
+        let response = Response::block("would block");
+        let decision = determine_decision(&response, PolicyMode::Audit);
+        assert_eq!(decision, Decision::Audited);
+    }
+
+    #[test]
+    fn test_merge_responses_with_mode_enforce() {
+        let allow = Response::allow();
+        let block = Response::block("blocked");
+
+        // In enforce mode, block takes precedence
+        let merged = merge_responses_with_mode(allow, block, PolicyMode::Enforce);
+        assert!(!merged.continue_);
+    }
+
+    #[test]
+    fn test_merge_responses_with_mode_warn() {
+        let allow = Response::allow();
+        let warning = Response::inject("warning");
+
+        // In warn mode, warnings accumulate but never block
+        let merged = merge_responses_with_mode(allow, warning, PolicyMode::Warn);
+        assert!(merged.continue_);
+        assert!(merged.context.is_some());
+    }
+
+    #[test]
+    fn test_rule_effective_mode_defaults_to_enforce() {
+        let rule = Rule {
+            name: "test".to_string(),
+            description: None,
+            matchers: Matchers {
+                tools: None,
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+            },
+            actions: Actions {
+                inject: None,
+                run: None,
+                block: None,
+                block_if_match: None,
+            },
+            mode: None, // No mode specified
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+        assert_eq!(rule.effective_mode(), PolicyMode::Enforce);
+    }
+
+    #[test]
+    fn test_rule_effective_mode_explicit_audit() {
+        let rule = Rule {
+            name: "test".to_string(),
+            description: None,
+            matchers: Matchers {
+                tools: None,
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+            },
+            actions: Actions {
+                inject: None,
+                run: None,
+                block: None,
+                block_if_match: None,
+            },
+            mode: Some(PolicyMode::Audit),
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+        assert_eq!(rule.effective_mode(), PolicyMode::Audit);
     }
 }
