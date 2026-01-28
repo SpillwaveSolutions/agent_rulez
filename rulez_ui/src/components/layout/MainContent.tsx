@@ -1,9 +1,26 @@
+import { writeConfig } from "@/lib/tauri";
 import { useConfigStore } from "@/stores/configStore";
+import { useCallback } from "react";
+import { EditorToolbar } from "../editor/EditorToolbar";
+import { ValidationPanel } from "../editor/ValidationPanel";
+import { YamlEditor } from "../editor/YamlEditor";
 import { FileTabBar } from "../files/FileTabBar";
 
 export function MainContent() {
-  const { activeFile, openFiles, updateContent, getActiveContent } = useConfigStore();
+  const { activeFile, updateContent, markSaved, getActiveContent } = useConfigStore();
   const activeContent = getActiveContent();
+
+  const handleSave = useCallback(async () => {
+    if (!activeFile) return;
+    const content = useConfigStore.getState().getActiveContent();
+    if (content === null) return;
+    try {
+      await writeConfig(activeFile, content);
+      markSaved(activeFile);
+    } catch (err) {
+      console.error("Failed to save file:", err);
+    }
+  }, [activeFile, markSaved]);
 
   return (
     <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -13,17 +30,16 @@ export function MainContent() {
       {/* Editor area */}
       <div className="flex-1 overflow-hidden">
         {activeFile && activeContent !== null ? (
-          <div className="h-full p-4 bg-white dark:bg-[#1A1A1A]">
-            {/* Placeholder for Monaco Editor - will be implemented in M2 */}
-            <div className="h-full rounded border border-gray-200 dark:border-gray-700 bg-surface dark:bg-surface-dark overflow-hidden">
-              <textarea
+          <div className="h-full flex flex-col bg-white dark:bg-[#1A1A1A]">
+            <EditorToolbar />
+            <div className="flex-1 overflow-hidden">
+              <YamlEditor
                 value={activeContent}
-                onChange={(e) => updateContent(activeFile, e.target.value)}
-                className="w-full h-full p-4 font-mono text-sm bg-transparent resize-none focus:outline-none text-gray-900 dark:text-gray-100"
-                placeholder="YAML content will appear here..."
-                spellCheck={false}
+                onChange={(val) => updateContent(activeFile, val)}
+                onSave={handleSave}
               />
             </div>
+            <ValidationPanel />
           </div>
         ) : (
           <div className="h-full flex items-center justify-center text-gray-400 dark:text-gray-500">
@@ -33,6 +49,8 @@ export function MainContent() {
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                role="img"
+                aria-label="No file selected"
               >
                 <path
                   strokeLinecap="round"

@@ -32,12 +32,6 @@
     }
   },
   "files": {
-    "ignore": [
-      "node_modules",
-      "dist",
-      "src-tauri/target",
-      "coverage",
-      "playwright-report"
-    ]
+    "ignore": ["node_modules", "dist", "src-tauri/target", "coverage", "playwright-report"]
   }
 }

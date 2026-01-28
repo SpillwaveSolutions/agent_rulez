@@ -1,0 +1,299 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://spillwave.dev/schemas/hooks-config/v1.0",
+  "title": "CCH Hooks Configuration",
+  "description": "Configuration schema for Claude Code Hooks (CCH) hooks.yaml files. Defines rules that intercept Claude Code tool calls to block dangerous operations, inject context, or run custom scripts.",
+  "type": "object",
+  "required": ["version"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "title": "Configuration Version",
+      "description": "The version of the hooks configuration format. Currently only '1.0' is supported.",
+      "enum": ["1.0"],
+      "examples": ["1.0"]
+    },
+    "settings": {
+      "$ref": "#/definitions/HooksSettings"
+    },
+    "rules": {
+      "type": "array",
+      "title": "Rules",
+      "description": "List of hook rules that define matchers and actions for intercepting Claude Code tool calls.",
+      "items": {
+        "$ref": "#/definitions/Rule"
+      },
+      "examples": [
+        [
+          {
+            "name": "block-force-push",
+            "description": "Block force push to main/master branches",
+            "matchers": {
+              "tools": ["Bash"],
+              "command_match": "git push.*(--force|-f).*(main|master)"
+            },
+            "actions": {
+              "block": true
+            }
+          }
+        ]
+      ]
+    },
+    "hooks": {
+      "type": "array",
+      "title": "Hooks (alias for rules)",
+      "description": "Alias for the 'rules' property. Use either 'rules' or 'hooks', but not both. Each entry defines matchers and actions for intercepting Claude Code tool calls.",
+      "items": {
+        "$ref": "#/definitions/Rule"
+      }
+    }
+  },
+  "definitions": {
+    "HooksSettings": {
+      "type": "object",
+      "title": "Global Settings",
+      "description": "Global configuration settings that apply to all hook rules.",
+      "additionalProperties": false,
+      "properties": {
+        "log_level": {
+          "type": "string",
+          "title": "Log Level",
+          "description": "Controls the verbosity of CCH log output. Use 'debug' for troubleshooting, 'info' for normal operation, 'warn' for important warnings only, or 'error' for critical errors only.",
+          "enum": ["debug", "info", "warn", "error"],
+          "default": "info",
+          "examples": ["info", "debug"]
+        },
+        "fail_open": {
+          "type": "boolean",
+          "title": "Fail Open",
+          "description": "When true, if CCH encounters an internal error processing a hook, it allows the tool call to proceed rather than blocking it. When false, errors cause the tool call to be blocked. Recommended: true for development, false for strict security environments.",
+          "default": true,
+          "examples": [true, false]
+        },
+        "max_context_size": {
+          "type": "string",
+          "title": "Maximum Context Size",
+          "description": "Maximum size of injected context content. Accepts human-readable size strings like '4KB', '1MB'. Limits how much text can be injected into Claude's context via inject actions.",
+          "examples": ["4KB", "8KB", "1MB"],
+          "pattern": "^\\d+\\s*(B|KB|MB|GB)$"
+        }
+      }
+    },
+    "Rule": {
+      "type": "object",
+      "title": "Hook Rule",
+      "description": "A single hook rule that matches tool calls based on matchers and performs actions when matched. Rules are evaluated in order; the first matching rule with a block action stops further evaluation.",
+      "required": ["name", "matchers", "actions"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "title": "Rule Name",
+          "description": "A unique, descriptive identifier for this rule. Use kebab-case naming convention (e.g., 'block-force-push', 'inject-python-context').",
+          "pattern": "^[a-zA-Z][a-zA-Z0-9_-]*$",
+          "examples": [
+            "block-force-push",
+            "inject-python-context",
+            "log-file-writes",
+            "block-rm-rf"
+          ]
+        },
+        "description": {
+          "type": "string",
+          "title": "Rule Description",
+          "description": "A human-readable description of what this rule does and why it exists. Shown in logs and the RuleZ UI.",
+          "examples": [
+            "Block force push to main/master branches",
+            "Inject Python best practices context when editing .py files"
+          ]
+        },
+        "enabled": {
+          "type": "boolean",
+          "title": "Enabled",
+          "description": "Whether this rule is active. Set to false to temporarily disable a rule without removing it from the configuration.",
+          "default": true
+        },
+        "event": {
+          "type": "string",
+          "title": "Hook Event Type",
+          "description": "The Claude Code hook event that triggers this rule. PreToolUse fires before a tool executes, PostToolUse fires after, and other events correspond to specific Claude Code lifecycle points.",
+          "enum": [
+            "PreToolUse",
+            "PostToolUse",
+            "PermissionRequest",
+            "UserPromptSubmit",
+            "SessionStart",
+            "SessionEnd",
+            "PreCompact"
+          ],
+          "default": "PreToolUse",
+          "examples": ["PreToolUse", "PostToolUse"]
+        },
+        "matchers": {
+          "$ref": "#/definitions/RuleMatcher"
+        },
+        "actions": {
+          "$ref": "#/definitions/RuleAction"
+        }
+      }
+    },
+    "RuleMatcher": {
+      "type": "object",
+      "title": "Rule Matchers",
+      "description": "Conditions that determine when a rule fires. All specified matchers must match (AND logic). At least one matcher should be specified for the rule to be useful.",
+      "additionalProperties": false,
+      "properties": {
+        "tools": {
+          "type": "array",
+          "title": "Tool Names",
+          "description": "List of Claude Code tool names to match against. The rule fires only when one of these tools is invoked. Uses OR logic: matching any listed tool is sufficient.",
+          "items": {
+            "type": "string",
+            "enum": [
+              "Bash",
+              "Read",
+              "Write",
+              "Edit",
+              "Glob",
+              "Grep",
+              "WebFetch",
+              "WebSearch",
+              "Task",
+              "NotebookEdit"
+            ]
+          },
+          "uniqueItems": true,
+          "examples": [["Bash"], ["Write", "Edit"], ["Bash", "Write", "Edit"]]
+        },
+        "extensions": {
+          "type": "array",
+          "title": "File Extensions",
+          "description": "List of file extensions to match against the tool's target file path. Include the leading dot. Uses OR logic: matching any listed extension is sufficient.",
+          "items": {
+            "type": "string",
+            "pattern": "^\\.[a-zA-Z0-9]+$"
+          },
+          "uniqueItems": true,
+          "examples": [[".py"], [".ts", ".tsx"], [".js", ".jsx", ".ts", ".tsx"], [".rs"]]
+        },
+        "directories": {
+          "type": "array",
+          "title": "Directory Paths",
+          "description": "List of directory paths to match against the tool's target file path. A match occurs if the file path starts with or contains any of these directories. Uses OR logic.",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true,
+          "examples": [["src/"], ["src/", "lib/"], [".env", "secrets/"]]
+        },
+        "command_match": {
+          "type": "string",
+          "title": "Command Pattern",
+          "description": "A regular expression pattern matched against the command string for Bash tool calls. Uses Rust regex syntax. The pattern is searched within the command (not anchored).",
+          "examples": [
+            "git push.*(--force|-f).*(main|master)",
+            "rm\\s+-rf\\s+/",
+            "curl.*\\|.*sh",
+            "npm publish"
+          ]
+        },
+        "path_match": {
+          "type": "string",
+          "title": "Path Pattern",
+          "description": "A regular expression pattern matched against file paths for file-based tool calls (Write, Edit, Read, etc.). Uses Rust regex syntax. The pattern is searched within the path.",
+          "examples": ["\\.env$", "node_modules/", "src/.*\\.test\\.ts$", "\\.(key|pem|cert)$"]
+        }
+      }
+    },
+    "RuleAction": {
+      "type": "object",
+      "title": "Rule Actions",
+      "description": "Actions to perform when all matchers match. Multiple actions can be specified on a single rule. Block actions prevent the tool call; inject actions add context; run actions execute scripts.",
+      "additionalProperties": false,
+      "properties": {
+        "block": {
+          "type": "boolean",
+          "title": "Block Tool Call",
+          "description": "When true, prevents the matched tool call from executing. CCH returns exit code 2 to Claude Code, which interprets this as a blocked operation. The tool call is not performed.",
+          "examples": [true]
+        },
+        "inject": {
+          "title": "Inject Context",
+          "description": "Text content to inject into Claude's context when the rule matches. Can be a single string or an array of strings (which are joined with newlines). Use this to provide guidelines, best practices, or project-specific instructions.",
+          "oneOf": [
+            {
+              "type": "string",
+              "examples": [
+                "Follow PEP 8 style guidelines",
+                "Use async/await for all I/O operations"
+              ]
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "examples": [
+                [
+                  "Follow PEP 8 style guidelines",
+                  "Use type hints for all function parameters",
+                  "Add docstrings to all public functions"
+                ]
+              ]
+            }
+          ]
+        },
+        "run": {
+          "type": "string",
+          "title": "Run Script",
+          "description": "A shell command or path to a script to execute when the rule matches. The script receives the tool call event as JSON on stdin and can output context or validation results on stdout. A non-zero exit code from the script blocks the tool call.",
+          "examples": [
+            "./scripts/validate-commit.sh",
+            "python scripts/check-imports.py",
+            "echo 'Tool call intercepted'"
+          ]
+        },
+        "block_if_match": {
+          "type": "string",
+          "title": "Conditional Block Pattern",
+          "description": "A regular expression pattern. If specified, the tool call is blocked only if the run script's stdout matches this pattern. This enables conditional blocking based on dynamic script output.",
+          "examples": ["BLOCK", "UNSAFE", "violation found"]
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "version": "1.0",
+      "settings": {
+        "log_level": "info",
+        "fail_open": true
+      },
+      "rules": [
+        {
+          "name": "block-force-push",
+          "description": "Block force push to main/master branches",
+          "matchers": {
+            "tools": ["Bash"],
+            "command_match": "git push.*(--force|-f).*(main|master)"
+          },
+          "actions": {
+            "block": true
+          }
+        },
+        {
+          "name": "inject-python-context",
+          "description": "Inject Python best practices context",
+          "matchers": {
+            "tools": ["Write", "Edit"],
+            "extensions": [".py"]
+          },
+          "actions": {
+            "inject": "Follow PEP 8 style guidelines"
+          }
+        }
+      ]
+    }
+  ]
+}

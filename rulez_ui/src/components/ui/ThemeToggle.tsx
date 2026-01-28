@@ -1,4 +1,4 @@
-import { useUIStore, type Theme } from "@/stores/uiStore";
+import { type Theme, useUIStore } from "@/stores/uiStore";
 
 export function ThemeToggle() {
   const { theme, setTheme } = useUIStore();
@@ -11,7 +11,13 @@ export function ThemeToggle() {
   const getIcon = () => {
     if (theme === "light") {
       return (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -23,7 +29,13 @@ export function ThemeToggle() {
     }
     if (theme === "dark") {
       return (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -35,7 +47,13 @@ export function ThemeToggle() {
     }
     // System
     return (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg
+        className="w-5 h-5"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+      >
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -54,6 +72,7 @@ export function ThemeToggle() {
 
   return (
     <button
+      type="button"
       onClick={cycleTheme}
       className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-400"
       aria-label={getLabel()}

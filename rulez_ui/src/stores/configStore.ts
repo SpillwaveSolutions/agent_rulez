@@ -1,5 +1,5 @@
-import { create } from "zustand";
 import type { ConfigFile, FileState } from "@/types";
+import { create } from "zustand";
 
 interface ConfigState {
   globalConfig: ConfigFile | null;

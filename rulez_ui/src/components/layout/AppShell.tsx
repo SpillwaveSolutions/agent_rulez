@@ -1,9 +1,9 @@
+import { useUIStore } from "@/stores/uiStore";
 import { Header } from "./Header";
-import { Sidebar } from "./Sidebar";
 import { MainContent } from "./MainContent";
 import { RightPanel } from "./RightPanel";
+import { Sidebar } from "./Sidebar";
 import { StatusBar } from "./StatusBar";
-import { useUIStore } from "@/stores/uiStore";
 
 export function AppShell() {
   const { sidebarOpen } = useUIStore();

@@ -1,6 +1,6 @@
-import { useEffect } from "react";
-import { useConfigStore } from "@/stores/configStore";
 import { listConfigFiles, readConfig } from "@/lib/tauri";
+import { useConfigStore } from "@/stores/configStore";
+import { useEffect } from "react";
 
 export function Sidebar() {
   const { globalConfig, projectConfig, setGlobalConfig, setProjectConfig, openFile, activeFile } =
@@ -49,7 +49,13 @@ export function Sidebar() {
         {/* Global config section */}
         <div className="mb-4">
           <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 mb-1">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -74,7 +80,13 @@ export function Sidebar() {
         {/* Project config section */}
         <div>
           <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 mb-1">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -114,6 +126,7 @@ function FileItem({ path, exists, isActive, onClick }: FileItemProps) {
 
   return (
     <button
+      type="button"
       onClick={onClick}
       className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-left transition-colors ${
         isActive
@@ -121,7 +134,13 @@ function FileItem({ path, exists, isActive, onClick }: FileItemProps) {
           : "hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
       } ${!exists ? "opacity-50" : ""}`}
     >
-      <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg
+        className="w-4 h-4 flex-shrink-0"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+      >
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -130,9 +149,7 @@ function FileItem({ path, exists, isActive, onClick }: FileItemProps) {
         />
       </svg>
       <span className="truncate">{fileName}</span>
-      {!exists && (
-        <span className="text-xs text-gray-400 dark:text-gray-500">(new)</span>
-      )}
+      {!exists && <span className="text-xs text-gray-400 dark:text-gray-500">(new)</span>}
     </button>
   );
 }

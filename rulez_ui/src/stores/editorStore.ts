@@ -1,5 +1,6 @@
+import type { CursorPosition, SelectionRange, ValidationError, ValidationWarning } from "@/types";
+import type { editor } from "monaco-editor";
 import { create } from "zustand";
-import type { ValidationError, ValidationWarning, CursorPosition, SelectionRange } from "@/types";
 
 interface EditorState {
   cursorPosition: CursorPosition;
@@ -7,6 +8,7 @@ interface EditorState {
   errors: ValidationError[];
   warnings: ValidationWarning[];
   isValidating: boolean;
+  editorRef: editor.IStandaloneCodeEditor | null;
 }
 
 interface EditorActions {
@@ -17,6 +19,7 @@ interface EditorActions {
   setValidationResults: (errors: ValidationError[], warnings: ValidationWarning[]) => void;
   clearValidation: () => void;
   setIsValidating: (isValidating: boolean) => void;
+  setEditorRef: (ref: editor.IStandaloneCodeEditor | null) => void;
   getErrorCount: () => number;
   getWarningCount: () => number;
 }
@@ -28,6 +31,7 @@ export const useEditorStore = create<EditorState & EditorActions>((set, get) => 
   errors: [],
   warnings: [],
   isValidating: false,
+  editorRef: null,
 
   // Actions
   setCursorPosition: (cursorPosition) => set({ cursorPosition }),
@@ -43,6 +47,8 @@ export const useEditorStore = create<EditorState & EditorActions>((set, get) => 
   clearValidation: () => set({ errors: [], warnings: [], isValidating: false }),
 
   setIsValidating: (isValidating) => set({ isValidating }),
+
+  setEditorRef: (editorRef) => set({ editorRef }),
 
   getErrorCount: () => get().errors.length,
 
