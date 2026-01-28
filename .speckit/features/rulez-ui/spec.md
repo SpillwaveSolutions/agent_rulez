@@ -154,7 +154,7 @@ rulez_ui/
 | `list_config_files` | List global and project configs | `project_dir?: string` |
 | `read_config` | Read config file content | `path: string` |
 | `write_config` | Write config file content | `path: string, content: string` |
-| `run_debug` | Execute CCH debug command | `event_type, tool?, command?, path?` |
+| `run_debug` | Execute CCH debug command | `hook_event_name, tool?, command?, path?` |
 | `validate_config` | Validate config via CCH | `path: string` |
 
 ---

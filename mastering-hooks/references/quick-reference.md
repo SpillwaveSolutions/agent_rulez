@@ -8,6 +8,12 @@ Fast lookup tables for events, matchers, actions, and file locations.
 |-------|------------|-------------|
 | `PreToolUse` | Before any tool executes | Inject context, validate inputs |
 | `PostToolUse` | After tool completes | Log actions, trigger follow-ups |
+| `Stop` | Session stop event | Cleanup, final logging |
+| `PostToolUseFailure` | After tool fails | Error logging, fallback actions |
+| `SubagentStart` | Subagent launched | Track agent activity |
+| `SubagentStop` | Subagent completed | Agent completion logging |
+| `Notification` | System notification | System event tracking |
+| `Setup` | Initial setup event | Configuration loading |
 | `PermissionRequest` | User asked to approve | Auto-approve/deny patterns |
 | `UserPromptSubmit` | User sends message | Inject session context |
 | `SessionStart` | New session begins | Load project context |

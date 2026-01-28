@@ -125,7 +125,7 @@ impl Timer {
 /// Parse CCH response from command output
 #[derive(Debug, Deserialize)]
 pub struct CchResponse {
-    #[serde(rename = "continue_")]
+    #[serde(rename = "continue")]
     pub continue_: bool,
     pub context: Option<String>,
     pub reason: Option<String>,

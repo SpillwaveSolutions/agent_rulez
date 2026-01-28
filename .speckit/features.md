@@ -200,6 +200,13 @@ git push origin v1.0.0
 - `logging/`: JSON Lines logging infrastructure
 - `cli/`: Command-line interface (init, install, debug, validate, logs, explain)
 
+### Claude Code JSON Protocol
+CCH communicates with Claude Code via stdin/stdout JSON. Key field mappings:
+- **Event field**: Claude Code sends `hook_event_name` (CCH accepts both `hook_event_name` and `event_type` via serde alias)
+- **Response field**: CCH serializes `continue` (not `continue_`) via `#[serde(rename = "continue")]`
+- **Timestamp**: Claude Code may not send `timestamp`; CCH defaults to `Utc::now()`
+- **Event types**: PreToolUse, PostToolUse, Stop, SessionStart, SessionEnd, PostToolUseFailure, SubagentStart, SubagentStop, Notification, Setup, PermissionRequest, UserPromptSubmit, PreCompact
+
 ### Key Patterns
 - Async-first design for performance
 - Configuration-driven behavior (no hardcoded rules)
@@ -233,3 +240,24 @@ git push origin v1.0.0
 - External script execution (Python validators)
 - JSON Lines log file management
 - Directory-based context file injection
+
+---
+
+## cch-advanced-rules (Backlog)
+**Status**: Backlog
+**Priority**: P3 (Future Enhancement)
+**Description**: Advanced rule features removed from skill docs during schema fix — never implemented in CCH binary
+**Location**: cch_cli/ (future Rust implementation)
+**Completion**: 0% - Spec only
+
+### SDD Artifacts
+- **Spec:** `.speckit/features/cch-advanced-rules/spec.md`
+
+### User Stories (Backlog)
+- [ ] US-ADV-01 (P2): `enabled_when` conditional matcher
+- [ ] US-ADV-02 (P3): `prompt_match` regex matcher
+- [ ] US-ADV-03 (P3): `require_fields` action type
+- [ ] US-ADV-04 (P2): Inline content injection (`inject_inline`)
+- [ ] US-ADV-05 (P2): Command-based context generation (`inject_command`)
+- [ ] US-ADV-06 (P3): Inline script blocks in `run:`
+- [ ] US-ADV-07 (P3): Context variables for expressions

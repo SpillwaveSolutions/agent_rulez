@@ -38,8 +38,8 @@ fn test_us1_force_push_blocked() {
 
     // Response should indicate blocking
     result.stdout(
-        predicate::str::contains(r#""continue_":false"#)
-            .or(predicate::str::contains(r#""continue_": false"#))
+        predicate::str::contains(r#""continue":false"#)
+            .or(predicate::str::contains(r#""continue": false"#))
             .and(
                 predicate::str::contains("block-force-push")
                     .or(predicate::str::contains("Blocked")),
@@ -75,8 +75,8 @@ fn test_us1_safe_push_allowed() {
 
     // Response should allow the operation
     result.stdout(
-        predicate::str::contains(r#""continue_":true"#)
-            .or(predicate::str::contains(r#""continue_": true"#)),
+        predicate::str::contains(r#""continue":true"#)
+            .or(predicate::str::contains(r#""continue": true"#)),
     );
 
     evidence.pass("Safe push event correctly allowed", timer.elapsed_ms());
@@ -113,8 +113,8 @@ fn test_us1_hard_reset_blocked() {
 
     // Response should indicate blocking
     result.stdout(
-        predicate::str::contains(r#""continue_":false"#)
-            .or(predicate::str::contains(r#""continue_": false"#)),
+        predicate::str::contains(r#""continue":false"#)
+            .or(predicate::str::contains(r#""continue": false"#)),
     );
 
     evidence.pass("Hard reset event correctly blocked", timer.elapsed_ms());

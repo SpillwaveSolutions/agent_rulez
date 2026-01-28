@@ -496,13 +496,13 @@ Enable testing rules by simulating events through CCH binary.
 ```rust
 #[tauri::command]
 pub async fn run_debug(
-    event_type: String,
+    hook_event_name: String,
     tool: Option<String>,
     command: Option<String>,
     path: Option<String>,
 ) -> Result<DebugResult, String> {
     let mut cmd = Command::new("cch");
-    cmd.arg("debug").arg(&event_type);
+    cmd.arg("debug").arg(&hook_event_name);
     
     if let Some(t) = tool {
         cmd.arg("--tool").arg(t);

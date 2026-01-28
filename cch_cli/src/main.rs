@@ -241,7 +241,7 @@ async fn process_hook_event(cli: &Cli, config: &config::Config) -> Result<()> {
 
     info!(
         "Processing event: {} ({})",
-        event.event_type, event.session_id
+        event.hook_event_name, event.session_id
     );
 
     let debug_config = models::DebugConfig::new(cli.debug_logs, config.settings.debug_logs);

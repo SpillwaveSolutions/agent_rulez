@@ -35,7 +35,7 @@ Enhance CCH logging to capture detailed event context, response summaries, and p
 **So that** I can correlate logs with actual Claude behavior
 
 **Acceptance Criteria:**
-- [ ] Log entries include `continue_` boolean
+- [ ] Log entries include `continue` boolean (serialized via `#[serde(rename = "continue")]`)
 - [ ] Blocked responses include `reason` field
 - [ ] Injection responses include `context_length` (not full content)
 - [ ] Response summary is always present on processed events
@@ -100,6 +100,7 @@ pub enum EventDetails {
 ```rust
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ResponseSummary {
+    #[serde(rename = "continue")]
     pub continue_: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub reason: Option<String>,
@@ -138,7 +139,7 @@ pub struct MatcherResults {
 pub struct LogEntry {
     // === Existing fields (preserved) ===
     pub timestamp: DateTime<Utc>,
-    pub event_type: String,
+    pub hook_event_name: String,  // Note: aliased from event_type for backward compat
     pub session_id: String,
     pub tool_name: Option<String>,
     pub rules_matched: Vec<String>,
@@ -246,7 +247,7 @@ pub struct LogEntry {
 ```json
 {
   "timestamp": "2026-01-22T14:32:11Z",
-  "event_type": "PreToolUse",
+  "hook_event_name": "PreToolUse",
   "session_id": "abc123",
   "tool_name": "Bash",
   "event_details": {
@@ -256,7 +257,7 @@ pub struct LogEntry {
   "rules_matched": ["block-force-push"],
   "outcome": "block",
   "response": {
-    "continue_": false,
+    "continue": false,
     "reason": "Blocked by rule 'block-force-push': Force push is not allowed"
   },
   "timing": {
@@ -270,7 +271,7 @@ pub struct LogEntry {
 ```json
 {
   "timestamp": "2026-01-22T14:32:11Z",
-  "event_type": "PreToolUse",
+  "hook_event_name": "PreToolUse",
   "session_id": "abc123",
   "tool_name": "Bash",
   "event_details": {
@@ -280,7 +281,7 @@ pub struct LogEntry {
   "rules_matched": ["block-force-push"],
   "outcome": "block",
   "response": {
-    "continue_": false,
+    "continue": false,
     "reason": "Blocked by rule 'block-force-push'"
   },
   "timing": {

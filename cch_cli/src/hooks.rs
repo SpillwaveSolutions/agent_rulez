@@ -41,7 +41,7 @@ pub async fn process_event(event: Event, debug_config: &DebugConfig) -> Result<R
     // Log the event with enhanced fields
     let entry = LogEntry {
         timestamp: event.timestamp,
-        event_type: format!("{:?}", event.event_type),
+        event_type: format!("{:?}", event.hook_event_name),
         session_id: event.session_id.clone(),
         tool_name: event.tool_name.clone(),
         rules_matched: matched_rules.iter().map(|r| r.name.clone()).collect(),
@@ -224,7 +224,7 @@ fn matches_rule(event: &Event, rule: &Rule) -> bool {
 
     // Check operations (event types)
     if let Some(ref operations) = matchers.operations {
-        let event_type_str = event.event_type.to_string();
+        let event_type_str = event.hook_event_name.to_string();
         if !operations.contains(&event_type_str) {
             return false;
         }
@@ -322,7 +322,7 @@ fn matches_rule_with_debug(event: &Event, rule: &Rule) -> (bool, Option<MatcherR
     // Check operations (event types)
     if let Some(ref operations) = matchers.operations {
         matcher_results.operations_matched = Some({
-            let event_type_str = event.event_type.to_string();
+            let event_type_str = event.hook_event_name.to_string();
             operations.contains(&event_type_str)
         });
         if !matcher_results.operations_matched.unwrap() {
@@ -795,7 +795,7 @@ mod tests {
     #[tokio::test]
     async fn test_rule_matching() {
         let event = Event {
-            event_type: EventType::PreToolUse,
+            hook_event_name: EventType::PreToolUse,
             tool_name: Some("Bash".to_string()),
             tool_input: Some(serde_json::json!({
                 "command": "git push --force"
@@ -803,6 +803,10 @@ mod tests {
             session_id: "test-session".to_string(),
             timestamp: Utc::now(),
             user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
         };
 
         let rule = Rule {
@@ -833,7 +837,7 @@ mod tests {
     #[tokio::test]
     async fn test_rule_non_matching() {
         let event = Event {
-            event_type: EventType::PreToolUse,
+            hook_event_name: EventType::PreToolUse,
             tool_name: Some("Bash".to_string()),
             tool_input: Some(serde_json::json!({
                 "command": "git status"
@@ -841,6 +845,10 @@ mod tests {
             session_id: "test-session".to_string(),
             timestamp: Utc::now(),
             user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
         };
 
         let rule = Rule {

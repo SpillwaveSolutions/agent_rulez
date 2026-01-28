@@ -306,7 +306,7 @@ impl EventDetails {
                     .map(String::from);
                 EventDetails::Grep { pattern, path }
             }
-            None if matches!(event.event_type, EventType::SessionStart | EventType::SessionEnd) => {
+            None if matches!(event.hook_event_name, EventType::SessionStart | EventType::SessionEnd) => {
                 let source = tool_input
                     .and_then(|ti| ti.get("source"))
                     .and_then(|s| s.as_str())
@@ -380,7 +380,7 @@ pub async fn process_event(event: Event, debug_config: &DebugConfig) -> Result<R
     // Log the event with enhanced fields
     let entry = LogEntry {
         timestamp: event.timestamp,
-        event_type: format!("{:?}", event.event_type),
+        event_type: format!("{:?}", event.hook_event_name),
         session_id: event.session_id.clone(),
         tool_name: event.tool_name.clone(),
         rules_matched: matched_rules.into_iter().map(|r| r.name.clone()).collect(),
@@ -472,7 +472,7 @@ mod event_details_tests {
     #[test]
     fn test_extract_bash_event() {
         let event = Event {
-            event_type: EventType::PreToolUse,
+            hook_event_name: EventType::PreToolUse,
             tool_name: Some("Bash".to_string()),
             tool_input: Some(serde_json::json!({
                 "command": "git push --force"
@@ -489,7 +489,7 @@ mod event_details_tests {
     #[test]
     fn test_extract_unknown_tool() {
         let event = Event {
-            event_type: EventType::PreToolUse,
+            hook_event_name: EventType::PreToolUse,
             tool_name: Some("FutureTool".to_string()),
             tool_input: None,
             session_id: "test".to_string(),
@@ -546,7 +546,7 @@ After implementation, verify:
 
 1. **Normal Mode:**
    ```bash
-   echo '{"event_type":"PreToolUse","tool_name":"Bash","tool_input":{"command":"git status"},...}' | cch
+   echo '{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"git status"},"session_id":"test"}' | cch
    # Check ~/.claude/logs/cch.log contains event_details and response
    ```
 

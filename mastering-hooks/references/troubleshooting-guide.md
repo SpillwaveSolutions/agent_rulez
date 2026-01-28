@@ -37,12 +37,14 @@ cch debug PreToolUse --tool Write --path test.py -v
    ```bash
    cat .claude/settings.json
    ```
-   Look for:
+   Look for the nested matcher/hooks structure:
    ```json
    {
      "hooks": {
-       "PreToolUse": "cch run-hook PreToolUse",
-       "PostToolUse": "cch run-hook PostToolUse"
+       "PreToolUse": [{ "matcher": "*", "hooks": [{ "type": "command", "command": "/path/to/cch", "timeout": 5 }] }],
+       "PostToolUse": [{ "matcher": "*", "hooks": [{ "type": "command", "command": "/path/to/cch", "timeout": 5 }] }],
+       "Stop": [{ "matcher": "*", "hooks": [{ "type": "command", "command": "/path/to/cch", "timeout": 5 }] }],
+       "SessionStart": [{ "matcher": "*", "hooks": [{ "type": "command", "command": "/path/to/cch", "timeout": 5 }] }]
      }
    }
    ```
@@ -338,6 +340,38 @@ enabled_when: "env.CI == 'true'"
 - File exists but is empty
 - File has wrong encoding (use UTF-8)
 - Context too large (check for size limits)
+
+---
+
+### Issue: "missing field `event_type`" Parse Error
+
+**Symptoms**: Every hook call fails with `hook error` and logs show `missing field 'event_type'`.
+
+**Root cause**: Claude Code sends events with the field name `hook_event_name`, not `event_type`. If your CCH binary expects `event_type`, it can't parse the JSON.
+
+**Resolution**:
+1. Update CCH binary to v1.1.0+ which accepts both `hook_event_name` and `event_type` (via serde alias)
+2. Rebuild and reinstall:
+   ```bash
+   cargo install --path cch_cli
+   cch install
+   ```
+
+**Protocol reference**: Claude Code's JSON event format:
+```json
+{
+  "hook_event_name": "PreToolUse",
+  "session_id": "abc123",
+  "tool_name": "Bash",
+  "tool_input": {"command": "git status"},
+  "cwd": "/path/to/project",
+  "transcript_path": "/path/to/transcript",
+  "permission_mode": "default",
+  "tool_use_id": "toolu_xxx"
+}
+```
+
+Note: Claude Code does **not** send a `timestamp` field. CCH defaults to `Utc::now()`.
 
 ---
 

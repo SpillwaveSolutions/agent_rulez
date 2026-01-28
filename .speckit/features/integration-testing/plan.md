@@ -195,7 +195,7 @@ EOF
 fn test_oq_block_force_push() {
     let temp = setup_test_workspace("block-force-push");
     let event = json!({
-        "event_type": "PreToolUse",
+        "hook_event_name": "PreToolUse",
         "tool_name": "Bash",
         "tool_input": {"command": "git push --force origin main"},
         "session_id": "test-001"

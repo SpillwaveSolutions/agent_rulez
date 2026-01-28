@@ -17,22 +17,42 @@ struct ClaudeSettings {
     other: HashMap<String, serde_json::Value>,
 }
 
-/// Hooks configuration in Claude Code settings
+/// Hooks configuration in Claude Code settings.
+///
+/// Claude Code expects PascalCase event keys with a nested matcher/hooks structure:
+/// ```json
+/// {
+///   "hooks": {
+///     "PreToolUse": [
+///       { "matcher": "*", "hooks": [{ "type": "command", "command": "/path/to/cch", "timeout": 5 }] }
+///     ]
+///   }
+/// }
+/// ```
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 struct HooksConfig {
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pre_tool_use: Vec<HookEntry>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    post_tool_use: Vec<HookEntry>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    session_start: Vec<HookEntry>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    permission_request: Vec<HookEntry>,
+    #[serde(rename = "PreToolUse", default, skip_serializing_if = "Vec::is_empty")]
+    pre_tool_use: Vec<MatcherEntry>,
+    #[serde(rename = "PostToolUse", default, skip_serializing_if = "Vec::is_empty")]
+    post_tool_use: Vec<MatcherEntry>,
+    #[serde(rename = "Stop", default, skip_serializing_if = "Vec::is_empty")]
+    stop: Vec<MatcherEntry>,
+    #[serde(rename = "SessionStart", default, skip_serializing_if = "Vec::is_empty")]
+    session_start: Vec<MatcherEntry>,
 }
 
-/// Individual hook entry
+/// A matcher entry groups a glob pattern with its hook commands
 #[derive(Debug, Serialize, Deserialize, Clone)]
-struct HookEntry {
+struct MatcherEntry {
+    matcher: String,
+    hooks: Vec<HookCommand>,
+}
+
+/// Individual hook command within a matcher entry
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct HookCommand {
+    #[serde(rename = "type")]
+    hook_type: String,
     command: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     timeout: Option<u32>,
@@ -75,17 +95,24 @@ pub async fn run(scope: Scope, binary_path: Option<String>) -> Result<()> {
     // Build hook command
     let hook_command = format!("{}", cch_path.display());
 
-    // Create hook entry
-    let hook_entry = HookEntry {
-        command: hook_command.clone(),
-        timeout: Some(10000), // 10 second timeout
+    // Create the matcher entry with nested hook command
+    let matcher_entry = MatcherEntry {
+        matcher: "*".to_string(),
+        hooks: vec![HookCommand {
+            hook_type: "command".to_string(),
+            command: hook_command.clone(),
+            timeout: Some(5),
+        }],
     };
 
     // Get or create hooks config
     let hooks = settings.hooks.get_or_insert_with(HooksConfig::default);
 
-    // Check if already installed
-    let already_installed = hooks.pre_tool_use.iter().any(|h| h.command.contains("cch"));
+    // Check if already installed (look inside nested hooks[].command)
+    let already_installed = hooks
+        .pre_tool_use
+        .iter()
+        .any(|m| m.hooks.iter().any(|h| h.command.contains("cch")));
 
     if already_installed {
         println!("✓ CCH is already installed");
@@ -94,10 +121,10 @@ pub async fn run(scope: Scope, binary_path: Option<String>) -> Result<()> {
     }
 
     // Add CCH to all hook events
-    hooks.pre_tool_use.push(hook_entry.clone());
-    hooks.post_tool_use.push(hook_entry.clone());
-    hooks.session_start.push(hook_entry.clone());
-    hooks.permission_request.push(hook_entry);
+    hooks.pre_tool_use.push(matcher_entry.clone());
+    hooks.post_tool_use.push(matcher_entry.clone());
+    hooks.stop.push(matcher_entry.clone());
+    hooks.session_start.push(matcher_entry);
 
     // Save settings
     save_settings(&settings_path, &settings)?;
@@ -106,8 +133,8 @@ pub async fn run(scope: Scope, binary_path: Option<String>) -> Result<()> {
     println!("Hook registered for events:");
     println!("  • PreToolUse");
     println!("  • PostToolUse");
+    println!("  • Stop");
     println!("  • SessionStart");
-    println!("  • PermissionRequest");
     println!();
     println!("To verify installation:");
     println!("  cch validate");
@@ -220,20 +247,26 @@ pub async fn uninstall(scope: Scope) -> Result<()> {
     if let Some(hooks) = &mut settings.hooks {
         let before = hooks.pre_tool_use.len()
             + hooks.post_tool_use.len()
-            + hooks.session_start.len()
-            + hooks.permission_request.len();
+            + hooks.stop.len()
+            + hooks.session_start.len();
 
-        hooks.pre_tool_use.retain(|h| !h.command.contains("cch"));
-        hooks.post_tool_use.retain(|h| !h.command.contains("cch"));
-        hooks.session_start.retain(|h| !h.command.contains("cch"));
         hooks
-            .permission_request
-            .retain(|h| !h.command.contains("cch"));
+            .pre_tool_use
+            .retain(|m| !m.hooks.iter().any(|h| h.command.contains("cch")));
+        hooks
+            .post_tool_use
+            .retain(|m| !m.hooks.iter().any(|h| h.command.contains("cch")));
+        hooks
+            .stop
+            .retain(|m| !m.hooks.iter().any(|h| h.command.contains("cch")));
+        hooks
+            .session_start
+            .retain(|m| !m.hooks.iter().any(|h| h.command.contains("cch")));
 
         let after = hooks.pre_tool_use.len()
             + hooks.post_tool_use.len()
-            + hooks.session_start.len()
-            + hooks.permission_request.len();
+            + hooks.stop.len()
+            + hooks.session_start.len();
 
         if before == after {
             println!("CCH was not installed");
@@ -243,8 +276,8 @@ pub async fn uninstall(scope: Scope) -> Result<()> {
         // Clean up empty hooks config
         if hooks.pre_tool_use.is_empty()
             && hooks.post_tool_use.is_empty()
+            && hooks.stop.is_empty()
             && hooks.session_start.is_empty()
-            && hooks.permission_request.is_empty()
         {
             settings.hooks = None;
         }

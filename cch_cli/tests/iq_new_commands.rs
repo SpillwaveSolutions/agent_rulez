@@ -138,7 +138,7 @@ fn test_debug_pretooluse_bash() {
         .success()
         .stdout(predicate::str::contains("Simulated Event"))
         .stdout(predicate::str::contains("Response"))
-        .stdout(predicate::str::contains("continue_"));
+        .stdout(predicate::str::contains("\"continue\""));
 }
 
 #[test]
@@ -268,12 +268,28 @@ fn test_install_creates_settings_json() {
 
     let content = fs::read_to_string(&settings).unwrap();
     assert!(
-        content.contains("pre_tool_use"),
-        "Should have pre_tool_use hook"
+        content.contains("PreToolUse"),
+        "Should have PreToolUse hook"
     );
     assert!(
-        content.contains("post_tool_use"),
-        "Should have post_tool_use hook"
+        content.contains("PostToolUse"),
+        "Should have PostToolUse hook"
+    );
+    assert!(
+        content.contains("Stop"),
+        "Should have Stop hook"
+    );
+    assert!(
+        content.contains("SessionStart"),
+        "Should have SessionStart hook"
+    );
+    assert!(
+        content.contains("\"matcher\""),
+        "Should have matcher field in nested structure"
+    );
+    assert!(
+        content.contains("\"type\": \"command\""),
+        "Should have type: command in hook entry"
     );
 }
 
@@ -309,8 +325,8 @@ fn test_uninstall_removes_hooks() {
     let settings = temp_dir.path().join(".claude/settings.json");
     let content = fs::read_to_string(&settings).unwrap();
     assert!(
-        !content.contains("pre_tool_use"),
-        "Should not have pre_tool_use hook"
+        !content.contains("PreToolUse"),
+        "Should not have PreToolUse hook after uninstall"
     );
 }
 

@@ -229,7 +229,7 @@ pub enum Decision {
 **Output Format:**
 ```
 Rule: <name>
-Event: <event_type>
+Event: <hook_event_name>
 Mode: <mode> (default: enforce)
 Priority: <priority> (default: 0)
 
