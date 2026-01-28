@@ -1,0 +1,26 @@
+# CCH Integration Test - Block Force Push
+# This configuration blocks dangerous git operations like force push and hard reset.
+
+version: "1.0"
+
+rules:
+  - name: block-force-push
+    description: "Prevents destructive force push operations"
+    matchers:
+      tools: ["Bash"]
+      command_match: "git push.*--force|git push.*-f"
+    actions:
+      block: true
+
+  - name: block-hard-reset
+    description: "Prevents destructive hard reset operations"
+    matchers:
+      tools: ["Bash"]
+      command_match: "git reset --hard"
+    actions:
+      block: true
+
+settings:
+  log_level: "debug"
+  debug_logs: true
+  fail_open: false

@@ -5,12 +5,6 @@
 #
 # Usage: ./verify-release.sh [version]
 #
-# Checks:
-# - Tag exists locally and on remote
-# - GitHub release exists
-# - Release assets are uploaded
-# - Workflow status
-#
 
 set -e
 
@@ -79,7 +73,6 @@ if [ -n "$ASSETS" ]; then
         echo "  - $asset"
     done
 
-    # Verify expected assets
     EXPECTED_ASSETS=(
         "cch-linux-x86_64.tar.gz"
         "cch-linux-aarch64.tar.gz"

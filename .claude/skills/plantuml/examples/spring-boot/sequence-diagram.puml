@@ -1,0 +1,196 @@
+@startuml spring-boot-api-flow
+!theme cerulean
+
+<style>
+participant {
+  BackgroundColor LightBlue
+  BorderColor Navy
+  FontColor DarkBlue
+}
+actor {
+  BackgroundColor LightGreen
+  BorderColor DarkGreen
+}
+database {
+  BackgroundColor LightYellow
+  BorderColor DarkGoldenrod
+}
+</style>
+
+title 🌱 Spring Boot REST API - Create Order Flow
+
+actor "👤 Client" as Client
+participant "⚖️ Load Balancer" as LB
+participant "🔒 Security Filter\n(JWT Validation)" as Security
+participant "🎯 OrderController\n@RestController" as Controller
+participant "💼 OrderService\n@Service" as Service
+participant "💼 UserService\n@Service" as UserService
+participant "💼 ProductService\n@Service" as ProductService
+participant "💼 PaymentService\n@Service" as PaymentService
+participant "📦 OrderRepository\n@Repository" as Repository
+database "💾 PostgreSQL\nDatabase" as DB
+database "⚡ Redis\nCache" as Cache
+participant "🔌 Payment Gateway\n(Stripe)" as PaymentAPI
+queue "📬 RabbitMQ" as MQ
+participant "⚡ NotificationService\n@Async" as NotifService
+
+== Authentication ==
+
+Client -> LB : POST /api/v1/orders\nAuthorization: Bearer <JWT>
+activate LB
+LB -> Security : Forward request
+activate Security
+
+Security -> Security : 🔑 Validate JWT token\nExtract user claims
+alt Token Invalid
+  Security --> Client : 401 Unauthorized
+else Token Valid
+  Security -> Controller : Authorized request\nSecurityContext populated
+  deactivate Security
+end
+
+== Order Creation ==
+
+activate Controller
+Controller -> Controller : 📄 Validate request DTO\n@Valid OrderDTO
+
+Controller -> Service : createOrder(orderDTO, userId)
+activate Service
+
+== User Validation ==
+
+Service -> UserService : validateUser(userId)
+activate UserService
+
+UserService -> Cache : 🔍 Check user cache
+activate Cache
+Cache --> UserService : Cache miss
+deactivate Cache
+
+UserService -> Repository : findById(userId)
+activate Repository
+Repository -> DB : SELECT * FROM users\nWHERE id = ?
+activate DB
+DB --> Repository : User data
+deactivate DB
+deactivate Repository
+
+UserService -> Cache : ⚡ Store user in cache\nTTL: 3600s
+activate Cache
+Cache --> UserService : OK
+deactivate Cache
+
+UserService --> Service : User valid ✓
+deactivate UserService
+
+== Product Validation ==
+
+loop For each product in order
+  Service -> ProductService : checkInventory(productId, quantity)
+  activate ProductService
+
+  ProductService -> Cache : 🔍 Check product cache
+  activate Cache
+  Cache --> ProductService : Cache hit
+  deactivate Cache
+
+  ProductService --> Service : Stock available ✓
+  deactivate ProductService
+end
+
+== Payment Processing ==
+
+Service -> Service : 💰 Calculate total amount
+Service -> PaymentService : processPayment(userId, amount)
+activate PaymentService
+
+PaymentService -> PaymentAPI : POST /v1/charges\n🔑 API Key\nAmount, Currency, Customer
+activate PaymentAPI
+
+PaymentAPI --> PaymentService : 201 Created\n{"id": "ch_xxx", "status": "succeeded"}
+deactivate PaymentAPI
+
+PaymentService --> Service : Payment successful ✓\nTransaction ID: ch_xxx
+deactivate PaymentService
+
+== Persist Order ==
+
+Service -> Service : 🏗️ Build Order entity\nSet payment ID, status, timestamp
+Service -> Repository : save(order)
+activate Repository
+
+Repository -> DB : BEGIN TRANSACTION
+activate DB
+DB -> DB : INSERT INTO orders (...)
+DB -> DB : INSERT INTO order_items (...)
+DB -> DB : UPDATE products SET stock = stock - qty
+DB --> Repository : COMMIT
+deactivate DB
+
+Repository --> Service : Order saved\nOrder ID: 12345
+deactivate Repository
+
+== Cache Invalidation ==
+
+Service -> Cache : ❌ Evict product cache\n@CacheEvict(products)
+activate Cache
+Cache --> Service : Cache cleared
+deactivate Cache
+
+== Async Event Publishing ==
+
+Service -> MQ : 📤 Publish OrderCreatedEvent\n{"orderId": 12345, "userId": 1, "amount": 99.99}
+activate MQ
+MQ --> Service : Event published
+deactivate MQ
+
+Service --> Controller : Order created ✓\nOrderDTO response
+deactivate Service
+
+Controller --> LB : 201 Created\n{"orderId": 12345, "status": "CONFIRMED"}
+deactivate Controller
+
+LB --> Client : 201 Created\nOrder confirmation
+deactivate LB
+
+== Async Notification (Background) ==
+
+MQ -> NotifService : Consume OrderCreatedEvent
+activate NotifService
+
+NotifService -> NotifService : ⚡ @Async processing
+NotifService -> PaymentAPI : Send order confirmation email
+activate PaymentAPI
+PaymentAPI --> NotifService : Email queued
+deactivate PaymentAPI
+
+NotifService -> NotifService : 📊 Log notification sent\nUpdate metrics
+deactivate NotifService
+
+note right of Security
+  Spring Security JWT Filter
+  Validates token signature
+  Extracts authorities
+  Populates SecurityContext
+end note
+
+note right of Service
+  @Transactional
+  Rollback on any exception
+  Isolation: READ_COMMITTED
+end note
+
+note right of Cache
+  Redis TTL: 1 hour
+  Eviction policy: LRU
+  Max memory: 2GB
+end note
+
+note right of NotifService
+  @Async annotation
+  Separate thread pool
+  Executor: 10 core threads
+  Does not block main flow
+end note
+
+@enduml

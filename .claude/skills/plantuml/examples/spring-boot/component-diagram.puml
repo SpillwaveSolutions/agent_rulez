@@ -1,0 +1,178 @@
+@startuml spring-boot-components
+!theme cerulean
+
+<style>
+component {
+  BackgroundColor LightBlue
+  BorderColor Navy
+  FontColor DarkBlue
+  FontSize 11
+}
+interface {
+  BackgroundColor LightYellow
+  BorderColor DarkGoldenrod
+}
+package {
+  BackgroundColor WhiteSmoke
+  BorderColor Gray
+  FontStyle bold
+}
+</style>
+
+title 🌱 Spring Boot Application Component Architecture
+
+' Presentation Layer
+package "🎯 Presentation Layer" {
+  [UserController\n@RestController] as UserCtrl
+  [OrderController\n@RestController] as OrderCtrl
+  [ProductController\n@RestController] as ProdCtrl
+
+  interface "REST API\n/api/v1/*" as RestAPI
+
+  UserCtrl -up- RestAPI
+  OrderCtrl -up- RestAPI
+  ProdCtrl -up- RestAPI
+}
+
+' Service Layer
+package "💼 Business Logic Layer" {
+  [UserService\n@Service] as UserSvc
+  [OrderService\n@Service] as OrderSvc
+  [ProductService\n@Service] as ProdSvc
+  [NotificationService\n@Service\n⚡ @Async] as NotifSvc
+  [PaymentService\n@Service] as PaymentSvc
+}
+
+' Data Access Layer
+package "📦 Data Access Layer" {
+  [UserRepository\n@Repository\nextends JpaRepository] as UserRepo
+  [OrderRepository\n@Repository\nextends JpaRepository] as OrderRepo
+  [ProductRepository\n@Repository\nextends JpaRepository] as ProdRepo
+
+  interface "JPA/Hibernate" as JPA
+
+  UserRepo -down- JPA
+  OrderRepo -down- JPA
+  ProdRepo -down- JPA
+}
+
+' Configuration and Cross-Cutting
+package "⚙️ Configuration & Infrastructure" {
+  [SecurityConfig\n@Configuration\n🔒 JWT Auth] as SecConfig
+  [CacheConfig\n@Configuration\n⚡ @EnableCaching] as CacheConfig
+  [AsyncConfig\n@Configuration\n⚡ @EnableAsync] as AsyncConfig
+  [DatabaseConfig\n@Configuration\n💾 DataSource] as DBConfig
+  [SwaggerConfig\n@Configuration\n📚 OpenAPI] as SwaggerConfig
+}
+
+' External Integrations
+package "🔌 External Integration Layer" {
+  [PaymentGatewayClient\n@FeignClient] as PaymentClient
+  [EmailClient\n@Component\nSMTP] as EmailClient
+  [S3StorageClient\n@Component\nAWS SDK] as S3Client
+}
+
+' Domain Models
+package "🏗️ Domain Models" {
+  [User\n@Entity\n@Table] as UserEntity
+  [Order\n@Entity\n@Table] as OrderEntity
+  [Product\n@Entity\n@Table] as ProdEntity
+}
+
+' DTOs
+package "📄 Data Transfer Objects" {
+  [UserDTO\nRecord] as UserDTO
+  [OrderDTO\nRecord] as OrderDTO
+  [ProductDTO\nRecord] as ProdDTO
+}
+
+' Database
+database "💾 PostgreSQL" as DB
+
+' Cache
+database "⚡ Redis Cache" as Cache
+
+' Message Queue
+queue "📬 RabbitMQ" as MQ
+
+' Relationships - Controller to Service
+UserCtrl --> UserSvc : uses
+OrderCtrl --> OrderSvc : uses
+ProdCtrl --> ProdSvc : uses
+
+' Service to Service
+OrderSvc --> UserSvc : validates user
+OrderSvc --> ProdSvc : checks inventory
+OrderSvc --> PaymentSvc : processes payment
+OrderSvc --> NotifSvc : sends notifications
+
+' Service to Repository
+UserSvc --> UserRepo : CRUD operations
+OrderSvc --> OrderRepo : CRUD operations
+ProdSvc --> ProdRepo : CRUD operations
+
+' Service to External
+PaymentSvc --> PaymentClient : payment processing
+NotifSvc --> EmailClient : email notifications
+ProdSvc --> S3Client : image upload
+
+' Repository to Database
+JPA --> DB : JDBC
+
+' Service to Cache
+UserSvc --> Cache : @Cacheable\n@CacheEvict
+ProdSvc --> Cache : @Cacheable
+
+' Service to Message Queue
+NotifSvc --> MQ : publish events
+OrderSvc --> MQ : publish events
+
+' DTOs usage
+UserCtrl ..> UserDTO : request/response
+OrderCtrl ..> OrderDTO : request/response
+ProdCtrl ..> ProdDTO : request/response
+
+' Entities usage
+UserRepo ..> UserEntity : manages
+OrderRepo ..> OrderEntity : manages
+ProdRepo ..> ProdEntity : manages
+
+' Security
+SecConfig ..> UserCtrl : secures
+SecConfig ..> OrderCtrl : secures
+SecConfig ..> ProdCtrl : secures
+
+' Configuration dependencies
+CacheConfig ..> Cache : configures
+DBConfig ..> DB : configures
+AsyncConfig ..> NotifSvc : enables async
+
+note right of SecConfig
+  JWT-based authentication
+  Role-based access control
+  CORS configuration
+  OAuth2 integration
+end note
+
+note bottom of Cache
+  Session storage
+  Query result caching
+  @Cacheable annotations
+  TTL: 1 hour
+end note
+
+note right of MQ
+  Event-driven architecture
+  Order events
+  Notification events
+  Dead letter queue
+end note
+
+note left of RestAPI
+  OpenAPI 3.0 documentation
+  Swagger UI available
+  Rate limiting enabled
+  API versioning: v1, v2
+end note
+
+@enduml

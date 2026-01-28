@@ -1,6 +1,6 @@
-import { ThemeToggle } from "../ui/ThemeToggle";
-import { useUIStore } from "@/stores/uiStore";
 import { isTauri } from "@/lib/tauri";
+import { useUIStore } from "@/stores/uiStore";
+import { ThemeToggle } from "../ui/ThemeToggle";
 
 export function Header() {
   const { toggleSidebar, sidebarOpen } = useUIStore();
@@ -11,6 +11,7 @@ export function Header() {
       <div className="flex items-center gap-3">
         {/* Sidebar toggle */}
         <button
+          type="button"
           onClick={toggleSidebar}
           className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
           aria-label={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
@@ -21,6 +22,7 @@ export function Header() {
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
+            aria-hidden="true"
           >
             <path
               strokeLinecap="round"
@@ -37,12 +39,11 @@ export function Header() {
             className="w-6 h-6 text-accent dark:text-accent-dark"
             viewBox="0 0 24 24"
             fill="currentColor"
+            aria-hidden="true"
           >
             <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
           </svg>
-          <span className="font-semibold text-lg text-gray-900 dark:text-gray-100">
-            RuleZ UI
-          </span>
+          <span className="font-semibold text-lg text-gray-900 dark:text-gray-100">RuleZ UI</span>
         </div>
 
         {/* Mode indicator */}
@@ -55,6 +56,7 @@ export function Header() {
       <div className="flex items-center gap-2">
         {/* Help button */}
         <button
+          type="button"
           className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
           aria-label="Help"
           title="Help"
@@ -64,6 +66,7 @@ export function Header() {
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
+            aria-hidden="true"
           >
             <path
               strokeLinecap="round"

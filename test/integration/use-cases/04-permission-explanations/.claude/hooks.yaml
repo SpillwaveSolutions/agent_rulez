@@ -1,0 +1,27 @@
+# CCH Integration Test - Permission Explanations
+# This configuration provides context during permission requests.
+
+version: "1.0"
+
+rules:
+  - name: explain-bash-permissions
+    description: "Provide context when Bash permission is requested"
+    event_types: ["PermissionRequest"]
+    matchers:
+      tools: ["Bash"]
+    actions:
+      inject_context:
+        - ".claude/context/bash-permission-context.md"
+
+  - name: explain-write-permissions
+    description: "Provide context when Write permission is requested"
+    event_types: ["PermissionRequest"]
+    matchers:
+      tools: ["Write", "Edit"]
+    actions:
+      inject_context:
+        - ".claude/context/write-permission-context.md"
+
+settings:
+  log_level: "debug"
+  debug_logs: true

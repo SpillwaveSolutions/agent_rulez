@@ -11,7 +11,7 @@
 set -e
 
 # Find repo root (where Cargo.toml with [workspace] lives)
-# .claude/skills/release-cch/scripts/ -> 4 levels to repo root
+# Path: .claude/skills/release-cch/scripts/ -> need to go up 4 levels
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 

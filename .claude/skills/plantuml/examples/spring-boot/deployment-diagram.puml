@@ -1,0 +1,130 @@
+@startuml spring-boot-deployment
+!theme cerulean
+
+<style>
+node {
+  BackgroundColor LightSteelBlue
+  BorderColor Navy
+  FontColor DarkBlue
+  FontSize 12
+}
+database {
+  BackgroundColor LightYellow
+  BorderColor DarkGoldenrod
+}
+component {
+  BackgroundColor LightGreen
+  BorderColor DarkGreen
+}
+</style>
+
+title Spring Boot Microservice Deployment Architecture
+
+' Cloud Infrastructure
+cloud "🌐 AWS Cloud" as aws {
+
+  ' Load Balancer
+  node "⚖️ Application Load Balancer" as alb {
+    component "ALB" as alb_comp
+  }
+
+  ' ECS Cluster
+  node "📦 ECS Cluster" as ecs {
+    ' Spring Boot Containers
+    rectangle "🌱 Spring Boot App (Container 1)" as app1 {
+      component "🎯 REST API\n⚙️ Spring Boot 3.x\n🔒 Spring Security\n📊 Actuator" as sb1
+    }
+
+    rectangle "🌱 Spring Boot App (Container 2)" as app2 {
+      component "🎯 REST API\n⚙️ Spring Boot 3.x\n🔒 Spring Security\n📊 Actuator" as sb2
+    }
+
+    rectangle "🌱 Spring Boot App (Container 3)" as app3 {
+      component "🎯 REST API\n⚙️ Spring Boot 3.x\n🔒 Spring Security\n📊 Actuator" as sb3
+    }
+  }
+
+  ' RDS Database
+  database "💾 Amazon RDS\n(PostgreSQL)" as rds {
+    component "Primary DB" as primary
+    component "Standby DB" as standby
+  }
+
+  ' ElastiCache
+  database "⚡ Amazon ElastiCache\n(Redis)" as redis {
+    component "Session Store\nCache Layer" as redis_comp
+  }
+
+  ' S3 Storage
+  storage "📁 Amazon S3" as s3 {
+    component "File Storage\nStatic Assets" as s3_comp
+  }
+
+  ' Secrets Manager
+  node "🔑 AWS Secrets Manager" as secrets {
+    component "DB Credentials\nAPI Keys" as secrets_comp
+  }
+
+  ' CloudWatch
+  node "📊 CloudWatch" as cloudwatch {
+    component "Logs\nMetrics\nAlerts" as cw_comp
+  }
+}
+
+' External Services
+cloud "🔌 External APIs" as external {
+  component "Payment Gateway" as payment
+  component "Email Service" as email
+  component "SMS Provider" as sms
+}
+
+' Connections
+alb_comp --> sb1 : HTTPS/443
+alb_comp --> sb2 : HTTPS/443
+alb_comp --> sb3 : HTTPS/443
+
+sb1 --> primary : JDBC\nPort 5432
+sb2 --> primary : JDBC\nPort 5432
+sb3 --> primary : JDBC\nPort 5432
+
+primary -[#red,dashed]-> standby : Replication
+
+sb1 --> redis_comp : Redis Protocol\nPort 6379
+sb2 --> redis_comp : Redis Protocol\nPort 6379
+sb3 --> redis_comp : Redis Protocol\nPort 6379
+
+sb1 --> s3_comp : AWS SDK
+sb2 --> s3_comp : AWS SDK
+sb3 --> s3_comp : AWS SDK
+
+sb1 ..> secrets_comp : Fetch secrets\nat startup
+sb2 ..> secrets_comp : Fetch secrets\nat startup
+sb3 ..> secrets_comp : Fetch secrets\nat startup
+
+sb1 --> payment : REST API
+sb2 --> email : REST API
+sb3 --> sms : REST API
+
+sb1 --> cw_comp : Logs & Metrics
+sb2 --> cw_comp : Logs & Metrics
+sb3 --> cw_comp : Logs & Metrics
+
+note right of ecs
+  Auto-scaling group
+  Min: 2, Max: 10 instances
+  Scale on CPU > 70%
+end note
+
+note bottom of rds
+  Multi-AZ deployment
+  Automated backups
+  Read replicas for reporting
+end note
+
+note bottom of redis
+  Session management
+  Cache for frequent queries
+  TTL: 3600s
+end note
+
+@enduml

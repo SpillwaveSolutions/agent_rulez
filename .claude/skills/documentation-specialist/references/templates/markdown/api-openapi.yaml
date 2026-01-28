@@ -1,0 +1,659 @@
+openapi: 3.0.3
+info:
+  title: [API Name]
+  description: |
+    # [API Name] REST API
+
+    This API provides [brief description of what the API does].
+
+    ## Base URL
+    - **Production**: `https://api.example.com/v1`
+    - **Staging**: `https://staging-api.example.com/v1`
+
+    ## Authentication
+    All API requests require authentication using JWT Bearer tokens.
+    Include the token in the `Authorization` header:
+    ```
+    Authorization: Bearer <your_jwt_token>
+    ```
+
+    ## Rate Limiting
+    - **Authenticated requests**: 1000 requests per hour
+    - **Unauthenticated requests**: 100 requests per hour
+
+    Rate limit information is included in response headers:
+    - `X-RateLimit-Limit`: Maximum requests per hour
+    - `X-RateLimit-Remaining`: Remaining requests
+    - `X-RateLimit-Reset`: Unix timestamp when limit resets
+
+    ## Pagination
+    List endpoints support pagination using query parameters:
+    - `page`: Page number (default: 1)
+    - `per_page`: Items per page (default: 50, max: 100)
+
+    Pagination metadata is included in the response under `meta`.
+
+    ## Error Handling
+    The API uses conventional HTTP response codes:
+    - `2xx`: Success
+    - `4xx`: Client errors (invalid request)
+    - `5xx`: Server errors
+
+    Error responses include a JSON body with `code` and `message` fields.
+
+    ## Versioning
+    The API is versioned via the URL path (`/v1`, `/v2`). Breaking changes will result in a new version.
+
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: api-support@example.com
+    url: https://example.com/support
+  license:
+    name: Proprietary
+    url: https://example.com/terms
+
+servers:
+  - url: https://api.example.com/v1
+    description: Production server
+  - url: https://staging-api.example.com/v1
+    description: Staging server
+  - url: http://localhost:3000/v1
+    description: Local development server
+
+tags:
+  - name: Authentication
+    description: User authentication and authorization
+  - name: Users
+    description: User account management
+  - name: Tasks
+    description: Task management operations
+  - name: Projects
+    description: Project management operations
+
+# ============================================================================
+# REUSABLE COMPONENTS
+# ============================================================================
+components:
+
+  # Security Schemes
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token obtained from the `/auth/login` endpoint.
+        Include in the Authorization header as: `Bearer <token>`
+
+  # Reusable Schemas (Data Models)
+  schemas:
+
+    # User Model
+    User:
+      type: object
+      required:
+        - id
+        - email
+        - name
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique user identifier
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: "user@example.com"
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: User's full name
+          example: "John Doe"
+        role:
+          type: string
+          enum: [user, admin, superadmin]
+          description: User's role in the system
+          example: "user"
+        created_at:
+          type: string
+          format: date-time
+          description: Account creation timestamp
+          example: "2025-01-15T10:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          example: "2025-01-15T14:45:00Z"
+
+    # Task Model
+    Task:
+      type: object
+      required:
+        - id
+        - title
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique task identifier
+          example: "660e8400-e29b-41d4-a716-446655440001"
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Task title
+          example: "Implement user authentication"
+        description:
+          type: string
+          maxLength: 2000
+          description: Detailed task description
+          example: "Add JWT-based authentication with refresh tokens"
+        status:
+          type: string
+          enum: [pending, in_progress, in_review, completed, archived]
+          description: Current status of the task
+          example: "in_progress"
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+          description: Task priority level
+          example: "high"
+        assignee_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: ID of the assigned user
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        project_id:
+          type: string
+          format: uuid
+          description: ID of the parent project
+          example: "770e8400-e29b-41d4-a716-446655440002"
+        due_date:
+          type: string
+          format: date
+          nullable: true
+          description: Task deadline
+          example: "2025-02-01"
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-01-15T10:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-01-16T09:15:00Z"
+
+    # Request/Response Models
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: "user@example.com"
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: "SecureP@ssw0rd"
+
+    LoginResponse:
+      type: object
+      required:
+        - access_token
+        - token_type
+        - expires_in
+      properties:
+        access_token:
+          type: string
+          description: JWT access token
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        refresh_token:
+          type: string
+          description: Refresh token for obtaining new access tokens
+          example: "dGVzdF9yZWZyZXNoX3Rva2VuXzEyMzQ1..."
+        token_type:
+          type: string
+          example: "Bearer"
+        expires_in:
+          type: integer
+          description: Token expiration time in seconds
+          example: 3600
+        user:
+          $ref: '#/components/schemas/User'
+
+    CreateTaskRequest:
+      type: object
+      required:
+        - title
+        - project_id
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+          example: "Design new landing page"
+        description:
+          type: string
+          maxLength: 2000
+          example: "Create a modern, responsive landing page with hero section and feature showcase"
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+          default: medium
+        assignee_id:
+          type: string
+          format: uuid
+          nullable: true
+        project_id:
+          type: string
+          format: uuid
+        due_date:
+          type: string
+          format: date
+          nullable: true
+
+    UpdateTaskRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 2000
+        status:
+          type: string
+          enum: [pending, in_progress, in_review, completed, archived]
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+        assignee_id:
+          type: string
+          format: uuid
+          nullable: true
+        due_date:
+          type: string
+          format: date
+          nullable: true
+
+    # Generic Response Models
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code
+          example: "invalid_request"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "The 'title' field is required"
+        details:
+          type: object
+          additionalProperties: true
+          description: Additional error context
+
+    PaginatedResponse:
+      type: object
+      required:
+        - data
+        - meta
+      properties:
+        data:
+          type: array
+          items: {}
+          description: Array of resources
+        meta:
+          type: object
+          required:
+            - page
+            - per_page
+            - total
+            - total_pages
+          properties:
+            page:
+              type: integer
+              example: 1
+            per_page:
+              type: integer
+              example: 50
+            total:
+              type: integer
+              example: 237
+            total_pages:
+              type: integer
+              example: 5
+
+  # Reusable Parameters
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      description: Page number for pagination
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+        example: 1
+
+    PerPageParam:
+      name: per_page
+      in: query
+      description: Number of items per page
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+        example: 50
+
+    TaskIdParam:
+      name: task_id
+      in: path
+      description: Unique task identifier
+      required: true
+      schema:
+        type: string
+        format: uuid
+        example: "660e8400-e29b-41d4-a716-446655440001"
+
+  # Reusable Responses
+  responses:
+    UnauthorizedError:
+      description: Authentication credentials missing or invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: "unauthorized"
+            message: "Invalid or expired authentication token"
+
+    ForbiddenError:
+      description: Authenticated but not authorized to access resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: "forbidden"
+            message: "You do not have permission to perform this action"
+
+    NotFoundError:
+      description: Requested resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: "not_found"
+            message: "Task with id '660e8400-e29b-41d4-a716-446655440001' not found"
+
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: "validation_error"
+            message: "Validation failed"
+            details:
+              title: "Title is required"
+              due_date: "Must be a future date"
+
+    RateLimitError:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: "rate_limit_exceeded"
+            message: "Too many requests. Please try again later."
+      headers:
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: Maximum requests per hour
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+          description: Remaining requests
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+          description: Unix timestamp when limit resets
+
+# ============================================================================
+# API ENDPOINTS
+# ============================================================================
+paths:
+
+  # ========================================
+  # Authentication Endpoints
+  # ========================================
+  /auth/login:
+    post:
+      summary: User login
+      description: Authenticate a user and obtain access tokens
+      operationId: loginUser
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: "invalid_credentials"
+                message: "Invalid email or password"
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+
+  /auth/logout:
+    post:
+      summary: User logout
+      description: Invalidate the current access token
+      operationId: logoutUser
+      tags:
+        - Authentication
+      security:
+        - BearerAuth: []
+      responses:
+        '204':
+          description: Logout successful (no content)
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  # ========================================
+  # Task Endpoints
+  # ========================================
+  /tasks:
+    get:
+      summary: List tasks
+      description: Retrieve a paginated list of tasks
+      operationId: listTasks
+      tags:
+        - Tasks
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - name: status
+          in: query
+          description: Filter by task status
+          required: false
+          schema:
+            type: string
+            enum: [pending, in_progress, in_review, completed, archived]
+        - name: assignee_id
+          in: query
+          description: Filter by assigned user ID
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: project_id
+          in: query
+          description: Filter by project ID
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of tasks
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Task'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+
+    post:
+      summary: Create a task
+      description: Create a new task
+      operationId: createTask
+      tags:
+        - Tasks
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+      responses:
+        '201':
+          description: Task created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+
+  /tasks/{task_id}:
+    get:
+      summary: Get a task
+      description: Retrieve a specific task by ID
+      operationId: getTask
+      tags:
+        - Tasks
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TaskIdParam'
+      responses:
+        '200':
+          description: Task details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    put:
+      summary: Update a task
+      description: Update a specific task by ID
+      operationId: updateTask
+      tags:
+        - Tasks
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TaskIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskRequest'
+      responses:
+        '200':
+          description: Task updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    delete:
+      summary: Delete a task
+      description: Delete a specific task by ID
+      operationId: deleteTask
+      tags:
+        - Tasks
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TaskIdParam'
+      responses:
+        '204':
+          description: Task deleted successfully (no content)
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+# ============================================================================
+# GLOBAL SECURITY (Applied to all endpoints unless overridden)
+# ============================================================================
+security:
+  - BearerAuth: []

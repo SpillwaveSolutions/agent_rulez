@@ -1,0 +1,8 @@
+installed_at: '2026-01-22T04:24:01+00:00'
+skill_id: git/pr-reviewer
+git_repo: https://github.com/SpillwaveSolutions/pr-reviewer-skill
+skill_path: /private/var/folders/tm/chrvt43s3rbdld20ghw1qtc40000gn/T/skilz-git-7zj2lxjj
+git_sha: 4aa1d9b3f6c1acc3b5876c8d8faa24b93af4c8c2
+skilz_version: 1.9.1
+install_mode: copy
+canonical_path: null

@@ -5,15 +5,6 @@
 #
 # Usage: ./generate-changelog.sh [version]
 #
-# Parses commits since the last tag and groups them by type:
-# - feat: -> Added
-# - fix: -> Fixed
-# - docs: -> Documentation
-# - chore: -> Changed
-# - feat!: -> BREAKING CHANGES
-#
-# Output is printed to stdout for review before adding to CHANGELOG.md
-#
 
 set -e
 
@@ -59,7 +50,7 @@ OTHER=""
 # Parse commits
 while IFS= read -r commit; do
     [ -z "$commit" ] && continue
-
+    
     case "$commit" in
         feat!:*)
             msg="${commit#feat!: }"
@@ -98,7 +89,6 @@ while IFS= read -r commit; do
             CHORES="${CHORES}- ${msg}\n"
             ;;
         *)
-            # Non-conventional commits go to Other
             OTHER="${OTHER}- ${commit}\n"
             ;;
     esac
@@ -151,4 +141,3 @@ echo "To update CHANGELOG.md:"
 echo "1. Review the above output"
 echo "2. Copy relevant sections to CHANGELOG.md"
 echo "3. Edit descriptions for clarity"
-echo "4. Remove any duplicate or irrelevant entries"

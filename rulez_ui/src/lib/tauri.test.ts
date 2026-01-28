@@ -1,4 +1,4 @@
-import { describe, expect, test, mock } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { isTauri } from "./tauri";
 
 describe("tauri.ts", () => {
@@ -17,8 +17,7 @@ describe("tauri.ts", () => {
       expect(isTauri()).toBe(true);
 
       // Restore
-      // @ts-expect-error - restoring window for test
-      globalThis.window = originalWindow;
+      globalThis.window = originalWindow as typeof globalThis.window;
     });
   });
 });

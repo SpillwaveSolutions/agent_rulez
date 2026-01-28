@@ -1,0 +1,24 @@
+# CCH Integration Test - Session Logging
+# This configuration enables comprehensive logging for audit trails.
+
+version: "1.0"
+
+rules:
+  - name: log-all-bash
+    description: "Log all Bash commands for audit"
+    matchers:
+      tools: ["Bash"]
+    actions:
+      log_level: "debug"
+
+  - name: log-file-operations
+    description: "Log all file operations"
+    matchers:
+      tools: ["Write", "Edit", "Read"]
+    actions:
+      log_level: "debug"
+
+settings:
+  log_level: "debug"
+  debug_logs: true
+  fail_open: true

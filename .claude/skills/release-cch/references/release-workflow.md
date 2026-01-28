@@ -130,29 +130,3 @@ After all builds complete:
 2. Generate checksums: `sha256sum *.tar.gz *.zip > checksums.txt`
 3. Create GitHub release with `softprops/action-gh-release`
 4. Upload all assets
-
-## Version Flow
-
-```
-Cargo.toml                    Git Tags                    GitHub Release
-    │                             │                             │
-    ▼                             ▼                             ▼
-version = "1.0.0"  ───────►  v1.0.0  ────────────────►  Release v1.0.0
-    │                             │                        │
-    │                             │                        ├─ Assets
-    │                             │                        ├─ Release notes
-    │                             │                        └─ Checksums
-    │                             │
-    ▼                             ▼
-version = "1.1.0"  ───────►  v1.1.0  ────────────────►  Release v1.1.0
-```
-
-## Timing Expectations
-
-| Phase | Typical Duration |
-|-------|-----------------|
-| Prepare (manual) | 5-10 minutes |
-| CI checks | 2-3 minutes |
-| Review/Merge PR | Variable |
-| Tag push to release | 3-5 minutes |
-| **Total** | ~15-20 minutes (excluding review) |

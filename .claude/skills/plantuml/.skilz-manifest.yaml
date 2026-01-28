@@ -1,0 +1,8 @@
+installed_at: '2026-01-22T04:23:57+00:00'
+skill_id: git/plantuml
+git_repo: https://github.com/SpillwaveSolutions/plantuml
+skill_path: /private/var/folders/tm/chrvt43s3rbdld20ghw1qtc40000gn/T/skilz-git-pjz2qx1f
+git_sha: 5580ff786015ee8e9a662dd2fead24e770a6bce4
+skilz_version: 1.9.1
+install_mode: copy
+canonical_path: null

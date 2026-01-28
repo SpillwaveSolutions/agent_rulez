@@ -1,0 +1,116 @@
+# CCH Wiki Mapping
+# Maps local markdown files to GitHub Wiki pages for synchronization
+# Wiki: https://github.com/SpillwaveSolutions/code_agent_context_hooks.wiki.git
+
+# Core documentation files
+docs:
+  docs/README.md: "Home"
+  docs/USER_GUIDE_CLI.md: "User-Guide-CLI"
+  docs/USER_GUIDE_SKILL.md: "User-Guide-Skill"
+  docs/BACKLOG.md: "Backlog"
+  docs/IQ_OQ_PQ_IntegrationTesting.md: "IQ-OQ-PQ-Integration-Testing"
+  CHANGELOG.md: "Changelog"
+
+# DevOps documentation
+devops:
+  docs/devops/BRANCHING.md: "DevOps-Branching-Strategy"
+  docs/devops/CI_TIERS.md: "DevOps-CI-Tiers"
+  docs/devops/RELEASE_PROCESS.md: "DevOps-Release-Process"
+
+# Product Requirements Documents
+prds:
+  docs/prds/cch_cli_prd.md: "PRD-CCH-CLI"
+  docs/prds/cch_system.md: "PRD-CCH-System"
+  docs/prds/mastering_hooks.md: "PRD-Mastering-Hooks"
+  docs/prds/phase2_prd.md: "PRD-Phase2-Governance"
+  docs/prds/rulez_ui_prd.md: "PRD-RuleZ-UI"
+
+# SpecKit Core
+speckit-core:
+  .speckit/constitution.md: "SpecKit-Constitution"
+  .speckit/features.md: "SpecKit-Features-Index"
+
+# Feature: CCH Binary v1 (Completed)
+feature-cch-binary:
+  .speckit/features/cch-binary-v1/specify.md: "Feature-CCH-Binary-v1-Spec"
+  .speckit/features/cch-binary-v1/plan.md: "Feature-CCH-Binary-v1-Plan"
+  .speckit/features/cch-binary-v1/tasks.md: "Feature-CCH-Binary-v1-Tasks"
+
+# Feature: Enhanced Logging (Completed)
+feature-enhanced-logging:
+  .speckit/features/enhanced-logging/spec.md: "Feature-Enhanced-Logging-Spec"
+  .speckit/features/enhanced-logging/plan.md: "Feature-Enhanced-Logging-Plan"
+  .speckit/features/enhanced-logging/tasks.md: "Feature-Enhanced-Logging-Tasks"
+
+# Feature: Phase 2 Governance (Completed)
+feature-phase2-governance:
+  .speckit/features/phase2-governance/spec.md: "Feature-Phase2-Governance-Spec"
+  .speckit/features/phase2-governance/plan.md: "Feature-Phase2-Governance-Plan"
+  .speckit/features/phase2-governance/tasks.md: "Feature-Phase2-Governance-Tasks"
+
+# Feature: RuleZ UI (In Progress)
+feature-rulez-ui:
+  .speckit/features/rulez-ui/spec.md: "Feature-RuleZ-UI-Spec"
+  .speckit/features/rulez-ui/plan.md: "Feature-RuleZ-UI-Plan"
+  .speckit/features/rulez-ui/tasks.md: "Feature-RuleZ-UI-Tasks"
+
+# Feature: Integration Testing (In Progress)
+feature-integration-testing:
+  .speckit/features/integration-testing/specify.md: "Feature-Integration-Testing-Spec"
+  .speckit/features/integration-testing/plan.md: "Feature-Integration-Testing-Plan"
+  .speckit/features/integration-testing/tasks.md: "Feature-Integration-Testing-Tasks"
+
+# Feature: Mastering Hooks (Completed)
+feature-mastering-hooks:
+  .speckit/features/mastering-hooks/spec.md: "Feature-Mastering-Hooks-Spec"
+  .speckit/features/mastering-hooks/plan.md: "Feature-Mastering-Hooks-Plan"
+  .speckit/features/mastering-hooks/tasks.md: "Feature-Mastering-Hooks-Tasks"
+
+# Feature: Advanced Rules (Backlog)
+feature-advanced-rules:
+  .speckit/features/cch-advanced-rules/spec.md: "Feature-Advanced-Rules-Spec"
+
+# Checklists
+checklists:
+  .speckit/checklists/phase2-governance-checklist.md: "Checklist-Phase2-Governance"
+  .speckit/checklists/rulez-ui-checklist.md: "Checklist-RuleZ-UI"
+
+# Wiki Pages Summary (for tracking)
+wiki_pages_created:
+  - Home: "Main project documentation with overview and quick start"
+  - User-Guide-CLI: "Complete CLI command reference"
+  - User-Guide-Skill: "CCH Skill usage guide"
+  - Backlog: "Product backlog items"
+  - IQ-OQ-PQ-Integration-Testing: "Validation testing framework"
+  - Changelog: "Version history and release notes"
+  - DevOps-Branching-Strategy: "Git workflow and branching model"
+  - DevOps-CI-Tiers: "Fast CI vs Full Validation tiers"
+  - DevOps-Release-Process: "Release workflow documentation"
+  - PRD-CCH-CLI: "CLI product requirements"
+  - PRD-CCH-System: "System architecture requirements"
+  - PRD-Mastering-Hooks: "Hooks skill requirements"
+  - PRD-Phase2-Governance: "Phase 2 governance requirements"
+  - PRD-RuleZ-UI: "Desktop UI product requirements"
+  - SpecKit-Constitution: "Project principles and standards"
+  - SpecKit-Features-Index: "All features with status"
+  - Feature-CCH-Binary-v1-Spec: "Binary specification"
+  - Feature-CCH-Binary-v1-Plan: "Binary implementation plan"
+  - Feature-CCH-Binary-v1-Tasks: "Binary task breakdown"
+  - Feature-Enhanced-Logging-Spec: "Logging specification"
+  - Feature-Enhanced-Logging-Plan: "Logging implementation plan"
+  - Feature-Enhanced-Logging-Tasks: "Logging task breakdown"
+  - Feature-Phase2-Governance-Spec: "Governance specification"
+  - Feature-Phase2-Governance-Plan: "Governance implementation plan"
+  - Feature-Phase2-Governance-Tasks: "Governance task breakdown"
+  - Feature-RuleZ-UI-Spec: "UI specification"
+  - Feature-RuleZ-UI-Plan: "UI implementation plan"
+  - Feature-RuleZ-UI-Tasks: "UI task breakdown"
+  - Feature-Integration-Testing-Spec: "Testing specification"
+  - Feature-Integration-Testing-Plan: "Testing implementation plan"
+  - Feature-Integration-Testing-Tasks: "Testing task breakdown"
+  - Feature-Mastering-Hooks-Spec: "Hooks skill specification"
+  - Feature-Mastering-Hooks-Plan: "Hooks skill implementation plan"
+  - Feature-Mastering-Hooks-Tasks: "Hooks skill task breakdown"
+  - Feature-Advanced-Rules-Spec: "Advanced rules specification"
+  - Checklist-Phase2-Governance: "Governance completion checklist"
+  - Checklist-RuleZ-UI: "RuleZ UI completion checklist"

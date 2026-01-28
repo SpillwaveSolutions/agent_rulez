@@ -53,7 +53,7 @@ export async function writeConfig(path: string, content: string): Promise<void> 
 export async function runDebug(params: DebugParams): Promise<DebugResult> {
   if (isTauri()) {
     const { invoke } = await import("@tauri-apps/api/core");
-    return invoke<DebugResult>("run_debug", params);
+    return invoke<DebugResult>("run_debug", params as unknown as Record<string, unknown>);
   }
   return mockRunDebug(params);
 }
@@ -61,9 +61,7 @@ export async function runDebug(params: DebugParams): Promise<DebugResult> {
 /**
  * Validate config file using CCH
  */
-export async function validateConfig(
-  path: string
-): Promise<{ valid: boolean; errors: string[] }> {
+export async function validateConfig(path: string): Promise<{ valid: boolean; errors: string[] }> {
   if (isTauri()) {
     const { invoke } = await import("@tauri-apps/api/core");
     return invoke<{ valid: boolean; errors: string[] }>("validate_config", { path });
@@ -126,9 +124,7 @@ async function mockRunDebug(params: DebugParams): Promise<DebugResult> {
   };
 }
 
-async function mockValidateConfig(
-  _path: string
-): Promise<{ valid: boolean; errors: string[] }> {
+async function mockValidateConfig(_path: string): Promise<{ valid: boolean; errors: string[] }> {
   await delay(50);
   // In mock mode, always return valid
   return { valid: true, errors: [] };

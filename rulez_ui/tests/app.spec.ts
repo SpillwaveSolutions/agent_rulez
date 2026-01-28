@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 test.describe("RuleZ UI Application", () => {
   test("should load the application", async ({ page }) => {

@@ -5,22 +5,11 @@
 #
 # Usage: ./preflight-check.sh [--json]
 #
-# Checks:
-# - Working directory status
-# - Current branch (main or release/*)
-# - cargo fmt --check
-# - cargo clippy (no warnings)
-# - cargo test (all pass)
-#
-# Exit codes:
-# - 0: All checks pass
-# - 1: One or more checks failed
-#
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# .claude/skills/release-cch/scripts/ -> 4 levels to repo root
+# Path: .claude/skills/release-cch/scripts/ -> need to go up 4 levels
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 JSON_OUTPUT=false
 
@@ -125,7 +114,6 @@ fi
 check_info "Running integration tests..."
 cd "$REPO_ROOT"
 if [ -x "$REPO_ROOT/test/integration/run-all.sh" ]; then
-    # Check if Claude CLI is available
     if command -v claude &> /dev/null; then
         INTEGRATION_OUTPUT=$("$REPO_ROOT/test/integration/run-all.sh" 2>&1) || true
         if echo "$INTEGRATION_OUTPUT" | grep -q "All tests passed"; then
@@ -136,15 +124,12 @@ if [ -x "$REPO_ROOT/test/integration/run-all.sh" ]; then
         else
             check_fail "Integration tests failed"
             $JSON_OUTPUT || echo "  Run: ./test/integration/run-all.sh"
-            $JSON_OUTPUT || echo "  Or: task integration-test"
         fi
     else
         check_warn "Claude CLI not available - skipping integration tests"
-        $JSON_OUTPUT || echo "  Integration tests require Claude CLI to be installed"
-        $JSON_OUTPUT || echo "  Install: https://docs.anthropic.com/en/docs/claude-code"
     fi
 else
-    check_fail "Integration test runner not found at test/integration/run-all.sh"
+    check_fail "Integration test runner not found"
 fi
 cd "$REPO_ROOT/cch_cli"
 

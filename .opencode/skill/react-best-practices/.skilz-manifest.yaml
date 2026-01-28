@@ -1,0 +1,8 @@
+installed_at: '2026-01-25T23:23:11+00:00'
+skill_id: vercel-labs/agent-skills/vercel-react-best-practices
+git_repo: https://github.com/vercel-labs/agent-skills.git
+skill_path: /main/skills/react-best-practices/SKILL.md
+git_sha: c4399b192588e71fdf0cb507c7b6ad9e9657ce6b
+skilz_version: 1.10.0
+install_mode: copy
+canonical_path: null

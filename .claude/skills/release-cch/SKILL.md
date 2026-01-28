@@ -107,7 +107,7 @@ This validates:
 - [ ] Clippy has no warnings
 - [ ] Format check passes
 
-**IMPORTANT:** Integration tests are REQUIRED before any release. They validate that CCH works correctly with the real Claude CLI end-to-end. If Claude CLI is not installed, the preflight check will warn but not block - however, you should ensure integration tests pass in CI before releasing.
+**IMPORTANT:** Integration tests are REQUIRED before any release.
 
 ### 1.5 Generate Changelog
 
@@ -115,8 +115,6 @@ This validates:
 VERSION=$(.claude/skills/release-cch/scripts/read-version.sh)
 .claude/skills/release-cch/scripts/generate-changelog.sh ${VERSION}
 ```
-
-Review the output and update `CHANGELOG.md` as needed. The script parses conventional commits (`feat:`, `fix:`, `docs:`, `chore:`).
 
 ### 1.6 Commit and Push
 
@@ -131,38 +129,7 @@ git push -u origin release/v${VERSION}
 
 ```bash
 VERSION=$(.claude/skills/release-cch/scripts/read-version.sh)
-gh pr create \
-  --title "chore: prepare v${VERSION} release" \
-  --body "$(cat <<EOF
-## Summary
-
-Prepare for the v${VERSION} release of Claude Context Hooks (CCH).
-
-## Changes
-
-- Update version to ${VERSION} in Cargo.toml
-- Add CHANGELOG.md entry for v${VERSION}
-
-## Pre-merge Requirements
-
-Before merging this PR, ensure:
-- [ ] All CI checks pass (including integration tests)
-- [ ] Integration tests verified locally: \`task integration-test\`
-
-## Release Checklist
-
-After this PR is merged:
-
-1. Checkout main: \`git checkout main && git pull\`
-2. Create tag: \`git tag v${VERSION}\`
-3. Push tag: \`git push origin v${VERSION}\`
-
-This will trigger the release workflow to build cross-platform binaries:
-- Linux (x86_64, aarch64)
-- macOS (x86_64, aarch64/Apple Silicon)
-- Windows (x86_64)
-EOF
-)"
+gh pr create --title "chore: prepare v${VERSION} release" --body "..."
 ```
 
 ### 1.8 Wait for CI
@@ -170,15 +137,6 @@ EOF
 ```bash
 gh pr checks <PR_NUMBER> --watch
 ```
-
-All checks must pass before merging:
-
-- Format, Clippy, Unit Tests, Code Coverage
-- **Integration Tests** (CCH + Claude CLI end-to-end validation)
-- Build Release (5 platforms)
-- CI Success
-
-**Note:** Integration tests validate that CCH hooks work correctly with the real Claude CLI. These are critical gate checks - do NOT skip them.
 
 ---
 
@@ -205,8 +163,6 @@ git tag v${VERSION}
 git push origin v${VERSION}
 ```
 
-This triggers the release workflow automatically.
-
 ---
 
 ## Phase 3: Verify Release
@@ -217,13 +173,6 @@ This triggers the release workflow automatically.
 .claude/skills/release-cch/scripts/verify-release.sh
 ```
 
-Or manually:
-
-```bash
-gh run list --limit 3
-gh run view <RUN_ID> --watch
-```
-
 ### 3.2 Verify Release Assets
 
 ```bash
@@ -231,156 +180,11 @@ VERSION=$(.claude/skills/release-cch/scripts/read-version.sh)
 gh release view v${VERSION}
 ```
 
-Expected assets (6 total):
-
-- cch-linux-x86_64.tar.gz
-- cch-linux-aarch64.tar.gz
-- cch-macos-x86_64.tar.gz
-- cch-macos-aarch64.tar.gz
-- cch-windows-x86_64.exe.zip
-- checksums.txt
-
-### 3.3 Announce Release
-
-Once verified, the release is live at:
-
-```
-https://github.com/SpillwaveSolutions/code_agent_context_hooks/releases/tag/v${VERSION}
-```
-
 ---
 
 ## Phase 4: Hotfix Release
 
-Use this when you need to release a patch (e.g., v1.0.1) from an existing release tag.
-
-### 4.1 Create Hotfix Branch from Tag
-
-```bash
-# Checkout the tag you want to patch
-git fetch --tags
-git checkout v1.0.0
-
-# Create hotfix branch
-git checkout -b hotfix/v1.0.1
-```
-
-### 4.2 Apply Fix
-
-Make the minimal fix needed, then run checks:
-
-```bash
-cd cch_cli && cargo fmt && cargo clippy --all-targets --all-features -- -D warnings && cargo test
-```
-
-### 4.3 Update Version
-
-Edit `Cargo.toml` at the workspace root:
-
-```toml
-[workspace.package]
-version = "1.0.1"
-```
-
-### 4.4 Update Changelog
-
-Add entry to `CHANGELOG.md`:
-
-```markdown
-## [1.0.1] - YYYY-MM-DD
-
-### Fixed
-
-- Description of the hotfix
-```
-
-### 4.5 Commit and Push
-
-```bash
-git add -A
-git commit -m "fix: <description of hotfix>
-
-Hotfix for v1.0.0 addressing <issue description>"
-git push -u origin hotfix/v1.0.1
-```
-
-### 4.6 Create PR to Main
-
-```bash
-gh pr create \
-  --title "fix: hotfix v1.0.1" \
-  --body "## Hotfix Release
-
-Patches v1.0.0 with critical fix for <issue>.
-
-### Changes
-- <description>
-
-### Release Steps After Merge
-1. \`git checkout main && git pull\`
-2. \`git tag v1.0.1\`
-3. \`git push origin v1.0.1\`"
-```
-
-### 4.7 After PR Merge - Tag and Release
-
-```bash
-gh pr merge <PR_NUMBER> --merge --delete-branch
-git checkout main && git pull
-git tag v1.0.1
-git push origin v1.0.1
-```
-
-### 4.8 Verify Hotfix Release
-
-```bash
-.claude/skills/release-cch/scripts/verify-release.sh 1.0.1
-```
-
----
-
-## Integration Tests (Required)
-
-Integration tests validate CCH works correctly with the real Claude CLI. **These must pass before any release.**
-
-### Running Integration Tests
-
-```bash
-# Via Taskfile (recommended)
-task integration-test
-
-# Or directly
-./test/integration/run-all.sh
-
-# Quick mode (skip slow tests)
-task integration-test-quick
-
-# Single test
-./test/integration/run-all.sh --test 01-block-force-push
-```
-
-### Test Cases
-
-| Test | What It Validates |
-|------|-------------------|
-| `01-block-force-push` | CCH blocks dangerous git operations |
-| `02-context-injection` | CCH injects context for file types |
-| `03-session-logging` | CCH creates proper audit logs |
-| `04-permission-explanations` | CCH provides permission context |
-
-### Prerequisites
-
-- Claude CLI installed and in PATH
-- CCH binary built (auto-built by test runner)
-
-### If Tests Fail
-
-1. Check Claude CLI is installed: `which claude`
-2. Check CCH builds: `cd cch_cli && cargo build --release`
-3. Run with debug: `DEBUG=1 ./test/integration/run-all.sh`
-4. Check logs: `~/.claude/logs/cch.log`
-
-For details, see [Integration Test README](../../../test/integration/README.md).
+See [hotfix-workflow.md](references/hotfix-workflow.md) for detailed steps.
 
 ---
 
@@ -390,7 +194,7 @@ For details, see [Integration Test README](../../../test/integration/README.md).
 |--------|---------|-------|
 | `read-version.sh` | Extract version from Cargo.toml | `./scripts/read-version.sh` |
 | `generate-changelog.sh` | Generate changelog from commits | `./scripts/generate-changelog.sh [version]` |
-| `preflight-check.sh` | Run all pre-release checks (includes integration tests) | `./scripts/preflight-check.sh [--json]` |
+| `preflight-check.sh` | Run all pre-release checks | `./scripts/preflight-check.sh [--json]` |
 | `verify-release.sh` | Monitor release workflow status | `./scripts/verify-release.sh [version]` |
 
 All scripts are located in `.claude/skills/release-cch/scripts/`.
@@ -402,54 +206,3 @@ All scripts are located in `.claude/skills/release-cch/scripts/`.
 - [release-workflow.md](references/release-workflow.md) - Standard release workflow diagram
 - [hotfix-workflow.md](references/hotfix-workflow.md) - Hotfix release workflow diagram
 - [troubleshooting.md](references/troubleshooting.md) - Common issues and solutions
-
----
-
-## Quick Command Reference
-
-### Standard Release
-
-```bash
-# 1. Update version in Cargo.toml manually
-# 2. Create release branch
-VERSION=$(.claude/skills/release-cch/scripts/read-version.sh)
-git checkout -b release/v${VERSION}
-
-# 3. Run checks
-.claude/skills/release-cch/scripts/preflight-check.sh
-
-# 4. Generate changelog, review, commit
-.claude/skills/release-cch/scripts/generate-changelog.sh ${VERSION}
-# Edit CHANGELOG.md as needed
-git add CHANGELOG.md Cargo.toml
-git commit -m "chore: prepare v${VERSION} release"
-git push -u origin release/v${VERSION}
-
-# 5. Create and merge PR
-gh pr create --title "chore: prepare v${VERSION} release" --body "..."
-gh pr checks <PR> --watch
-gh pr merge <PR> --merge --delete-branch
-
-# 6. Tag and release
-git checkout main && git pull
-git tag v${VERSION}
-git push origin v${VERSION}
-
-# 7. Verify
-.claude/skills/release-cch/scripts/verify-release.sh
-```
-
-### Hotfix Release
-
-```bash
-# 1. Branch from tag
-git checkout v1.0.0
-git checkout -b hotfix/v1.0.1
-
-# 2. Fix, update version, update changelog
-# 3. Commit, push, PR, merge
-# 4. Tag and release
-git checkout main && git pull
-git tag v1.0.1
-git push origin v1.0.1
-```

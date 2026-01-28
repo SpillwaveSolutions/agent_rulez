@@ -1,0 +1,42 @@
+{
+  "name": "sdd",
+  "version": "1.0.0",
+  "description": "Guide users through GitHub's Spec-Kit for Spec-Driven Development - a methodology where specifications become executable and directly generate working implementations. Supports greenfield, brownfield, and creative exploration workflows.",
+  "triggers": [
+    "spec-driven development",
+    "spec kit",
+    "speckit",
+    "sdd",
+    "specify cli",
+    "specification driven",
+    "github spec-kit",
+    "/speckit",
+    "constitution",
+    "specify init",
+    "executable specifications",
+    "intent-driven development",
+    "brownfield",
+    "existing codebase",
+    "legacy code",
+    "legacy system",
+    "add features to existing",
+    "modernize",
+    "modernization",
+    "existing project",
+    "reverse engineer",
+    "codebase analysis",
+    "iterative enhancement"
+  ],
+  "author": "Based on GitHub Spec-Kit by Den Delimarsky and John Lam",
+  "license": "MIT",
+  "tags": [
+    "development-methodology",
+    "ai-native-development",
+    "spec-driven",
+    "github",
+    "project-management",
+    "workflow",
+    "requirements",
+    "planning"
+  ]
+}

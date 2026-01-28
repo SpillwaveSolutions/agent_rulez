@@ -2,47 +2,69 @@
 
 CCH release workflow automation for Claude Code.
 
+## Overview
+
+This skill provides automated release workflows for the Claude Context Hooks (CCH) project, including:
+
+- **Prepare Release**: Create branch, run checks, generate changelog, create PR
+- **Execute Release**: Merge PR, tag, push to trigger CI/CD
+- **Verify Release**: Monitor workflows, check assets
+- **Hotfix Release**: Patch existing releases with minimal changes
+
 ## Usage
 
 Invoke via the `/cch-release` command:
 
 ```bash
-/cch-release              # Interactive full workflow
-/cch-release prepare      # Create branch, changelog, PR
-/cch-release execute      # Merge PR, create tag
-/cch-release verify       # Check release status
-/cch-release hotfix v1.0.0 # Patch from existing tag
+/cch-release           # Interactive mode
+/cch-release prepare   # Prepare a new release
+/cch-release execute   # Execute after PR merge
+/cch-release verify    # Verify release status
+/cch-release hotfix v1.0.0  # Create hotfix
 ```
 
 ## Structure
 
 ```
-release-cch/
-├── SKILL.md              # Main skill documentation
-├── README.md             # This file
-├── scripts/              # Automation scripts
-│   ├── read-version.sh   # Extract version from Cargo.toml
-│   ├── generate-changelog.sh # Generate changelog from commits
-│   ├── preflight-check.sh    # Pre-release verification
-│   └── verify-release.sh     # Verify release completed
-├── references/           # Additional documentation
-│   ├── release-workflow.md   # Standard release diagram
-│   ├── hotfix-workflow.md    # Hotfix release diagram
-│   └── troubleshooting.md    # Common issues and solutions
-└── templates/            # Reusable templates
-    ├── changelog-entry.md    # Changelog entry template
-    └── pr-body.md            # Pull request body template
+.claude/skills/release-cch/
+├── SKILL.md                    # Main skill documentation
+├── README.md                   # This file
+├── scripts/
+│   ├── read-version.sh         # Extract version from Cargo.toml
+│   ├── generate-changelog.sh   # Generate changelog from commits
+│   ├── preflight-check.sh      # Pre-release validation
+│   └── verify-release.sh       # Release verification
+├── references/
+│   ├── release-workflow.md     # Standard release diagram
+│   ├── hotfix-workflow.md      # Hotfix process diagram
+│   └── troubleshooting.md      # Common issues and solutions
+└── templates/
+    ├── changelog-entry.md      # Changelog template
+    └── pr-body.md              # PR body template
 ```
 
-## Quick Start
+## Scripts
 
-1. Update version in `Cargo.toml`
-2. Run `/cch-release prepare`
-3. Wait for CI to pass
-4. Run `/cch-release execute`
-5. Run `/cch-release verify`
+All scripts are executable and can be run from the repo root:
 
-## See Also
+| Script | Purpose |
+|--------|---------|
+| `read-version.sh` | Reads version from `Cargo.toml` |
+| `generate-changelog.sh` | Parses conventional commits |
+| `preflight-check.sh` | Runs all pre-release checks |
+| `verify-release.sh` | Monitors release workflow |
 
-- [SKILL.md](SKILL.md) - Complete workflow documentation
-- [references/troubleshooting.md](references/troubleshooting.md) - Problem solving
+## Requirements
+
+- Git
+- GitHub CLI (`gh`)
+- Rust toolchain (for cargo commands)
+- Repository: `SpillwaveSolutions/code_agent_context_hooks`
+
+## Migrated From
+
+This skill was migrated from `.opencode/skill/release-cch/` to Claude Code format.
+
+Key changes:
+- Path depth adjusted for `.claude/skills/` (5 levels vs 4)
+- All path references updated to `.claude/skills/release-cch/`
