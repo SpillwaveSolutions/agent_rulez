@@ -144,15 +144,13 @@ impl Config {
 
     /// Get enabled rules sorted by priority (highest first)
     pub fn enabled_rules(&self) -> Vec<&Rule> {
-        let mut rules: Vec<&Rule> = self
-            .rules
-            .iter()
-            .filter(|r| r.metadata.as_ref().map_or(true, |m| m.enabled))
-            .collect();
+        let mut rules: Vec<&Rule> = self.rules.iter().filter(|r| r.is_enabled()).collect();
 
+        // Sort by effective priority (higher first)
+        // Uses new Phase 2 priority field with fallback to legacy metadata.priority
         rules.sort_by(|a, b| {
-            let a_priority = a.metadata.as_ref().map_or(0, |m| m.priority);
-            let b_priority = b.metadata.as_ref().map_or(0, |m| m.priority);
+            let a_priority = a.effective_priority();
+            let b_priority = b.effective_priority();
             b_priority.cmp(&a_priority) // Higher priority first
         });
 
@@ -199,6 +197,9 @@ mod tests {
                     block: Some(true),
                     block_if_match: None,
                 },
+                mode: None,
+                priority: None,
+                governance: None,
                 metadata: Some(RuleMetadata {
                     priority: 0,
                     timeout: 5,
@@ -232,6 +233,9 @@ mod tests {
                         block: Some(true),
                         block_if_match: None,
                     },
+                    mode: None,
+                    priority: None,
+                    governance: None,
                     metadata: None,
                 },
                 Rule {
@@ -250,6 +254,9 @@ mod tests {
                         block: Some(false),
                         block_if_match: None,
                     },
+                    mode: None,
+                    priority: None,
+                    governance: None,
                     metadata: None,
                 },
             ],
@@ -280,6 +287,9 @@ mod tests {
                         block: Some(true),
                         block_if_match: None,
                     },
+                    mode: None,
+                    priority: None,
+                    governance: None,
                     metadata: Some(RuleMetadata {
                         priority: 0,
                         timeout: 5,
@@ -302,6 +312,9 @@ mod tests {
                         block: Some(false),
                         block_if_match: None,
                     },
+                    mode: None,
+                    priority: None,
+                    governance: None,
                     metadata: Some(RuleMetadata {
                         priority: 10,
                         timeout: 5,

@@ -1,0 +1,9 @@
+# Bun configuration for RuleZ UI
+
+[install]
+# Save exact versions in package.json
+exact = true
+
+[test]
+# Test configuration
+coverage = false

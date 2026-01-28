@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+/* Base styles */
+:root {
+  --color-bg: #ffffff;
+  --color-surface: #f5f5f5;
+  --color-text: #1a1a1a;
+  --color-text-muted: #6b7280;
+  --color-border: #e5e7eb;
+  --color-accent: #3b82f6;
+  --color-error: #ef4444;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+}
+
+.dark {
+  --color-bg: #1a1a1a;
+  --color-surface: #252525;
+  --color-text: #f5f5f5;
+  --color-text-muted: #9ca3af;
+  --color-border: #374151;
+  --color-accent: #60a5fa;
+  --color-error: #f87171;
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+}
+
+/* Prevent text selection on UI elements */
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
+/* Focus ring styles */
+.focus-ring {
+  @apply focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-[#1a1a1a];
+}
+
+/* Status bar height */
+.status-bar {
+  height: 24px;
+  min-height: 24px;
+}
+
+/* Panel transitions */
+.panel-transition {
+  @apply transition-all duration-200 ease-in-out;
+}
+
+/* Resizer handle */
+.resizer {
+  @apply bg-transparent hover:bg-accent/30 cursor-col-resize transition-colors;
+  width: 4px;
+}
+
+.resizer:active {
+  @apply bg-accent/50;
+}
+
+/* Error highlight in editor */
+.error-line-highlight {
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+.dark .error-line-highlight {
+  background-color: rgba(248, 113, 113, 0.15);
+}

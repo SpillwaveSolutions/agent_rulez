@@ -1,0 +1,29 @@
+[package]
+name = "rulez-ui"
+version = "0.1.0"
+description = "Desktop application for visual CCH configuration editing"
+authors = ["RuleZ UI Team"]
+edition = "2021"
+rust-version = "1.70"
+
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
+
+[dependencies]
+tauri = { version = "2.0", features = ["devtools"] }
+tauri-plugin-shell = "2.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["process", "fs"] }
+dirs = "5.0"
+
+[features]
+# This feature is used for production builds or when a dev server is not specified
+custom-protocol = ["tauri/custom-protocol"]
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

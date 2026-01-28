@@ -159,6 +159,20 @@ impl LogQuery {
             }
         }
 
+        // Filter by policy mode (Phase 2.2)
+        if let Some(ref mode) = filters.mode {
+            if entry.mode.as_ref() != Some(mode) {
+                return false;
+            }
+        }
+
+        // Filter by decision (Phase 2.2)
+        if let Some(ref decision) = filters.decision {
+            if entry.decision.as_ref() != Some(decision) {
+                return false;
+            }
+        }
+
         true
     }
 }
@@ -186,6 +200,12 @@ pub struct QueryFilters {
 
     /// Filter entries until this timestamp
     pub until: Option<DateTime<Utc>>,
+
+    /// Filter by policy mode (Phase 2.2)
+    pub mode: Option<crate::models::PolicyMode>,
+
+    /// Filter by decision (Phase 2.2)
+    pub decision: Option<crate::models::Decision>,
 }
 
 use std::sync::OnceLock;
@@ -296,11 +316,17 @@ mod tests {
                 injected_files: None,
                 validator_output: Some("blocked by policy".to_string()),
             }),
-            // New enhanced logging fields
+            // Enhanced logging fields (CRD-001)
             event_details: None,
             response: None,
             raw_event: None,
             rule_evaluations: None,
+            // Phase 2.2 governance logging fields
+            mode: None,
+            priority: None,
+            decision: None,
+            governance: None,
+            trust_level: None,
         };
 
         logger.log_async(entry.clone()).await.unwrap();

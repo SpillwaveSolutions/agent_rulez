@@ -2,10 +2,21 @@ use anyhow::Result;
 use chrono::{DateTime, Utc};
 
 use crate::logging::{LogQuery, QueryFilters};
-use crate::models::Outcome;
+use crate::models::{Decision, Outcome, PolicyMode};
 
-/// Query and display logs
-pub async fn run(limit: usize, since: Option<String>) -> Result<()> {
+/// Query and display logs with optional filtering
+///
+/// # Arguments
+/// * `limit` - Maximum number of entries to return
+/// * `since` - Filter entries since this RFC3339 timestamp
+/// * `mode` - Filter by policy mode (enforce, warn, audit)
+/// * `decision` - Filter by decision (allowed, blocked, warned, audited)
+pub async fn run(
+    limit: usize,
+    since: Option<String>,
+    mode: Option<String>,
+    decision: Option<String>,
+) -> Result<()> {
     let query = LogQuery::new();
 
     let mut filters = QueryFilters {
@@ -24,6 +35,34 @@ pub async fn run(limit: usize, since: Option<String>) -> Result<()> {
         }
     }
 
+    // Parse mode filter
+    if let Some(mode_str) = mode {
+        match mode_str.to_lowercase().as_str() {
+            "enforce" => filters.mode = Some(PolicyMode::Enforce),
+            "warn" => filters.mode = Some(PolicyMode::Warn),
+            "audit" => filters.mode = Some(PolicyMode::Audit),
+            _ => {
+                println!(
+                    "Warning: Invalid mode '{}'. Valid values: enforce, warn, audit",
+                    mode_str
+                );
+            }
+        }
+    }
+
+    // Parse decision filter
+    if let Some(decision_str) = decision {
+        match decision_str.parse::<Decision>() {
+            Ok(d) => filters.decision = Some(d),
+            Err(_) => {
+                println!(
+                    "Warning: Invalid decision '{}'. Valid values: allowed, blocked, warned, audited",
+                    decision_str
+                );
+            }
+        }
+    }
+
     let entries = query.query(filters)?;
 
     if entries.is_empty() {
@@ -33,13 +72,20 @@ pub async fn run(limit: usize, since: Option<String>) -> Result<()> {
 
     println!("Found {} log entries:", entries.len());
     println!(
-        "{:<25} {:<15} {:<12} {:<10} {:<8} {:<6}",
-        "Timestamp", "Event", "Tool", "Rules", "Outcome", "Time"
+        "{:<25} {:<15} {:<12} {:<8} {:<8} {:<10} {:>6}",
+        "Timestamp", "Event", "Tool", "Mode", "Decision", "Outcome", "Time"
     );
 
     for entry in entries {
         let tool = entry.tool_name.as_deref().unwrap_or("-");
-        let rules_count = entry.rules_matched.len();
+        let mode_str = entry
+            .mode
+            .map(|m| format!("{}", m))
+            .unwrap_or_else(|| "-".to_string());
+        let decision_str = entry
+            .decision
+            .map(|d| format!("{}", d))
+            .unwrap_or_else(|| "-".to_string());
         let outcome = match entry.outcome {
             Outcome::Allow => "ALLOW",
             Outcome::Block => "BLOCK",
@@ -47,11 +93,12 @@ pub async fn run(limit: usize, since: Option<String>) -> Result<()> {
         };
 
         println!(
-            "{:<25} {:<15} {:<12} {:<10} {:<8} {:>6}ms",
+            "{:<25} {:<15} {:<12} {:<8} {:<8} {:<10} {:>6}ms",
             entry.timestamp.format("%Y-%m-%d %H:%M:%S"),
             entry.event_type,
             tool,
-            rules_count,
+            mode_str,
+            decision_str,
             outcome,
             entry.timing.processing_ms
         );

@@ -9,8 +9,9 @@ use crate::config::Config;
 use crate::logging::log_entry;
 use crate::models::LogMetadata;
 use crate::models::{
-    DebugConfig, Event, EventDetails, LogEntry, LogTiming, MatcherResults, Outcome, Response,
-    ResponseSummary, Rule, RuleEvaluation, Timing,
+    DebugConfig, Decision, Event, EventDetails, GovernanceMetadata, LogEntry, LogTiming,
+    MatcherResults, Outcome, PolicyMode, Response, ResponseSummary, Rule, RuleEvaluation, Timing,
+    TrustLevel,
 };
 
 /// Process a hook event and return the appropriate response
@@ -30,13 +31,20 @@ pub async fn process_event(event: Event, debug_config: &DebugConfig) -> Result<R
     let event_details = EventDetails::extract(&event);
     let response_summary = ResponseSummary::from_response(&response);
 
+    // Extract governance data from the primary matched rule (first/highest priority)
+    let (primary_mode, primary_priority, primary_governance, trust_level) =
+        extract_governance_data(&matched_rules);
+
+    // Determine decision based on response and mode
+    let decision = primary_mode.map(|m| determine_decision(&response, m));
+
     // Log the event with enhanced fields
     let entry = LogEntry {
         timestamp: event.timestamp,
         event_type: format!("{:?}", event.event_type),
         session_id: event.session_id.clone(),
         tool_name: event.tool_name.clone(),
-        rules_matched: matched_rules.into_iter().map(|r| r.name.clone()).collect(),
+        rules_matched: matched_rules.iter().map(|r| r.name.clone()).collect(),
         outcome: match response.continue_ {
             true if response.context.is_some() => Outcome::Inject,
             true => Outcome::Allow,
@@ -53,7 +61,7 @@ pub async fn process_event(event: Event, debug_config: &DebugConfig) -> Result<R
                 .map(|_| vec!["injected".to_string()]),
             validator_output: None,
         }),
-        // New enhanced logging fields
+        // Enhanced logging fields (CRD-001)
         event_details: Some(event_details),
         response: Some(response_summary),
         raw_event: if debug_config.enabled {
@@ -66,6 +74,12 @@ pub async fn process_event(event: Event, debug_config: &DebugConfig) -> Result<R
         } else {
             None
         },
+        // Phase 2.2 Governance logging fields
+        mode: primary_mode,
+        priority: primary_priority,
+        decision,
+        governance: primary_governance,
+        trust_level,
     };
 
     // Log asynchronously (don't fail the response if logging fails)
@@ -81,7 +95,29 @@ pub async fn process_event(event: Event, debug_config: &DebugConfig) -> Result<R
     Ok(response)
 }
 
+/// Extract governance data from matched rules
+/// Returns (mode, priority, governance, trust_level) from the primary (first) matched rule
+fn extract_governance_data(
+    matched_rules: &[&Rule],
+) -> (
+    Option<PolicyMode>,
+    Option<i32>,
+    Option<GovernanceMetadata>,
+    Option<TrustLevel>,
+) {
+    if let Some(primary) = matched_rules.first() {
+        let mode = Some(primary.effective_mode());
+        let priority = Some(primary.effective_priority());
+        let governance = primary.governance.clone();
+        let trust_level = primary.actions.trust_level();
+        (mode, priority, governance, trust_level)
+    } else {
+        (None, None, None, None)
+    }
+}
+
 /// Evaluate all enabled rules against an event
+/// Rules are sorted by priority (higher first) by config.enabled_rules()
 async fn evaluate_rules<'a>(
     event: &'a Event,
     config: &'a Config,
@@ -91,6 +127,7 @@ async fn evaluate_rules<'a>(
     let mut response = Response::allow();
     let mut rule_evaluations = Vec::new();
 
+    // Get enabled rules (already sorted by priority in Config::enabled_rules)
     for rule in config.enabled_rules() {
         let (matched, matcher_results) = if debug_config.enabled {
             matches_rule_with_debug(event, rule)
@@ -108,11 +145,12 @@ async fn evaluate_rules<'a>(
         if matched {
             matched_rules.push(rule);
 
-            // Execute rule actions
-            let rule_response = execute_rule_actions(event, rule, config).await?;
+            // Execute rule actions based on mode (Phase 2 Governance)
+            let mode = rule.effective_mode();
+            let rule_response = execute_rule_actions_with_mode(event, rule, config, mode).await?;
 
-            // Merge responses (block takes precedence, inject accumulates)
-            response = merge_responses(response, rule_response);
+            // Merge responses based on mode (block takes precedence, inject accumulates)
+            response = merge_responses_with_mode(response, rule_response, mode);
         }
     }
 
@@ -344,7 +382,7 @@ async fn execute_rule_actions(event: &Event, rule: &Rule, config: &Config) -> Re
     }
 
     // Handle script execution
-    if let Some(ref script_path) = actions.run {
+    if let Some(script_path) = actions.script_path() {
         match execute_validator_script(event, script_path, rule, config).await {
             Ok(script_response) => {
                 return Ok(script_response);
@@ -479,6 +517,275 @@ fn merge_responses(mut existing: Response, new: Response) -> Response {
     existing
 }
 
+// =============================================================================
+// Phase 2 Governance: Mode-Based Action Execution
+// =============================================================================
+
+/// Execute rule actions respecting the policy mode
+///
+/// Mode behavior:
+/// - Enforce: Normal execution (block, inject, run validators)
+/// - Warn: Never blocks, injects warning context instead
+/// - Audit: Logs only, no blocking or injection
+async fn execute_rule_actions_with_mode(
+    event: &Event,
+    rule: &Rule,
+    config: &Config,
+    mode: PolicyMode,
+) -> Result<Response> {
+    match mode {
+        PolicyMode::Enforce => {
+            // Normal execution - delegate to existing function
+            execute_rule_actions(event, rule, config).await
+        }
+        PolicyMode::Warn => {
+            // Never block, inject warning instead
+            execute_rule_actions_warn_mode(event, rule, config).await
+        }
+        PolicyMode::Audit => {
+            // Log only, no blocking or injection
+            Ok(Response::allow())
+        }
+    }
+}
+
+/// Execute rule actions in warn mode (never blocks, injects warnings)
+async fn execute_rule_actions_warn_mode(
+    event: &Event,
+    rule: &Rule,
+    config: &Config,
+) -> Result<Response> {
+    let actions = &rule.actions;
+
+    // Convert blocks to warnings
+    if let Some(block) = actions.block {
+        if block {
+            let warning = format!(
+                "[WARNING] Rule '{}' would block this operation: {}\n\
+                 This rule is in 'warn' mode - operation will proceed.",
+                rule.name,
+                rule.description.as_deref().unwrap_or("No description")
+            );
+            return Ok(Response::inject(warning));
+        }
+    }
+
+    // Convert conditional blocks to warnings
+    if let Some(ref pattern) = actions.block_if_match {
+        if let Some(ref tool_input) = event.tool_input {
+            if let Some(content) = tool_input
+                .get("newString")
+                .or_else(|| tool_input.get("content"))
+                .and_then(|c| c.as_str())
+            {
+                if let Ok(regex) = Regex::new(pattern) {
+                    if regex.is_match(content) {
+                        let warning = format!(
+                            "[WARNING] Rule '{}' would block this content (matches pattern '{}').\n\
+                             This rule is in 'warn' mode - operation will proceed.",
+                            rule.name, pattern
+                        );
+                        return Ok(Response::inject(warning));
+                    }
+                }
+            }
+        }
+    }
+
+    // Context injection still works in warn mode
+    if let Some(ref inject_path) = actions.inject {
+        match read_context_file(inject_path).await {
+            Ok(context) => {
+                return Ok(Response::inject(context));
+            }
+            Err(e) => {
+                tracing::warn!("Failed to read context file '{}': {}", inject_path, e);
+            }
+        }
+    }
+
+    // Script execution - convert blocks to warnings
+    if let Some(script_path) = actions.script_path() {
+        match execute_validator_script(event, script_path, rule, config).await {
+            Ok(script_response) => {
+                if !script_response.continue_ {
+                    // Convert block to warning
+                    let warning = format!(
+                        "[WARNING] Validator script '{}' would block this operation: {}\n\
+                         This rule is in 'warn' mode - operation will proceed.",
+                        script_path,
+                        script_response.reason.as_deref().unwrap_or("No reason")
+                    );
+                    return Ok(Response::inject(warning));
+                }
+                return Ok(script_response);
+            }
+            Err(e) => {
+                tracing::warn!("Script execution failed for rule '{}': {}", rule.name, e);
+                if !config.settings.fail_open {
+                    // Even in warn mode, respect fail_open setting
+                    return Err(e);
+                }
+            }
+        }
+    }
+
+    Ok(Response::allow())
+}
+
+/// Merge responses with mode awareness
+///
+/// Mode affects merge behavior:
+/// - Enforce: Normal merge (blocks take precedence)
+/// - Warn: Blocks become warnings (never blocks)
+/// - Audit: No merging (allow always)
+fn merge_responses_with_mode(existing: Response, new: Response, mode: PolicyMode) -> Response {
+    match mode {
+        PolicyMode::Enforce => {
+            // Normal merge behavior
+            merge_responses(existing, new)
+        }
+        PolicyMode::Warn | PolicyMode::Audit => {
+            // In warn/audit mode, new response should never block
+            // (execute_rule_actions_with_mode ensures this)
+            merge_responses(existing, new)
+        }
+    }
+}
+
+/// Determine the decision outcome based on response and mode
+#[allow(dead_code)] // Used in Phase 2.2 (enhanced logging)
+pub fn determine_decision(response: &Response, mode: PolicyMode) -> Decision {
+    match mode {
+        PolicyMode::Audit => Decision::Audited,
+        PolicyMode::Warn => {
+            if response.context.is_some() {
+                Decision::Warned
+            } else {
+                Decision::Allowed
+            }
+        }
+        PolicyMode::Enforce => {
+            if !response.continue_ {
+                Decision::Blocked
+            } else {
+                // Both injection and no-injection count as allowed
+                Decision::Allowed
+            }
+        }
+    }
+}
+
+// =============================================================================
+// Phase 2 Governance: Conflict Resolution
+// =============================================================================
+
+/// Mode precedence for conflict resolution
+/// Returns a numeric value where higher = wins
+#[allow(dead_code)] // Used in conflict resolution tests and future enhancements
+pub fn mode_precedence(mode: PolicyMode) -> u8 {
+    match mode {
+        PolicyMode::Enforce => 3, // Highest - always wins
+        PolicyMode::Warn => 2,    // Middle
+        PolicyMode::Audit => 1,   // Lowest - only logs
+    }
+}
+
+/// Represents a potential rule response for conflict resolution
+#[allow(dead_code)] // Used in conflict resolution tests and future multi-rule scenarios
+#[derive(Debug, Clone)]
+pub struct RuleConflictEntry<'a> {
+    pub rule: &'a Rule,
+    pub response: Response,
+    pub mode: PolicyMode,
+    pub priority: i32,
+}
+
+/// Resolve conflicts between multiple matched rules
+///
+/// Resolution order:
+/// 1. Enforce mode wins over warn and audit (regardless of priority)
+/// 2. Among same modes, higher priority wins
+/// 3. For multiple blocks, use highest priority block's message
+/// 4. Warnings and injections are accumulated
+#[allow(dead_code)] // Used when multiple rules need explicit conflict resolution
+pub fn resolve_conflicts(entries: &[RuleConflictEntry]) -> Response {
+    if entries.is_empty() {
+        return Response::allow();
+    }
+
+    // Separate by mode
+    let enforce_entries: Vec<_> = entries
+        .iter()
+        .filter(|e| e.mode == PolicyMode::Enforce)
+        .collect();
+    let warn_entries: Vec<_> = entries
+        .iter()
+        .filter(|e| e.mode == PolicyMode::Warn)
+        .collect();
+
+    // Check for enforce blocks (highest precedence)
+    for entry in &enforce_entries {
+        if !entry.response.continue_ {
+            // First enforce block wins (entries are pre-sorted by priority)
+            return entry.response.clone();
+        }
+    }
+
+    // Accumulate all injections (from enforce and warn modes)
+    let mut accumulated_context: Option<String> = None;
+
+    // Add enforce injections first
+    for entry in &enforce_entries {
+        if let Some(ref ctx) = entry.response.context {
+            if let Some(ref mut acc) = accumulated_context {
+                acc.push_str("\n\n");
+                acc.push_str(ctx);
+            } else {
+                accumulated_context = Some(ctx.clone());
+            }
+        }
+    }
+
+    // Add warn injections
+    for entry in &warn_entries {
+        if let Some(ref ctx) = entry.response.context {
+            if let Some(ref mut acc) = accumulated_context {
+                acc.push_str("\n\n");
+                acc.push_str(ctx);
+            } else {
+                accumulated_context = Some(ctx.clone());
+            }
+        }
+    }
+
+    // Return accumulated response
+    if let Some(context) = accumulated_context {
+        Response::inject(context)
+    } else {
+        Response::allow()
+    }
+}
+
+/// Compare two rules for conflict resolution
+/// Returns true if rule_a should take precedence over rule_b
+#[allow(dead_code)] // Used in conflict resolution tests and future multi-rule scenarios
+pub fn rule_takes_precedence(rule_a: &Rule, rule_b: &Rule) -> bool {
+    let mode_a = rule_a.effective_mode();
+    let mode_b = rule_b.effective_mode();
+
+    // First compare by mode precedence
+    let prec_a = mode_precedence(mode_a);
+    let prec_b = mode_precedence(mode_b);
+
+    if prec_a != prec_b {
+        return prec_a > prec_b;
+    }
+
+    // Same mode: compare by priority
+    rule_a.effective_priority() > rule_b.effective_priority()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -514,6 +821,9 @@ mod tests {
                 run: None,
                 block_if_match: None,
             },
+            mode: None,
+            priority: None,
+            governance: None,
             metadata: None,
         };
 
@@ -549,6 +859,9 @@ mod tests {
                 run: None,
                 block_if_match: None,
             },
+            mode: None,
+            priority: None,
+            governance: None,
             metadata: None,
         };
 
@@ -569,5 +882,275 @@ mod tests {
         let merged = merge_responses(inject.clone(), inject.clone());
         assert!(merged.continue_);
         assert!(merged.context.as_ref().unwrap().contains("context"));
+    }
+
+    // =========================================================================
+    // Phase 2 Governance: Mode-Based Execution Tests
+    // =========================================================================
+
+    #[test]
+    fn test_determine_decision_enforce_blocked() {
+        let response = Response::block("blocked");
+        let decision = determine_decision(&response, PolicyMode::Enforce);
+        assert_eq!(decision, Decision::Blocked);
+    }
+
+    #[test]
+    fn test_determine_decision_enforce_allowed() {
+        let response = Response::allow();
+        let decision = determine_decision(&response, PolicyMode::Enforce);
+        assert_eq!(decision, Decision::Allowed);
+    }
+
+    #[test]
+    fn test_determine_decision_warn_mode() {
+        let response = Response::inject("warning context");
+        let decision = determine_decision(&response, PolicyMode::Warn);
+        assert_eq!(decision, Decision::Warned);
+    }
+
+    #[test]
+    fn test_determine_decision_audit_mode() {
+        // In audit mode, everything is Audited regardless of response
+        let response = Response::block("would block");
+        let decision = determine_decision(&response, PolicyMode::Audit);
+        assert_eq!(decision, Decision::Audited);
+    }
+
+    #[test]
+    fn test_merge_responses_with_mode_enforce() {
+        let allow = Response::allow();
+        let block = Response::block("blocked");
+
+        // In enforce mode, block takes precedence
+        let merged = merge_responses_with_mode(allow, block, PolicyMode::Enforce);
+        assert!(!merged.continue_);
+    }
+
+    #[test]
+    fn test_merge_responses_with_mode_warn() {
+        let allow = Response::allow();
+        let warning = Response::inject("warning");
+
+        // In warn mode, warnings accumulate but never block
+        let merged = merge_responses_with_mode(allow, warning, PolicyMode::Warn);
+        assert!(merged.continue_);
+        assert!(merged.context.is_some());
+    }
+
+    #[test]
+    fn test_rule_effective_mode_defaults_to_enforce() {
+        let rule = Rule {
+            name: "test".to_string(),
+            description: None,
+            matchers: Matchers {
+                tools: None,
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+            },
+            actions: Actions {
+                inject: None,
+                run: None,
+                block: None,
+                block_if_match: None,
+            },
+            mode: None, // No mode specified
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+        assert_eq!(rule.effective_mode(), PolicyMode::Enforce);
+    }
+
+    #[test]
+    fn test_rule_effective_mode_explicit_audit() {
+        let rule = Rule {
+            name: "test".to_string(),
+            description: None,
+            matchers: Matchers {
+                tools: None,
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+            },
+            actions: Actions {
+                inject: None,
+                run: None,
+                block: None,
+                block_if_match: None,
+            },
+            mode: Some(PolicyMode::Audit),
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+        assert_eq!(rule.effective_mode(), PolicyMode::Audit);
+    }
+
+    // =========================================================================
+    // Phase 2 Governance: Conflict Resolution Tests
+    // =========================================================================
+
+    fn create_rule_with_mode(name: &str, mode: PolicyMode, priority: i32) -> Rule {
+        Rule {
+            name: name.to_string(),
+            description: Some(format!("{} rule", name)),
+            matchers: Matchers {
+                tools: None,
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+            },
+            actions: Actions {
+                inject: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: Some(mode),
+            priority: Some(priority),
+            governance: None,
+            metadata: None,
+        }
+    }
+
+    #[test]
+    fn test_mode_precedence() {
+        assert!(mode_precedence(PolicyMode::Enforce) > mode_precedence(PolicyMode::Warn));
+        assert!(mode_precedence(PolicyMode::Warn) > mode_precedence(PolicyMode::Audit));
+        assert!(mode_precedence(PolicyMode::Enforce) > mode_precedence(PolicyMode::Audit));
+    }
+
+    #[test]
+    fn test_rule_takes_precedence_mode_wins() {
+        let enforce_rule = create_rule_with_mode("enforce", PolicyMode::Enforce, 0);
+        let warn_rule = create_rule_with_mode("warn", PolicyMode::Warn, 100);
+
+        // Enforce wins over warn even with lower priority
+        assert!(rule_takes_precedence(&enforce_rule, &warn_rule));
+        assert!(!rule_takes_precedence(&warn_rule, &enforce_rule));
+    }
+
+    #[test]
+    fn test_rule_takes_precedence_same_mode_priority_wins() {
+        let high_priority = create_rule_with_mode("high", PolicyMode::Enforce, 100);
+        let low_priority = create_rule_with_mode("low", PolicyMode::Enforce, 0);
+
+        assert!(rule_takes_precedence(&high_priority, &low_priority));
+        assert!(!rule_takes_precedence(&low_priority, &high_priority));
+    }
+
+    #[test]
+    fn test_resolve_conflicts_enforce_block_wins() {
+        let enforce_rule = create_rule_with_mode("enforce", PolicyMode::Enforce, 100);
+        let warn_rule = create_rule_with_mode("warn", PolicyMode::Warn, 50);
+
+        let entries = vec![
+            RuleConflictEntry {
+                rule: &enforce_rule,
+                response: Response::block("Blocked by enforce rule"),
+                mode: PolicyMode::Enforce,
+                priority: 100,
+            },
+            RuleConflictEntry {
+                rule: &warn_rule,
+                response: Response::inject("Warning from warn rule"),
+                mode: PolicyMode::Warn,
+                priority: 50,
+            },
+        ];
+
+        let resolved = resolve_conflicts(&entries);
+        assert!(!resolved.continue_); // Block wins
+        assert!(resolved.reason.as_ref().unwrap().contains("enforce"));
+    }
+
+    #[test]
+    fn test_resolve_conflicts_warnings_accumulate() {
+        let warn_rule1 = create_rule_with_mode("warn1", PolicyMode::Warn, 100);
+        let warn_rule2 = create_rule_with_mode("warn2", PolicyMode::Warn, 50);
+
+        let entries = vec![
+            RuleConflictEntry {
+                rule: &warn_rule1,
+                response: Response::inject("Warning 1"),
+                mode: PolicyMode::Warn,
+                priority: 100,
+            },
+            RuleConflictEntry {
+                rule: &warn_rule2,
+                response: Response::inject("Warning 2"),
+                mode: PolicyMode::Warn,
+                priority: 50,
+            },
+        ];
+
+        let resolved = resolve_conflicts(&entries);
+        assert!(resolved.continue_); // No blocking in warn mode
+        let context = resolved.context.unwrap();
+        assert!(context.contains("Warning 1"));
+        assert!(context.contains("Warning 2"));
+    }
+
+    #[test]
+    fn test_resolve_conflicts_empty_allows() {
+        let resolved = resolve_conflicts(&[]);
+        assert!(resolved.continue_);
+        assert!(resolved.context.is_none());
+    }
+
+    #[test]
+    fn test_resolve_conflicts_audit_only_allows() {
+        let audit_rule = create_rule_with_mode("audit", PolicyMode::Audit, 100);
+
+        let entries = vec![RuleConflictEntry {
+            rule: &audit_rule,
+            response: Response::allow(), // Audit mode produces allow
+            mode: PolicyMode::Audit,
+            priority: 100,
+        }];
+
+        let resolved = resolve_conflicts(&entries);
+        assert!(resolved.continue_);
+    }
+
+    #[test]
+    fn test_resolve_conflicts_mixed_modes() {
+        let enforce_rule = create_rule_with_mode("enforce", PolicyMode::Enforce, 50);
+        let warn_rule = create_rule_with_mode("warn", PolicyMode::Warn, 100);
+        let audit_rule = create_rule_with_mode("audit", PolicyMode::Audit, 200);
+
+        // Enforce injects, warn injects, audit does nothing
+        let entries = vec![
+            RuleConflictEntry {
+                rule: &enforce_rule,
+                response: Response::inject("Enforce context"),
+                mode: PolicyMode::Enforce,
+                priority: 50,
+            },
+            RuleConflictEntry {
+                rule: &warn_rule,
+                response: Response::inject("Warning context"),
+                mode: PolicyMode::Warn,
+                priority: 100,
+            },
+            RuleConflictEntry {
+                rule: &audit_rule,
+                response: Response::allow(),
+                mode: PolicyMode::Audit,
+                priority: 200,
+            },
+        ];
+
+        let resolved = resolve_conflicts(&entries);
+        assert!(resolved.continue_);
+        let context = resolved.context.unwrap();
+        // Enforce comes first, then warn
+        assert!(context.contains("Enforce context"));
+        assert!(context.contains("Warning context"));
     }
 }

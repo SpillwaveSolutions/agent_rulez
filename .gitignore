@@ -6,6 +6,7 @@ release/
 *.rlib
 *.prof*
 !.opencode 
+!.claude 
 
 # IDEs and editors
 .vscode/

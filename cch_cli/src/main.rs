@@ -78,13 +78,44 @@ enum Commands {
         /// Number of recent log entries to show
         #[arg(short, long, default_value = "10")]
         limit: usize,
-        /// Show logs since timestamp
+        /// Show logs since timestamp (RFC3339 format)
         #[arg(long)]
         since: Option<String>,
+        /// Filter by policy mode (enforce, warn, audit)
+        #[arg(long)]
+        mode: Option<String>,
+        /// Filter by decision (allowed, blocked, warned, audited)
+        #[arg(long)]
+        decision: Option<String>,
     },
-    /// Explain why rules fired for a given event
+    /// Explain rules or events (use 'cch explain --help' for subcommands)
     Explain {
-        /// Event ID to explain
+        #[command(subcommand)]
+        subcommand: Option<ExplainSubcommand>,
+        /// Event/session ID to explain (legacy usage)
+        event_id: Option<String>,
+    },
+}
+
+/// Subcommands for the explain command
+#[derive(Subcommand)]
+enum ExplainSubcommand {
+    /// Explain a specific rule's configuration and governance
+    Rule {
+        /// Name of the rule to explain
+        name: String,
+        /// Output as JSON for machine parsing
+        #[arg(long)]
+        json: bool,
+        /// Skip activity statistics (faster)
+        #[arg(long)]
+        no_stats: bool,
+    },
+    /// List all configured rules
+    Rules,
+    /// Explain an event by session ID
+    Event {
+        /// Session/event ID
         event_id: String,
     },
 }
@@ -144,11 +175,46 @@ async fn main() -> Result<()> {
         Some(Commands::Validate { config }) => {
             cli::validate::run(config).await?;
         }
-        Some(Commands::Logs { limit, since }) => {
-            cli::logs::run(limit, since).await?;
+        Some(Commands::Logs {
+            limit,
+            since,
+            mode,
+            decision,
+        }) => {
+            cli::logs::run(limit, since, mode, decision).await?;
         }
-        Some(Commands::Explain { event_id }) => {
-            cli::explain::run(event_id).await?;
+        Some(Commands::Explain {
+            subcommand,
+            event_id,
+        }) => {
+            match subcommand {
+                Some(ExplainSubcommand::Rule {
+                    name,
+                    json,
+                    no_stats,
+                }) => {
+                    cli::explain::explain_rule(name, json, no_stats).await?;
+                }
+                Some(ExplainSubcommand::Rules) => {
+                    cli::explain::list_rules().await?;
+                }
+                Some(ExplainSubcommand::Event { event_id }) => {
+                    cli::explain::run(event_id).await?;
+                }
+                None => {
+                    // Legacy: if event_id provided directly
+                    if let Some(id) = event_id {
+                        cli::explain::run(id).await?;
+                    } else {
+                        println!("Usage: cch explain <event_id>");
+                        println!("       cch explain rule <rule_name>");
+                        println!("       cch explain rules");
+                        println!("       cch explain event <event_id>");
+                        println!();
+                        println!("Use 'cch explain --help' for more information.");
+                    }
+                }
+            }
         }
         None => {
             // No subcommand provided, read from stdin for hook processing
