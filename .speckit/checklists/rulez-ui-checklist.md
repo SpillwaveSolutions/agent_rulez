@@ -2,25 +2,43 @@
 
 **Feature ID:** rulez-ui
 **Generated:** 2026-01-24
-**Status:** Pre-Implementation
+**Status:** M1 Complete, M2-M8 In Progress
+**PR:** #72 (merged to develop)
+**Last Updated:** 2026-01-25
 
 ---
 
 ## Pre-Implementation Checklist
 
 ### Project Setup Readiness
-- [ ] Bun installed and working (`bun --version`)
-- [ ] Rust toolchain installed (`rustc --version`)
-- [ ] Tauri CLI installed (`cargo install tauri-cli`)
-- [ ] Node.js available as fallback (for some tooling)
-- [ ] CCH binary built and in PATH (`cch --version`)
+- [x] Bun installed and working (`bun --version`)
+- [x] Rust toolchain installed (`rustc --version`)
+- [x] Tauri CLI installed (`cargo install tauri-cli`)
+- [x] Node.js available as fallback (for some tooling)
+- [ ] CCH binary built and in PATH (`cch --version`) - needed for M6
 
 ### Development Environment
-- [ ] VS Code or preferred IDE configured
-- [ ] TypeScript extension installed
-- [ ] Rust analyzer extension installed
-- [ ] Tailwind CSS IntelliSense configured
-- [ ] Biome extension for linting
+- [x] VS Code or preferred IDE configured
+- [x] TypeScript extension installed
+- [x] Rust analyzer extension installed
+- [x] Tailwind CSS IntelliSense configured
+- [x] Biome extension for linting
+
+---
+
+## Milestone 1: Project Setup ✅
+
+### M1 Deliverables
+- [x] Tauri 2.0 + React 18 scaffold
+- [x] TypeScript strict mode configured
+- [x] Tailwind CSS 4 configured
+- [x] Biome linting configured
+- [x] Dual-mode architecture (Tauri/web)
+- [x] `isTauri()` detection function
+- [x] Mock data module for browser testing
+- [x] Basic Zustand stores (config, editor, ui)
+- [x] Component skeleton structure
+- [x] CLAUDE.md and README.md documentation
 
 ---
 

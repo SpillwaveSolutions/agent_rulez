@@ -1,33 +1,35 @@
 # RuleZ UI Implementation Tasks
 
 **Feature ID:** rulez-ui
-**Status:** Ready for Implementation
+**Status:** M1 Complete, M2-M8 Pending
 **Total Estimated Days:** 9.5 (Phase 1 MVP)
+**PR:** #72 (merged to develop)
+**Last Updated:** 2026-01-25
 
 ---
 
-## Milestone 1: Project Setup (1 day)
+## Milestone 1: Project Setup (1 day) - COMPLETE
 
 ### M1-T01: Initialize Tauri + React project with Bun
-- [ ] Create `rulez_ui` directory at project root
-- [ ] Initialize Bun project: `bun init`
-- [ ] Add Tauri 2.0: `bunx create-tauri-app`
-- [ ] Configure TypeScript with strict mode
-- [ ] Set up Tailwind CSS 4
-- [ ] Configure Biome for linting/formatting
-- [ ] Create basic directory structure
+- [x] Create `rulez_ui` directory at project root
+- [x] Initialize Bun project: `bun init`
+- [x] Add Tauri 2.0: `bunx create-tauri-app`
+- [x] Configure TypeScript with strict mode
+- [x] Set up Tailwind CSS 4
+- [x] Configure Biome for linting/formatting
+- [x] Create basic directory structure
 
 ### M1-T02: Configure dual-mode architecture
-- [ ] Create `src/lib/tauri.ts` with `isTauri()` detection
-- [ ] Implement web fallback pattern for all Tauri commands
-- [ ] Add mock data module for browser testing
-- [ ] Verify HMR works in both modes
+- [x] Create `src/lib/tauri.ts` with `isTauri()` detection
+- [x] Implement web fallback pattern for all Tauri commands
+- [x] Add mock data module for browser testing
+- [x] Verify HMR works in both modes
 
 ### M1-T03: Set up CI workflow
-- [ ] Create `.github/workflows/rulez-ui.yml`
-- [ ] Configure Bun installation
-- [ ] Add lint, typecheck, test stages
-- [ ] Configure Tauri build for release artifacts
+- [x] Create `.github/workflows/rulez-ui.yml`
+- [x] Configure Bun installation
+- [x] Add lint, typecheck, test stages
+- [x] Configure Tauri build for release artifacts
 
 ---
 

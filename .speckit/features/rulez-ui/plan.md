@@ -1,9 +1,11 @@
 # RuleZ UI Implementation Plan
 
 **Feature ID:** rulez-ui
-**Status:** Ready for Implementation
+**Status:** M1 Complete, M2-M8 In Progress
 **Created:** 2026-01-24
+**M1 Completed:** 2026-01-25
 **Total Estimated:** 9.5 days (Phase 1 MVP)
+**PR:** #72 (merged to develop)
 
 ---
 

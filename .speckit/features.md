@@ -1,17 +1,21 @@
 # Discovered Features
 
-## rulez-ui (Specified)
-**Status**: Specified
+**Git Workflow Note:** `develop` is the main working branch. Feature branches are created from `develop`, and PRs are merged back to `develop`. Only releases merge to `main`.
+
+## rulez-ui (In Progress)
+**Status**: In Progress (M1 Complete)
 **Priority**: P1 (User Experience)
 **Description**: Native desktop application for visualizing, editing, validating, and debugging CCH configurations
 **Location**: rulez_ui/ (Tauri + React implementation)
 **PRD**: docs/prds/rulez_ui_prd.md
 **Plan**: docs/plans/rulez_ui_plan.md
+**PR**: #72 (merged to develop)
+**Branch**: feature/phase2-governance-core
 
 ### SDD Artifacts
 - **Spec:** `.speckit/features/rulez-ui/spec.md`
 - **Tasks:** `.speckit/features/rulez-ui/tasks.md`
-- **Status:** Ready for Implementation
+- **Status:** M1 Complete, M2-M8 Pending
 
 ### User Stories (Phase 1 MVP)
 - [ ] US-RUI-01: YAML Editor with Syntax Highlighting
@@ -20,6 +24,16 @@
 - [ ] US-RUI-04: Debug Simulation
 - [ ] US-RUI-05: Rule Tree Visualization
 - [ ] US-RUI-06: Theme Support
+
+### Milestone Progress
+- [x] M1: Project Setup (Tauri + React + Bun scaffold) - Complete
+- [ ] M2: Monaco Editor
+- [ ] M3: Schema Validation
+- [ ] M4: File Operations
+- [ ] M5: Rule Tree View
+- [ ] M6: Debug Simulator
+- [ ] M7: Theming
+- [ ] M8: Playwright Tests
 
 ### Technology Stack
 - **Runtime**: Bun (TypeScript/React operations)
@@ -44,37 +58,40 @@
 
 ---
 
-## phase2-governance (Planned)
-**Status**: Planned
+## phase2-governance (Complete)
+**Status**: Complete
 **Priority**: P2 (Enterprise Readiness)
 **Description**: Policy governance layer with modes, metadata, priorities, and enhanced explainability
 **Location**: cch_cli/ (Rust implementation extension)
 **PRD**: docs/prds/phase2_prd.md
+**PR**: #72 (merged to develop)
+**Branch**: feature/phase2-governance-core
+**Completion Date**: 2026-01-25
 
 ### SDD Artifacts
 - **Spec:** `.speckit/features/phase2-governance/spec.md`
 - **Tasks:** `.speckit/features/phase2-governance/tasks.md`
 - **Plan:** `.speckit/features/phase2-governance/plan.md`
-- **Status:** Ready for Implementation
+- **Status:** Complete (All phases implemented)
 
 ### User Stories
-- [ ] US-GOV-01: Rule Metadata (Provenance)
-- [ ] US-GOV-02: Policy Modes (enforce | warn | audit)
-- [ ] US-GOV-03: Rule Priority
-- [ ] US-GOV-04: Policy Conflict Resolution
-- [ ] US-GOV-05: Enhanced `cch explain rule` Command
-- [ ] US-GOV-06: Enhanced Logging Schema
-- [ ] US-GOV-07: Validator Trust Levels (Informational)
+- [x] US-GOV-01: Rule Metadata (Provenance)
+- [x] US-GOV-02: Policy Modes (enforce | warn | audit)
+- [x] US-GOV-03: Rule Priority
+- [x] US-GOV-04: Policy Conflict Resolution
+- [x] US-GOV-05: Enhanced `cch explain rule` Command
+- [x] US-GOV-06: Enhanced Logging Schema
+- [x] US-GOV-07: Validator Trust Levels (Informational)
 
 ### Implementation Phases
-| Phase | Description | Est. Days |
-|-------|-------------|-----------|
-| P2.1 | Core Governance (modes, priority, metadata) | 3-4 |
-| P2.2 | Enhanced Logging | 1-2 |
-| P2.3 | CLI Enhancements | 1-2 |
-| P2.4 | Trust Levels | 0.5-1 |
+| Phase | Description | Est. Days | Status |
+|-------|-------------|-----------|--------|
+| P2.1 | Core Governance (modes, priority, metadata) | 3-4 | Complete |
+| P2.2 | Enhanced Logging | 1-2 | Complete |
+| P2.3 | CLI Enhancements | 1-2 | Complete |
+| P2.4 | Trust Levels | 0.5-1 | Complete |
 
-**Total: 5.5-9 days estimated**
+**All phases complete. 68 tests pass.**
 
 ### Design Philosophy
 - **Backward Compatible**: All new features are optional
