@@ -1,0 +1,12 @@
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "git push"
+  },
+  "session_id": "claude-code-session-001",
+  "cwd": "REPLACED_AT_RUNTIME",
+  "transcript_path": "/tmp/transcript.jsonl",
+  "permission_mode": "default",
+  "tool_use_id": "toolu_test001"
+}

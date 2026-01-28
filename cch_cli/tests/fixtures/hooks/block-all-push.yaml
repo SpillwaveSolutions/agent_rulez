@@ -1,0 +1,23 @@
+# Test fixture: Block ALL git push operations
+# This is the configuration the user has in their articles repo.
+# It blocks any "git push" command, not just force push.
+
+version: "1.0"
+
+settings:
+  debug_logs: false
+  log_level: info
+  fail_open: true
+  script_timeout: 5
+
+rules:
+  - name: block-git-push
+    description: Prevent all git push operations
+    matchers:
+      tools: [Bash]
+      command_match: "git push"
+    actions:
+      block: true
+    metadata:
+      priority: 100
+      enabled: true
