@@ -4,6 +4,11 @@
 //! like force push, so that I don't accidentally overwrite remote history.
 //!
 //! These tests verify the blocking functionality works correctly.
+//!
+//! Claude Code hooks protocol for blocking:
+//! - Exit code 0 = allow (JSON stdout parsed for context injection)
+//! - Exit code 2 = BLOCK the tool call (stderr = reason fed to Claude)
+//! - Other exit codes = non-blocking error
 
 #![allow(deprecated)]
 #![allow(unused_imports)]
@@ -29,25 +34,32 @@ fn test_us1_force_push_blocked() {
     let event = read_fixture("events/force-push-event.json");
 
     // Run CCH with the event
-    let result = Command::cargo_bin("cch")
+    let output = Command::cargo_bin("cch")
         .expect("binary exists")
         .current_dir(temp_dir.path())
         .write_stdin(event)
-        .assert()
-        .success();
+        .output()
+        .expect("command should run");
 
-    // Response should indicate blocking
-    result.stdout(
-        predicate::str::contains(r#""continue":false"#)
-            .or(predicate::str::contains(r#""continue": false"#))
-            .and(
-                predicate::str::contains("block-force-push")
-                    .or(predicate::str::contains("Blocked")),
-            ),
+    // Claude Code protocol: exit code 2 = BLOCK the tool
+    assert_eq!(
+        output.status.code(),
+        Some(2),
+        "Blocked commands MUST exit with code 2 (Claude Code blocking protocol)"
+    );
+
+    // stderr contains the blocking reason (fed to Claude)
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("block-force-push") || stderr.contains("Blocked"),
+        "stderr should contain the rule name or blocking message, got: {stderr}"
     );
 
     evidence.pass(
-        "Force push event correctly blocked with reason containing rule name",
+        &format!(
+            "Force push event correctly blocked with exit code 2, stderr: {}",
+            stderr.trim()
+        ),
         timer.elapsed_ms(),
     );
     let _ = evidence.save(&evidence_dir());
@@ -104,20 +116,33 @@ fn test_us1_hard_reset_blocked() {
     }"#;
 
     // Run CCH with the event
-    let result = Command::cargo_bin("cch")
+    let output = Command::cargo_bin("cch")
         .expect("binary exists")
         .current_dir(temp_dir.path())
         .write_stdin(event)
-        .assert()
-        .success();
+        .output()
+        .expect("command should run");
 
-    // Response should indicate blocking
-    result.stdout(
-        predicate::str::contains(r#""continue":false"#)
-            .or(predicate::str::contains(r#""continue": false"#)),
+    // Claude Code protocol: exit code 2 = BLOCK the tool
+    assert_eq!(
+        output.status.code(),
+        Some(2),
+        "Hard reset MUST exit with code 2 (blocked)"
     );
 
-    evidence.pass("Hard reset event correctly blocked", timer.elapsed_ms());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("block-hard-reset") || stderr.contains("Blocked"),
+        "stderr should contain rule name or blocking message, got: {stderr}"
+    );
+
+    evidence.pass(
+        &format!(
+            "Hard reset correctly blocked with exit code 2, stderr: {}",
+            stderr.trim()
+        ),
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }
 
@@ -141,17 +166,25 @@ fn test_us1_block_reason_provided() {
         .output()
         .expect("command should run");
 
-    let stdout = String::from_utf8_lossy(&output.stdout);
-
-    // Parse the response and check for reason
-    assert!(
-        stdout.contains("reason"),
-        "Response should include reason field"
+    // Claude Code protocol: exit code 2 = BLOCK the tool
+    assert_eq!(
+        output.status.code(),
+        Some(2),
+        "Blocked commands MUST exit with code 2"
     );
-    assert!(stdout.contains("Blocked"), "Reason should mention blocking");
+
+    // Blocking reason is on stderr (fed to Claude)
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("Blocked"),
+        "stderr should mention blocking, got: {stderr}"
+    );
 
     evidence.pass(
-        &format!("Block response includes clear reason: {}", stdout.trim()),
+        &format!(
+            "Block response includes clear reason on stderr: {}",
+            stderr.trim()
+        ),
         timer.elapsed_ms(),
     );
     let _ = evidence.save(&evidence_dir());

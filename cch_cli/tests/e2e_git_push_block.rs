@@ -6,8 +6,12 @@
 //! - Does NOT send `timestamp` (CCH defaults to Utc::now())
 //! - Includes extra fields: transcript_path, permission_mode, tool_use_id
 //!
-//! The critical scenario tested: CCH is invoked from a DIFFERENT directory
-//! than the project, but uses the event's `cwd` to find the project's hooks.yaml.
+//! Claude Code hooks protocol for blocking:
+//! - Exit code 0 = allow (JSON stdout parsed for context injection)
+//! - Exit code 2 = BLOCK the tool call (stderr = reason fed to Claude)
+//! - Other exit codes = non-blocking error
+//!
+//! CCH now exits with code 2 when blocking, writing the reason to stderr.
 
 #![allow(deprecated)]
 #![allow(unused_imports)]
@@ -43,19 +47,19 @@ fn setup_claude_code_event(config_name: &str, command: &str) -> (tempfile::TempD
 }
 
 // ==========================================================================
-// Test 1: Basic git push block using Claude Code protocol
+// Test 1: Basic git push block — exit code 2 + stderr reason
 // ==========================================================================
 
-/// Simulate Claude Code sending a `git push` event with `hook_event_name` and `cwd`.
-/// CCH should block it when the project has a block-all-push rule.
+/// Simulate Claude Code sending a `git push` event.
+/// CCH must exit with code 2 and write the blocking reason to stderr.
+/// This is how Claude Code knows to BLOCK the tool call.
 #[test]
-fn test_e2e_git_push_blocked_claude_code_protocol() {
+fn test_e2e_git_push_blocked_exit_code_2() {
     let timer = Timer::start();
-    let mut evidence = TestEvidence::new("e2e_git_push_blocked", "E2E");
+    let mut evidence = TestEvidence::new("e2e_git_push_blocked_exit2", "E2E");
 
     let (temp_dir, event_json) = setup_claude_code_event("block-all-push.yaml", "git push");
 
-    // Run CCH with current_dir set to the project (simple case)
     let output = Command::cargo_bin("cch")
         .expect("binary exists")
         .current_dir(temp_dir.path())
@@ -63,46 +67,45 @@ fn test_e2e_git_push_blocked_claude_code_protocol() {
         .output()
         .expect("command should run");
 
-    assert!(output.status.success(), "CCH should exit 0");
+    // Claude Code protocol: exit code 2 = BLOCK the tool
+    assert_eq!(
+        output.status.code(),
+        Some(2),
+        "Blocked commands MUST exit with code 2 (Claude Code blocking protocol)"
+    );
 
-    let response = CchResponse::from_output(&output).expect("should parse response");
-
+    // stderr contains the blocking reason (fed to Claude)
+    let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        !response.continue_,
-        "git push MUST be blocked (continue should be false)"
+        stderr.contains("block-git-push"),
+        "stderr should contain the rule name, got: {stderr}"
     );
     assert!(
-        response.reason.is_some(),
-        "blocked response must include a reason"
-    );
-    let reason = response.reason.unwrap();
-    assert!(
-        reason.contains("block-git-push"),
-        "reason should reference the rule name, got: {reason}"
+        stderr.contains("Blocked"),
+        "stderr should mention blocking, got: {stderr}"
     );
 
     evidence.pass(
-        &format!("git push correctly blocked with reason: {reason}"),
+        &format!(
+            "git push blocked with exit code 2, stderr: {}",
+            stderr.trim()
+        ),
         timer.elapsed_ms(),
     );
     let _ = evidence.save(&evidence_dir());
 }
 
 // ==========================================================================
-// Test 2: CRITICAL - CWD-based config loading (the bug that was fixed)
+// Test 2: CRITICAL - CWD-based config loading with exit code 2
 // ==========================================================================
 
-/// This is the critical test: CCH is invoked from a DIFFERENT directory
-/// than the project, but the event's `cwd` field points to the project.
-/// CCH must use `cwd` to find the correct hooks.yaml.
-///
-/// This was the root cause of git push not being blocked in production:
-/// Claude Code invokes CCH from an arbitrary directory, and CCH was using
-/// `current_dir()` instead of the event's `cwd` to locate hooks.yaml.
+/// CCH invoked from a DIFFERENT directory than the project.
+/// The event's `cwd` field points to the project with hooks.yaml.
+/// Must still block with exit code 2.
 #[test]
-fn test_e2e_cwd_based_config_loading() {
+fn test_e2e_cwd_based_config_loading_exit_code_2() {
     let timer = Timer::start();
-    let mut evidence = TestEvidence::new("e2e_cwd_config_loading", "E2E");
+    let mut evidence = TestEvidence::new("e2e_cwd_config_loading_exit2", "E2E");
 
     let (temp_dir, event_json) = setup_claude_code_event("block-all-push.yaml", "git push");
 
@@ -117,44 +120,40 @@ fn test_e2e_cwd_based_config_loading() {
         .output()
         .expect("command should run");
 
-    assert!(output.status.success(), "CCH should exit 0");
-
-    let response = CchResponse::from_output(&output).expect("should parse response");
-
-    assert!(
-        !response.continue_,
-        "git push MUST be blocked even when CWD differs from project dir.\n\
-         CCH must use event.cwd to find hooks.yaml.\n\
-         Response: {:?}",
-        response.continue_
-    );
-    assert!(
-        response.reason.as_ref().unwrap().contains("block-git-push"),
-        "reason should reference the rule name"
+    assert_eq!(
+        output.status.code(),
+        Some(2),
+        "Must block with exit 2 even when CWD differs from project dir"
     );
 
-    // Also verify the temp_dir still has hooks.yaml
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("block-git-push"),
+        "stderr should contain rule name, got: {stderr}"
+    );
+
+    // Verify hooks.yaml exists in the project dir
     assert!(
         temp_dir.path().join(".claude/hooks.yaml").exists(),
         "hooks.yaml should exist in the project dir"
     );
 
     evidence.pass(
-        "git push blocked via cwd-based config loading (CWD != project dir)",
+        "git push blocked via cwd-based config loading (exit code 2, CWD != project dir)",
         timer.elapsed_ms(),
     );
     let _ = evidence.save(&evidence_dir());
 }
 
 // ==========================================================================
-// Test 3: Safe commands are allowed
+// Test 3: Safe commands exit 0 with JSON stdout
 // ==========================================================================
 
-/// Git status should NOT be blocked by the block-all-push rule.
+/// Git status should NOT be blocked — exit code 0 with JSON stdout.
 #[test]
-fn test_e2e_git_status_allowed() {
+fn test_e2e_git_status_allowed_exit_code_0() {
     let timer = Timer::start();
-    let mut evidence = TestEvidence::new("e2e_git_status_allowed", "E2E");
+    let mut evidence = TestEvidence::new("e2e_git_status_allowed_exit0", "E2E");
 
     let (temp_dir, event_json) = setup_claude_code_event("block-all-push.yaml", "git status");
 
@@ -165,27 +164,32 @@ fn test_e2e_git_status_allowed() {
         .output()
         .expect("command should run");
 
-    assert!(output.status.success(), "CCH should exit 0");
+    assert!(
+        output.status.success(),
+        "Allowed commands MUST exit with code 0"
+    );
 
-    let response = CchResponse::from_output(&output).expect("should parse response");
-
+    let response = CchResponse::from_output(&output).expect("should parse JSON response");
     assert!(
         response.continue_,
         "git status should be allowed (continue should be true)"
     );
 
-    evidence.pass("git status correctly allowed", timer.elapsed_ms());
+    evidence.pass(
+        "git status correctly allowed (exit 0, JSON)",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }
 
 // ==========================================================================
-// Test 4: Various git push variants are all blocked
+// Test 4: Various git push variants all exit code 2
 // ==========================================================================
 
 #[test]
-fn test_e2e_git_push_variants_blocked() {
+fn test_e2e_git_push_variants_exit_code_2() {
     let timer = Timer::start();
-    let mut evidence = TestEvidence::new("e2e_git_push_variants", "E2E");
+    let mut evidence = TestEvidence::new("e2e_git_push_variants_exit2", "E2E");
 
     let push_commands = vec![
         "git push",
@@ -208,32 +212,28 @@ fn test_e2e_git_push_variants_blocked() {
             .output()
             .expect("command should run");
 
-        let response = CchResponse::from_output(&output).expect("should parse response");
-
-        assert!(
-            !response.continue_,
-            "Command '{cmd}' MUST be blocked but was allowed"
+        assert_eq!(
+            output.status.code(),
+            Some(2),
+            "Command '{cmd}' MUST exit with code 2 (blocked)"
         );
     }
 
     evidence.pass(
-        &format!(
-            "All {} git push variants correctly blocked",
-            push_commands.len()
-        ),
+        &format!("All {} git push variants exit code 2", push_commands.len()),
         timer.elapsed_ms(),
     );
     let _ = evidence.save(&evidence_dir());
 }
 
 // ==========================================================================
-// Test 5: Non-push git commands are allowed
+// Test 5: Non-push git commands all exit code 0
 // ==========================================================================
 
 #[test]
-fn test_e2e_non_push_git_commands_allowed() {
+fn test_e2e_non_push_git_commands_exit_code_0() {
     let timer = Timer::start();
-    let mut evidence = TestEvidence::new("e2e_non_push_allowed", "E2E");
+    let mut evidence = TestEvidence::new("e2e_non_push_exit0", "E2E");
 
     let safe_commands = vec![
         "git status",
@@ -258,17 +258,15 @@ fn test_e2e_non_push_git_commands_allowed() {
             .output()
             .expect("command should run");
 
-        let response = CchResponse::from_output(&output).expect("should parse response");
-
         assert!(
-            response.continue_,
-            "Command '{cmd}' should be ALLOWED but was blocked"
+            output.status.success(),
+            "Command '{cmd}' should exit 0 (allowed)"
         );
     }
 
     evidence.pass(
         &format!(
-            "All {} non-push git commands correctly allowed",
+            "All {} non-push git commands exit code 0",
             safe_commands.len()
         ),
         timer.elapsed_ms(),
@@ -277,97 +275,79 @@ fn test_e2e_non_push_git_commands_allowed() {
 }
 
 // ==========================================================================
-// Test 6: Response format matches Claude Code expectations
+// Test 6: Blocked = stderr reason, Allowed = JSON stdout
 // ==========================================================================
 
-/// Claude Code expects the response JSON to have `"continue"` (not `"continue_"`).
-/// Verify the exact JSON output format.
+/// Verify the output format matches Claude Code's expectations:
+/// - Blocked: exit 2, reason on stderr, NO JSON on stdout
+/// - Allowed: exit 0, JSON on stdout with "continue":true
 #[test]
-fn test_e2e_response_json_format() {
+fn test_e2e_output_format_claude_code_protocol() {
     let timer = Timer::start();
-    let mut evidence = TestEvidence::new("e2e_response_format", "E2E");
+    let mut evidence = TestEvidence::new("e2e_output_format", "E2E");
 
-    // Test blocked response format
+    // === Blocked response ===
     let (temp_dir, event_json) = setup_claude_code_event("block-all-push.yaml", "git push");
 
-    let output = Command::cargo_bin("cch")
+    let blocked_output = Command::cargo_bin("cch")
         .expect("binary exists")
         .current_dir(temp_dir.path())
         .write_stdin(event_json)
         .output()
         .expect("command should run");
 
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stdout_str = stdout.trim();
+    assert_eq!(blocked_output.status.code(), Some(2), "Blocked = exit 2");
 
-    // Must contain "continue" (not "continue_")
+    let stderr = String::from_utf8_lossy(&blocked_output.stderr);
+    assert!(!stderr.is_empty(), "Blocked must have stderr reason");
     assert!(
-        stdout_str.contains(r#""continue":false"#) || stdout_str.contains(r#""continue": false"#),
-        "Blocked response must contain '\"continue\":false', got: {stdout_str}"
+        stderr.contains("Blocked"),
+        "stderr should describe the block"
     );
 
-    // Must NOT contain "continue_"
-    assert!(
-        !stdout_str.contains("continue_"),
-        "Response must NOT contain 'continue_' (serde rename required), got: {stdout_str}"
-    );
-
-    // Must contain "reason"
-    assert!(
-        stdout_str.contains(r#""reason""#),
-        "Blocked response must contain 'reason' field, got: {stdout_str}"
-    );
-
-    // Must be valid JSON
-    let parsed: serde_json::Value =
-        serde_json::from_str(stdout_str).expect("response must be valid JSON");
-    assert_eq!(
-        parsed["continue"], false,
-        "JSON 'continue' field must be false"
-    );
-
-    // Test allowed response format
+    // === Allowed response ===
     let (temp_dir2, event_json2) = setup_claude_code_event("block-all-push.yaml", "git status");
 
-    let output2 = Command::cargo_bin("cch")
+    let allowed_output = Command::cargo_bin("cch")
         .expect("binary exists")
         .current_dir(temp_dir2.path())
         .write_stdin(event_json2)
         .output()
         .expect("command should run");
 
-    let stdout2 = String::from_utf8_lossy(&output2.stdout);
-    let stdout_str2 = stdout2.trim();
+    assert!(allowed_output.status.success(), "Allowed = exit 0");
 
+    let stdout = String::from_utf8_lossy(&allowed_output.stdout);
+    let stdout_str = stdout.trim();
+
+    // Must be valid JSON with "continue":true
     assert!(
-        stdout_str2.contains(r#""continue":true"#) || stdout_str2.contains(r#""continue": true"#),
-        "Allowed response must contain '\"continue\":true', got: {stdout_str2}"
+        stdout_str.contains(r#""continue":true"#) || stdout_str.contains(r#""continue": true"#),
+        "Allowed response JSON must have 'continue':true, got: {stdout_str}"
     );
 
+    // Must NOT contain "continue_"
     assert!(
-        !stdout_str2.contains("continue_"),
-        "Response must NOT contain 'continue_', got: {stdout_str2}"
+        !stdout_str.contains("continue_"),
+        "Must not contain 'continue_', got: {stdout_str}"
     );
 
     evidence.pass(
-        "Response JSON format matches Claude Code expectations",
+        "Output format matches Claude Code protocol (exit 2 + stderr / exit 0 + JSON)",
         timer.elapsed_ms(),
     );
     let _ = evidence.save(&evidence_dir());
 }
 
 // ==========================================================================
-// Test 7: No config = allow all (fail-open behavior)
+// Test 7: No config = allow all (exit 0, fail-open)
 // ==========================================================================
 
-/// When there's no hooks.yaml in the project dir and no global config,
-/// CCH should allow everything (fail-open).
 #[test]
 fn test_e2e_no_config_allows_all() {
     let timer = Timer::start();
     let mut evidence = TestEvidence::new("e2e_no_config_allows", "E2E");
 
-    // Create a temp dir with NO .claude/hooks.yaml
     let empty_dir = tempfile::tempdir().expect("create empty dir");
     let cwd = empty_dir.path().to_string_lossy().to_string();
 
@@ -388,29 +368,23 @@ fn test_e2e_no_config_allows_all() {
 
     assert!(
         output.status.success(),
-        "CCH should exit 0 even with no config"
+        "No config = exit 0 (fail-open, allow all)"
     );
 
     let response = CchResponse::from_output(&output).expect("should parse response");
-
     assert!(
         response.continue_,
-        "With no hooks.yaml, everything should be allowed (fail-open)"
+        "With no hooks.yaml, everything should be allowed"
     );
 
-    evidence.pass(
-        "No config = all commands allowed (fail-open)",
-        timer.elapsed_ms(),
-    );
+    evidence.pass("No config = exit 0, all allowed", timer.elapsed_ms());
     let _ = evidence.save(&evidence_dir());
 }
 
 // ==========================================================================
-// Test 8: CWD-based loading with git push variants from wrong directory
+// Test 8: CWD + push variants from wrong dir = all exit code 2
 // ==========================================================================
 
-/// The critical combined test: invoked from WRONG dir, with various git push
-/// variants, all must be blocked via cwd-based config loading.
 #[test]
 fn test_e2e_cwd_git_push_variants_from_wrong_dir() {
     let timer = Timer::start();
@@ -427,7 +401,6 @@ fn test_e2e_cwd_git_push_variants_from_wrong_dir() {
     for cmd in &push_commands {
         let (_temp_dir, event_json) = setup_claude_code_event("block-all-push.yaml", cmd);
 
-        // Run from WRONG directory
         let output = Command::cargo_bin("cch")
             .expect("binary exists")
             .current_dir(wrong_dir.path())
@@ -435,17 +408,16 @@ fn test_e2e_cwd_git_push_variants_from_wrong_dir() {
             .output()
             .expect("command should run");
 
-        let response = CchResponse::from_output(&output).expect("should parse response");
-
-        assert!(
-            !response.continue_,
-            "Command '{cmd}' MUST be blocked even from wrong CWD"
+        assert_eq!(
+            output.status.code(),
+            Some(2),
+            "Command '{cmd}' MUST exit 2 even from wrong CWD"
         );
     }
 
     evidence.pass(
         &format!(
-            "All {} push variants blocked from wrong CWD via event.cwd",
+            "All {} push variants exit 2 from wrong CWD",
             push_commands.len()
         ),
         timer.elapsed_ms(),

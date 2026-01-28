@@ -54,21 +54,31 @@ fn test_us3_validator_blocks_console_log() {
     let event = read_fixture("events/console-log-write-event.json");
 
     // Run CCH with the event
-    let result = Command::cargo_bin("cch")
+    let output = Command::cargo_bin("cch")
         .expect("binary exists")
         .current_dir(temp_dir.path())
         .write_stdin(event)
-        .assert()
-        .success();
+        .output()
+        .expect("command should run");
 
-    // Response should block
-    result.stdout(
-        predicate::str::contains(r#""continue":false"#)
-            .or(predicate::str::contains(r#""continue": false"#)),
+    // Claude Code protocol: exit code 2 = BLOCK the tool
+    assert_eq!(
+        output.status.code(),
+        Some(2),
+        "Validator block MUST exit with code 2"
+    );
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        !stderr.is_empty(),
+        "Blocked response must have stderr reason"
     );
 
     evidence.pass(
-        "Validator correctly blocks code containing console.log",
+        &format!(
+            "Validator correctly blocks code containing console.log (exit 2, stderr: {})",
+            stderr.trim()
+        ),
         timer.elapsed_ms(),
     );
     let _ = evidence.save(&evidence_dir());
