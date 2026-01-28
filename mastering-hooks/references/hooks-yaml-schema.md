@@ -37,6 +37,12 @@ hooks:
 |-------|-------------|-------------------|
 | `PreToolUse` | Before tool executes | tool_name, tool_input, file_path |
 | `PostToolUse` | After tool completes | tool_name, tool_input, tool_output, file_path |
+| `Stop` | Session stop event | session_id |
+| `PostToolUseFailure` | After tool fails | tool_name, error |
+| `SubagentStart` | Subagent launched | agent_type |
+| `SubagentStop` | Subagent completed | agent_type |
+| `Notification` | System notification | message |
+| `Setup` | Initial setup event | configuration |
 | `PermissionRequest` | User approval requested | tool_name, permission_type |
 | `UserPromptSubmit` | User sends message | prompt_text |
 | `SessionStart` | New session begins | session_id, project_path |

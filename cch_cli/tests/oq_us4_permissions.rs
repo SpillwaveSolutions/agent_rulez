@@ -55,8 +55,8 @@ fn test_us4_permission_request_injection() {
 
     // Response should allow and potentially include context
     result.stdout(
-        predicate::str::contains(r#""continue_":true"#)
-            .or(predicate::str::contains(r#""continue_": true"#)),
+        predicate::str::contains(r#""continue":true"#)
+            .or(predicate::str::contains(r#""continue": true"#)),
     );
 
     evidence.pass(
@@ -114,7 +114,7 @@ fn test_us4_permission_event_type_filter() {
     let stdout = String::from_utf8_lossy(&output.stdout);
 
     // Should allow - the permission rule requires operations: ["PermissionRequest"]
-    assert!(stdout.contains(r#""continue_":true"#) || stdout.contains(r#""continue_": true"#));
+    assert!(stdout.contains(r#""continue":true"#) || stdout.contains(r#""continue": true"#));
 
     evidence.pass(
         "PreToolUse event does not match PermissionRequest filter",
@@ -171,8 +171,8 @@ fn test_us4_file_operation_explanation() {
 
     // Response should allow (permission explanations don't block, they inject)
     result.stdout(
-        predicate::str::contains(r#""continue_":true"#)
-            .or(predicate::str::contains(r#""continue_": true"#)),
+        predicate::str::contains(r#""continue":true"#)
+            .or(predicate::str::contains(r#""continue": true"#)),
     );
 
     evidence.pass(

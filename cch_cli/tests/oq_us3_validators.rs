@@ -63,8 +63,8 @@ fn test_us3_validator_blocks_console_log() {
 
     // Response should block
     result.stdout(
-        predicate::str::contains(r#""continue_":false"#)
-            .or(predicate::str::contains(r#""continue_": false"#)),
+        predicate::str::contains(r#""continue":false"#)
+            .or(predicate::str::contains(r#""continue": false"#)),
     );
 
     evidence.pass(
@@ -130,8 +130,8 @@ fn test_us3_validator_allows_clean_code() {
 
     // Response should allow
     result.stdout(
-        predicate::str::contains(r#""continue_":true"#)
-            .or(predicate::str::contains(r#""continue_": true"#)),
+        predicate::str::contains(r#""continue":true"#)
+            .or(predicate::str::contains(r#""continue": true"#)),
     );
 
     evidence.pass(
@@ -216,8 +216,8 @@ print("Done")
 
     // With fail_open=true, should allow on timeout
     result.stdout(
-        predicate::str::contains(r#""continue_":true"#)
-            .or(predicate::str::contains(r#""continue_": true"#)),
+        predicate::str::contains(r#""continue":true"#)
+            .or(predicate::str::contains(r#""continue": true"#)),
     );
 
     evidence.pass(

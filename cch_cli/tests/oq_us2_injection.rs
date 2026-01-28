@@ -55,8 +55,8 @@ fn test_us2_cdk_context_injection() {
 
     // Response should allow and include context
     result.stdout(
-        predicate::str::contains(r#""continue_":true"#)
-            .or(predicate::str::contains(r#""continue_": true"#)),
+        predicate::str::contains(r#""continue":true"#)
+            .or(predicate::str::contains(r#""continue": true"#)),
     );
     // Note: Context injection depends on the skill file existing
 
@@ -107,8 +107,8 @@ fn test_us2_non_matching_no_injection() {
 
     // Response should allow without context injection
     result.stdout(
-        predicate::str::contains(r#""continue_":true"#)
-            .or(predicate::str::contains(r#""continue_": true"#)),
+        predicate::str::contains(r#""continue":true"#)
+            .or(predicate::str::contains(r#""continue": true"#)),
     );
 
     evidence.pass(
@@ -167,8 +167,8 @@ fn test_us2_extension_based_injection() {
 
     // Response should allow
     result.stdout(
-        predicate::str::contains(r#""continue_":true"#)
-            .or(predicate::str::contains(r#""continue_": true"#)),
+        predicate::str::contains(r#""continue":true"#)
+            .or(predicate::str::contains(r#""continue": true"#)),
     );
 
     evidence.pass(

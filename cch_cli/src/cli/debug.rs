@@ -146,12 +146,16 @@ fn build_event(
     };
 
     Event {
-        event_type: event_type.as_model_event_type(),
+        hook_event_name: event_type.as_model_event_type(),
         session_id,
         tool_name: Some(tool_name),
         tool_input: Some(tool_input),
         timestamp: Utc::now(),
         user_id: None,
+        transcript_path: None,
+        cwd: None,
+        permission_mode: None,
+        tool_use_id: None,
     }
 }
 

@@ -20,7 +20,7 @@
   - [x] Session variant with `source`, `reason`, `transcript_path`, `cwd` fields
   - [x] Permission variant with `permission_mode` and boxed `tool_details`
   - [x] Unknown variant with `tool_name` field
-- [x] Add `ResponseSummary` struct with `continue_`, `reason`, `context_length`
+- [x] Add `ResponseSummary` struct with `continue` (serde-renamed from `continue_`), `reason`, `context_length`
 - [x] Add `RuleEvaluation` struct with `rule_name`, `matched`, `matcher_results`
 - [x] Add `MatcherResults` struct with individual matcher result fields
 - [x] Add `DebugConfig` struct with `enabled` flag

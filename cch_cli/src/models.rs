@@ -931,7 +931,7 @@ mod event_details_tests {
     #[test]
     fn test_extract_bash_event() {
         let event = Event {
-            event_type: EventType::PreToolUse,
+            hook_event_name: EventType::PreToolUse,
             tool_name: Some("Bash".to_string()),
             tool_input: Some(serde_json::json!({
                 "command": "git push --force"
@@ -939,6 +939,10 @@ mod event_details_tests {
             session_id: "test-session".to_string(),
             timestamp: Utc::now(),
             user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
         };
 
         let details = EventDetails::extract(&event);
@@ -948,7 +952,7 @@ mod event_details_tests {
     #[test]
     fn test_extract_write_event() {
         let event = Event {
-            event_type: EventType::PreToolUse,
+            hook_event_name: EventType::PreToolUse,
             tool_name: Some("Write".to_string()),
             tool_input: Some(serde_json::json!({
                 "filePath": "/path/to/file.rs"
@@ -956,6 +960,10 @@ mod event_details_tests {
             session_id: "test-session".to_string(),
             timestamp: Utc::now(),
             user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
         };
 
         let details = EventDetails::extract(&event);
@@ -967,7 +975,7 @@ mod event_details_tests {
     #[test]
     fn test_extract_write_event_file_path() {
         let event = Event {
-            event_type: EventType::PreToolUse,
+            hook_event_name: EventType::PreToolUse,
             tool_name: Some("Write".to_string()),
             tool_input: Some(serde_json::json!({
                 "file_path": "/path/to/file.rs"
@@ -975,6 +983,10 @@ mod event_details_tests {
             session_id: "test-session".to_string(),
             timestamp: Utc::now(),
             user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
         };
 
         let details = EventDetails::extract(&event);
@@ -986,7 +998,7 @@ mod event_details_tests {
     #[test]
     fn test_extract_edit_event() {
         let event = Event {
-            event_type: EventType::PreToolUse,
+            hook_event_name: EventType::PreToolUse,
             tool_name: Some("Edit".to_string()),
             tool_input: Some(serde_json::json!({
                 "filePath": "/path/to/file.rs"
@@ -994,6 +1006,10 @@ mod event_details_tests {
             session_id: "test-session".to_string(),
             timestamp: Utc::now(),
             user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
         };
 
         let details = EventDetails::extract(&event);
@@ -1005,7 +1021,7 @@ mod event_details_tests {
     #[test]
     fn test_extract_read_event() {
         let event = Event {
-            event_type: EventType::PreToolUse,
+            hook_event_name: EventType::PreToolUse,
             tool_name: Some("Read".to_string()),
             tool_input: Some(serde_json::json!({
                 "filePath": "/path/to/file.rs"
@@ -1013,6 +1029,10 @@ mod event_details_tests {
             session_id: "test-session".to_string(),
             timestamp: Utc::now(),
             user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
         };
 
         let details = EventDetails::extract(&event);
@@ -1024,7 +1044,7 @@ mod event_details_tests {
     #[test]
     fn test_extract_glob_event() {
         let event = Event {
-            event_type: EventType::PreToolUse,
+            hook_event_name: EventType::PreToolUse,
             tool_name: Some("Glob".to_string()),
             tool_input: Some(serde_json::json!({
                 "pattern": "*.rs",
@@ -1033,6 +1053,10 @@ mod event_details_tests {
             session_id: "test-session".to_string(),
             timestamp: Utc::now(),
             user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
         };
 
         let details = EventDetails::extract(&event);
@@ -1043,7 +1067,7 @@ mod event_details_tests {
     #[test]
     fn test_extract_grep_event() {
         let event = Event {
-            event_type: EventType::PreToolUse,
+            hook_event_name: EventType::PreToolUse,
             tool_name: Some("Grep".to_string()),
             tool_input: Some(serde_json::json!({
                 "pattern": "fn main",
@@ -1052,6 +1076,10 @@ mod event_details_tests {
             session_id: "test-session".to_string(),
             timestamp: Utc::now(),
             user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
         };
 
         let details = EventDetails::extract(&event);
@@ -1062,7 +1090,7 @@ mod event_details_tests {
     #[test]
     fn test_extract_session_start_event() {
         let event = Event {
-            event_type: EventType::SessionStart,
+            hook_event_name: EventType::SessionStart,
             tool_name: None,
             tool_input: Some(serde_json::json!({
                 "source": "vscode",
@@ -1073,6 +1101,10 @@ mod event_details_tests {
             session_id: "test-session".to_string(),
             timestamp: Utc::now(),
             user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
         };
 
         let details = EventDetails::extract(&event);
@@ -1088,12 +1120,16 @@ mod event_details_tests {
     #[test]
     fn test_extract_unknown_tool() {
         let event = Event {
-            event_type: EventType::PreToolUse,
+            hook_event_name: EventType::PreToolUse,
             tool_name: Some("FutureTool".to_string()),
             tool_input: None,
             session_id: "test-session".to_string(),
             timestamp: Utc::now(),
             user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
         };
 
         let details = EventDetails::extract(&event);
@@ -1141,10 +1177,15 @@ fn default_enabled() -> bool {
 }
 
 /// Claude Code hook event data structure
+///
+/// Claude Code sends events with `hook_event_name` as the field name.
+/// The `alias = "event_type"` preserves backward compatibility with
+/// debug commands and tests that use the old field name.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Event {
-    /// Hook event type
-    pub event_type: EventType,
+    /// Hook event type (Claude Code sends as `hook_event_name`)
+    #[serde(alias = "event_type")]
+    pub hook_event_name: EventType,
 
     /// Name of the tool being used
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1157,15 +1198,34 @@ pub struct Event {
     /// Unique session identifier
     pub session_id: String,
 
-    /// ISO 8601 timestamp
+    /// ISO 8601 timestamp (Claude Code may not send this, so default to now)
+    #[serde(default = "chrono::Utc::now")]
     pub timestamp: DateTime<Utc>,
 
     /// User identifier if available
     #[serde(skip_serializing_if = "Option::is_none")]
     pub user_id: Option<String>,
+
+    /// Path to session transcript (sent by Claude Code)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub transcript_path: Option<String>,
+
+    /// Current working directory (sent by Claude Code)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cwd: Option<String>,
+
+    /// Permission mode (sent by Claude Code)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub permission_mode: Option<String>,
+
+    /// Tool use ID (sent by Claude Code)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_use_id: Option<String>,
 }
 
 /// Supported hook event types
+///
+/// Includes all event types that Claude Code can send to hooks.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "PascalCase")]
 pub enum EventType {
@@ -1176,6 +1236,12 @@ pub enum EventType {
     SessionStart,
     SessionEnd,
     PreCompact,
+    Stop,
+    PostToolUseFailure,
+    SubagentStart,
+    SubagentStop,
+    Notification,
+    Setup,
 }
 
 impl std::fmt::Display for EventType {
@@ -1188,14 +1254,24 @@ impl std::fmt::Display for EventType {
             EventType::SessionStart => write!(f, "SessionStart"),
             EventType::SessionEnd => write!(f, "SessionEnd"),
             EventType::PreCompact => write!(f, "PreCompact"),
+            EventType::Stop => write!(f, "Stop"),
+            EventType::PostToolUseFailure => write!(f, "PostToolUseFailure"),
+            EventType::SubagentStart => write!(f, "SubagentStart"),
+            EventType::SubagentStop => write!(f, "SubagentStop"),
+            EventType::Notification => write!(f, "Notification"),
+            EventType::Setup => write!(f, "Setup"),
         }
     }
 }
 
 /// Binary output structure for hook responses
+///
+/// Sent to Claude Code via stdout. The `continue` field controls whether
+/// the operation proceeds or is blocked.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Response {
     /// Whether the operation should proceed
+    #[serde(rename = "continue")]
     pub continue_: bool,
 
     /// Additional context to inject
@@ -1504,7 +1580,7 @@ impl EventDetails {
                 EventDetails::Grep { pattern, path }
             }
             None if matches!(
-                event.event_type,
+                event.hook_event_name,
                 EventType::SessionStart | EventType::SessionEnd
             ) =>
             {
