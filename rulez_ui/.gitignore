@@ -8,6 +8,7 @@ out
 
 # Tauri
 src-tauri/target
+src-tauri/gen
 
 # Code coverage
 coverage
