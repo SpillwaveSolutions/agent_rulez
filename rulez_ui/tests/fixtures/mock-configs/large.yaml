@@ -1,0 +1,151 @@
+# Large configuration with many rules for performance testing
+version: "1"
+
+hooks:
+  # Security Rules
+  - name: block-force-push
+    event: PreToolUse
+    match:
+      tools: [Bash]
+      command_match: "git push.*--force"
+    action:
+      type: block
+      reason: "Force push is disabled for safety"
+
+  - name: block-hard-reset
+    event: PreToolUse
+    match:
+      tools: [Bash]
+      command_match: "git reset.*--hard"
+    action:
+      type: block
+      reason: "Hard reset requires confirmation"
+
+  - name: block-rm-rf
+    event: PreToolUse
+    match:
+      tools: [Bash]
+      command_match: "rm -rf /"
+    action:
+      type: block
+      reason: "Dangerous delete operation blocked"
+
+  - name: block-secrets-in-logs
+    event: PreToolUse
+    match:
+      tools: [Bash]
+      command_match: "echo.*API_KEY|SECRET|PASSWORD"
+    action:
+      type: block
+      reason: "Do not log secrets"
+
+  # Context Injection Rules
+  - name: python-standards
+    event: PreToolUse
+    match:
+      tools: [Write, Edit]
+      extensions: [.py]
+    action:
+      type: inject
+      source: file
+      path: .claude/context/python-standards.md
+
+  - name: typescript-standards
+    event: PreToolUse
+    match:
+      tools: [Write, Edit]
+      extensions: [.ts, .tsx]
+    action:
+      type: inject
+      source: file
+      path: .claude/context/typescript-standards.md
+
+  - name: rust-standards
+    event: PreToolUse
+    match:
+      tools: [Write, Edit]
+      extensions: [.rs]
+    action:
+      type: inject
+      source: file
+      path: .claude/context/rust-standards.md
+
+  - name: go-standards
+    event: PreToolUse
+    match:
+      tools: [Write, Edit]
+      extensions: [.go]
+    action:
+      type: inject
+      source: file
+      path: .claude/context/go-standards.md
+
+  - name: java-standards
+    event: PreToolUse
+    match:
+      tools: [Write, Edit]
+      extensions: [.java]
+    action:
+      type: inject
+      source: file
+      path: .claude/context/java-standards.md
+
+  # Validation Rules
+  - name: pre-commit-security
+    event: PreToolUse
+    match:
+      tools: [Bash]
+      command_match: "git commit"
+    action:
+      type: run
+      command: .claude/validators/check-secrets.sh
+      timeout: 30
+
+  - name: lint-before-push
+    event: PreToolUse
+    match:
+      tools: [Bash]
+      command_match: "git push"
+    action:
+      type: run
+      command: .claude/validators/run-lint.sh
+      timeout: 60
+
+  - name: test-before-deploy
+    event: PreToolUse
+    match:
+      tools: [Bash]
+      command_match: "deploy|terraform apply"
+    action:
+      type: run
+      command: .claude/validators/run-tests.sh
+      timeout: 300
+
+  # Directory-Based Rules
+  - name: docs-context
+    event: PreToolUse
+    match:
+      tools: [Write, Edit]
+      directories: [docs/, documentation/]
+    action:
+      type: inject
+      source: inline
+      content: |
+        Documentation Guidelines:
+        - Use clear, concise language
+        - Include code examples where appropriate
+        - Follow the style guide
+
+  - name: test-context
+    event: PreToolUse
+    match:
+      tools: [Write, Edit]
+      directories: [test/, tests/, __tests__/]
+    action:
+      type: inject
+      source: inline
+      content: |
+        Testing Guidelines:
+        - Write descriptive test names
+        - Use arrange-act-assert pattern
+        - Cover edge cases

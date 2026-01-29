@@ -1,0 +1,166 @@
+# cch_cli/Taskfile.yml - CCH CLI (Rust) Tasks
+#
+# Rust/Cargo tasks for the CCH binary.
+# Parent can include this with: taskfile: ./cch_cli/Taskfile.yml
+#
+# Quick start:
+#   task --list           # Show available tasks
+#   task build            # Build release binary
+#   task test             # Run tests
+
+version: '3'
+
+vars:
+  BINARY_NAME: cch
+
+tasks:
+  # ===========================================================================
+  # Build Tasks
+  # ===========================================================================
+
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  build:
+    desc: Build release binary
+    cmds:
+      - cargo build --release
+    sources:
+      - src/**/*.rs
+      - Cargo.toml
+      - ../Cargo.toml
+    generates:
+      - target/release/{{.BINARY_NAME}}
+
+  build-debug:
+    desc: Build debug binary
+    cmds:
+      - cargo build
+    sources:
+      - src/**/*.rs
+      - Cargo.toml
+      - ../Cargo.toml
+    generates:
+      - target/debug/{{.BINARY_NAME}}
+
+  clean:
+    desc: Remove build artifacts
+    cmds:
+      - cargo clean
+
+  # ===========================================================================
+  # Test Tasks
+  # ===========================================================================
+
+  test:
+    desc: Run unit tests
+    cmds:
+      - cargo test
+
+  test-verbose:
+    desc: Run tests with verbose output
+    cmds:
+      - cargo test -- --nocapture
+
+  test-specific:
+    desc: Run a specific test by name
+    cmds:
+      - cargo test {{.TEST_NAME}} -- --nocapture
+    vars:
+      TEST_NAME: '{{.TEST_NAME | default ""}}'
+
+  # ===========================================================================
+  # Code Quality Tasks
+  # ===========================================================================
+
+  lint:
+    desc: Run clippy linter
+    cmds:
+      - cargo clippy --all-targets --all-features -- -D warnings
+
+  format:
+    desc: Format code with rustfmt
+    cmds:
+      - cargo fmt
+
+  format-check:
+    desc: Check code formatting
+    cmds:
+      - cargo fmt --check
+
+  check:
+    desc: Run all quality checks
+    cmds:
+      - task: format-check
+      - task: lint
+      - task: test
+
+  # ===========================================================================
+  # Development Tasks
+  # ===========================================================================
+
+  watch:
+    desc: Auto-rebuild on changes (requires cargo-watch)
+    cmds:
+      - cargo watch -x build
+
+  watch-test:
+    desc: Auto-run tests on changes
+    cmds:
+      - cargo watch -x test
+
+  run:
+    desc: Run the CLI with arguments
+    deps: [build-debug]
+    cmds:
+      - ./target/debug/{{.BINARY_NAME}} {{.CLI_ARGS}}
+    vars:
+      CLI_ARGS: '{{.CLI_ARGS | default "--help"}}'
+
+  # ===========================================================================
+  # Installation Tasks
+  # ===========================================================================
+
+  install:
+    desc: Install globally via cargo
+    cmds:
+      - cargo install --path .
+
+  install-dev:
+    desc: Install from debug build
+    deps: [build-debug]
+    cmds:
+      - cp target/debug/{{.BINARY_NAME}} ~/.local/bin/
+
+  # ===========================================================================
+  # Documentation Tasks
+  # ===========================================================================
+
+  doc:
+    desc: Generate Rust documentation
+    cmds:
+      - cargo doc --no-deps
+
+  doc-open:
+    desc: Generate and open documentation
+    cmds:
+      - cargo doc --no-deps --open
+
+  # ===========================================================================
+  # Release Tasks
+  # ===========================================================================
+
+  release-build:
+    desc: Build optimized release binary
+    env:
+      RUSTFLAGS: "-C target-cpu=native"
+    cmds:
+      - cargo build --release
+
+  version:
+    desc: Show version
+    deps: [build]
+    cmds:
+      - ./target/release/{{.BINARY_NAME}} --version

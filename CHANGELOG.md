@@ -5,6 +5,44 @@ All notable changes to Claude Context Hooks (CCH) will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-01-28
+
+### Critical Fixes
+
+**v1.0.0 was fundamentally broken for blocking operations.** This release contains essential fixes:
+
+- **Exit Code 2 for Blocking** - v1.0.0 incorrectly used exit code 0 with `continue:false`, which did NOT prevent tool execution. CCH now exits with code 2 when blocking, per Claude Code hook protocol.
+- **Event Parsing Fix** - Fixed to correctly parse `hook_event_name` field (not `event_type`) per Claude Code hook event protocol.
+- **Config Resolution** - Now uses the event's `cwd` field to locate project-level `hooks.yaml`, fixing incorrect rule matching in some scenarios.
+
+### Added
+
+#### Tooling
+- **Taskfile Architecture** - Modular Taskfiles for CLI (`cch_cli/Taskfile.yml`) and UI (`rulez_ui/Taskfile.yml`) with root orchestration
+- **Playwright E2E Testing** - Expanded test infrastructure with Page Object Models and CI integration
+- **E2E GitHub Workflow** - Automated Playwright tests on push to main/develop
+
+#### RuleZ UI
+- Page Object Models for maintainable E2E tests
+- Test fixtures for mock configurations and event scenarios
+- Enhanced Playwright configuration for CI environments
+
+### Changed
+
+- Root Taskfile now includes subproject Taskfiles via `includes:`
+- Orchestrated commands: `task build`, `task test:all`, `task dev`, `task ci-full`
+- Playwright config updated with JUnit reporter, video capture on retry, and visual regression settings
+
+### Developer Notes
+
+**Upgrade from v1.0.x is strongly recommended.** Blocking rules were not functioning correctly in v1.0.0-1.0.2.
+
+To verify blocking works correctly after upgrade:
+```bash
+echo '{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"git push --force"}}' | cch pre-tool-use
+echo $?  # Should output: 2
+```
+
 ## [1.0.0] - 2026-01-23
 
 ### Added

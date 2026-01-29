@@ -1,0 +1,59 @@
+{
+  "description": "Events that should trigger context injection",
+  "scenarios": [
+    {
+      "name": "Python file write",
+      "event": {
+        "hook_event_name": "PreToolUse",
+        "tool_name": "Write",
+        "tool_input": {
+          "file_path": "src/main.py",
+          "content": "# New Python file"
+        }
+      },
+      "expectedOutcome": "Inject",
+      "expectedContext": "python-standards"
+    },
+    {
+      "name": "TypeScript file edit",
+      "event": {
+        "hook_event_name": "PreToolUse",
+        "tool_name": "Edit",
+        "tool_input": {
+          "file_path": "src/components/App.tsx",
+          "old_string": "function",
+          "new_string": "const"
+        }
+      },
+      "expectedOutcome": "Inject",
+      "expectedContext": "typescript-standards"
+    },
+    {
+      "name": "Rust file write",
+      "event": {
+        "hook_event_name": "PreToolUse",
+        "tool_name": "Write",
+        "tool_input": {
+          "file_path": "src/lib.rs",
+          "content": "// New Rust module"
+        }
+      },
+      "expectedOutcome": "Inject",
+      "expectedContext": "rust-standards"
+    },
+    {
+      "name": "Documentation edit",
+      "event": {
+        "hook_event_name": "PreToolUse",
+        "tool_name": "Edit",
+        "tool_input": {
+          "file_path": "docs/README.md",
+          "old_string": "old text",
+          "new_string": "new text"
+        }
+      },
+      "expectedOutcome": "Inject",
+      "expectedContext": "docs-context"
+    }
+  ]
+}

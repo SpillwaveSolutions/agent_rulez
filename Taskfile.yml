@@ -4,12 +4,26 @@
 # Install Task: https://taskfile.dev/installation/
 #
 # Quick start:
-#   task --list        # Show all available tasks
-#   task build         # Build CCH binary
-#   task test          # Run all tests
-#   task integration-test  # Run integration tests
+#   task --list            # Show all available tasks
+#   task build             # Build both CLI and UI
+#   task test              # Run all unit tests
+#   task test:all          # All tests including integration and E2E
+#   task dev               # Start full dev environment
+#   task ci                # Run full CI pipeline locally
 
 version: '3'
+
+# ===========================================================================
+# Subproject Includes
+# ===========================================================================
+
+includes:
+  cli:
+    taskfile: ./cch_cli/Taskfile.yml
+    dir: ./cch_cli
+  ui:
+    taskfile: ./rulez_ui/Taskfile.yml
+    dir: ./rulez_ui
 
 vars:
   PROJECT_NAME: cch
@@ -28,6 +42,12 @@ tasks:
       - task --list
 
   build:
+    desc: Build both CLI and UI
+    cmds:
+      - task: cli:build
+      - task: ui:build
+
+  build-cli:
     desc: Build CCH binary (release mode)
     dir: "{{.CCH_CLI_DIR}}"
     cmds:
@@ -113,10 +133,12 @@ tasks:
       TEST_NAME: '{{.TEST_NAME | default "01-block-force-push"}}'
 
   test-all:
-    desc: Run all tests (unit + integration)
+    desc: Run all tests (unit + integration + E2E)
     cmds:
       - task: test
+      - task: ui:test
       - task: integration-test
+      - task: ui:e2e
 
   # ===========================================================================
   # IQ/OQ/PQ Validation Tasks
@@ -250,6 +272,33 @@ tasks:
       - ./{{.CCH_BINARY}} validate
 
   # ===========================================================================
+  # Development Environment Tasks
+  # ===========================================================================
+
+  dev:
+    desc: Start full dev environment (CLI watch + UI dev server)
+    cmds:
+      - echo "Starting development environment..."
+      - echo "Run 'task cli:watch' in one terminal"
+      - echo "Run 'task ui:dev' in another terminal"
+      - task: ui:dev
+
+  dev-cli:
+    desc: Start CLI development with auto-rebuild
+    cmds:
+      - task: cli:watch
+
+  dev-ui:
+    desc: Start UI development server
+    cmds:
+      - task: ui:dev
+
+  dev-ui-tauri:
+    desc: Start Tauri desktop development
+    cmds:
+      - task: ui:dev:tauri
+
+  # ===========================================================================
   # CI/CD Tasks
   # ===========================================================================
 
@@ -257,16 +306,19 @@ tasks:
     desc: Run full CI pipeline locally
     cmds:
       - task: clean
-      - task: build
+      - task: build-cli
       - task: check
       - task: test
       - echo "CI pipeline completed successfully"
 
   ci-full:
-    desc: Run full CI pipeline including integration tests
+    desc: Run full CI pipeline including integration and E2E tests
     cmds:
       - task: ci
+      - task: ui:check
+      - task: ui:build
       - task: integration-test
+      - task: ui:e2e
 
   # ===========================================================================
   # Documentation Tasks

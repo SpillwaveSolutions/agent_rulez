@@ -1,0 +1,12 @@
+# Invalid YAML configuration for testing error handling
+version: "1"
+
+hooks:
+  - name: broken-rule
+    event: PreToolUse
+    match:
+      tools: [Bash
+      # Missing closing bracket - syntax error
+    action:
+      type: block
+      reason: "This rule has invalid YAML"
