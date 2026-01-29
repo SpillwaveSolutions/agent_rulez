@@ -75,6 +75,14 @@ checklists:
   .speckit/checklists/phase2-governance-checklist.md: "Checklist-Phase2-Governance"
   .speckit/checklists/rulez-ui-checklist.md: "Checklist-RuleZ-UI"
 
+# Skills Documentation
+skills:
+  .claude/skills/release-cch/SKILL.md: "Skill-Release-CCH-Guide"
+  .claude/skills/release-cch/README.md: "Skill-Release-CCH-Overview"
+  .claude/skills/release-cch/references/release-workflow.md: "Skill-Release-CCH-Workflow"
+  .claude/skills/release-cch/references/hotfix-workflow.md: "Skill-Release-CCH-Hotfix"
+  .claude/skills/release-cch/references/troubleshooting.md: "Skill-Release-CCH-Troubleshooting"
+
 # Wiki Pages Summary (for tracking)
 wiki_pages_created:
   - Home: "Main project documentation with overview and quick start"
@@ -114,3 +122,8 @@ wiki_pages_created:
   - Feature-Advanced-Rules-Spec: "Advanced rules specification"
   - Checklist-Phase2-Governance: "Governance completion checklist"
   - Checklist-RuleZ-UI: "RuleZ UI completion checklist"
+  - Skill-Release-CCH-Guide: "CCH release workflow automation"
+  - Skill-Release-CCH-Overview: "Release skill introduction"
+  - Skill-Release-CCH-Workflow: "Standard release process"
+  - Skill-Release-CCH-Hotfix: "Hotfix release process"
+  - Skill-Release-CCH-Troubleshooting: "Release troubleshooting"
