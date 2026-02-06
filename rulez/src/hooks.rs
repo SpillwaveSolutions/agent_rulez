@@ -368,6 +368,11 @@ async fn execute_rule_actions(event: &Event, rule: &Rule, config: &Config) -> Re
         }
     }
 
+    // Handle inline content injection (takes precedence over inject)
+    if let Some(ref inline_content) = actions.inject_inline {
+        return Ok(Response::inject(inline_content.clone()));
+    }
+
     // Handle context injection
     if let Some(ref inject_path) = actions.inject {
         match read_context_file(inject_path).await {
@@ -590,6 +595,11 @@ async fn execute_rule_actions_warn_mode(
                 }
             }
         }
+    }
+
+    // Handle inline content injection (takes precedence over inject)
+    if let Some(ref inline_content) = actions.inject_inline {
+        return Ok(Response::inject(inline_content.clone()));
     }
 
     // Context injection still works in warn mode
@@ -822,6 +832,7 @@ mod tests {
             actions: Actions {
                 block: Some(true),
                 inject: None,
+                inject_inline: None,
                 run: None,
                 block_if_match: None,
             },
@@ -864,6 +875,7 @@ mod tests {
             actions: Actions {
                 block: Some(true),
                 inject: None,
+                inject_inline: None,
                 run: None,
                 block_if_match: None,
             },
@@ -960,6 +972,7 @@ mod tests {
             },
             actions: Actions {
                 inject: None,
+                inject_inline: None,
                 run: None,
                 block: None,
                 block_if_match: None,
@@ -986,6 +999,7 @@ mod tests {
             },
             actions: Actions {
                 inject: None,
+                inject_inline: None,
                 run: None,
                 block: None,
                 block_if_match: None,
@@ -1015,6 +1029,7 @@ mod tests {
             },
             actions: Actions {
                 inject: None,
+                inject_inline: None,
                 run: None,
                 block: Some(true),
                 block_if_match: None,

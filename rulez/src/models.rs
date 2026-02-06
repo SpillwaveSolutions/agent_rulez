@@ -276,6 +276,10 @@ pub struct Actions {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub inject: Option<String>,
 
+    /// Inline markdown content to inject directly (no file read)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub inject_inline: Option<String>,
+
     /// Validator script to execute (supports string or object format)
     ///
     /// Supports two formats for backward compatibility:
@@ -632,6 +636,7 @@ reason: Code quality
             },
             actions: Actions {
                 inject: None,
+                inject_inline: None,
                 run: None,
                 block: None,
                 block_if_match: None,
@@ -658,6 +663,7 @@ reason: Code quality
             },
             actions: Actions {
                 inject: None,
+                inject_inline: None,
                 run: None,
                 block: None,
                 block_if_match: None,
@@ -684,6 +690,7 @@ reason: Code quality
             },
             actions: Actions {
                 inject: None,
+                inject_inline: None,
                 run: None,
                 block: None,
                 block_if_match: None,
@@ -710,6 +717,7 @@ reason: Code quality
             },
             actions: Actions {
                 inject: None,
+                inject_inline: None,
                 run: None,
                 block: None,
                 block_if_match: None,
@@ -736,6 +744,7 @@ reason: Code quality
             },
             actions: Actions {
                 inject: None,
+                inject_inline: None,
                 run: None,
                 block: None,
                 block_if_match: None,
@@ -766,6 +775,7 @@ reason: Code quality
             },
             actions: Actions {
                 inject: None,
+                inject_inline: None,
                 run: None,
                 block: None,
                 block_if_match: None,
@@ -850,6 +860,7 @@ reason: Code quality
             },
             actions: Actions {
                 inject: None,
+                inject_inline: None,
                 run: None,
                 block: None,
                 block_if_match: None,
