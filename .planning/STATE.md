@@ -29,7 +29,16 @@
 
 ## Active Concerns
 
-- None yet - starting fresh with GSD
+1. **Monorepo structure needs reorganization** - Current layout doesn't reflect component priorities
+   - CCH Core binary is the primary product (not RuleZ UI)
+   - mastering-hooks should be a plugin
+   - Todo captured: `2026-02-06-reorganize-monorepo-structure.md`
+
+---
+
+## Pending Todos
+
+- 1 pending — `/gsd:check-todos` to review
 
 ---
 
