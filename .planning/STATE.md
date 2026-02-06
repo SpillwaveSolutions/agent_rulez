@@ -1,58 +1,75 @@
 # Living Memory
 
 **Last Updated:** 2026-02-06
-**Current Phase:** 1 (Monaco Editor)
-**Current Plan:** Not yet planned
+**Current Focus:** Brainstorming next steps after monorepo reorganization
 
 ---
 
 ## Position
 
-- **Milestone:** RuleZ UI v1.0
-- **Phase:** 1 of 7
-- **Status:** Ready to plan
+- **Project:** RuleZ (renamed from CCH)
+- **Status:** Monorepo reorganization complete
+- **Next:** Determine priorities across all three components
 
 ---
 
-## Key Decisions
+## Recent Changes (2026-02-06)
 
-1. **Converted from SDD to GSD** (2026-02-06)
+1. **Converted SDD → GSD**
    - Kept .speckit/ as reference
    - Created .planning/ for GSD workflow
    - Codebase mapped with 7 documents
 
-2. **M1 Complete** (prior work)
-   - Tauri 2.0 + React scaffold done
-   - PR #72 merged to develop
+2. **Monorepo Reorganization**
+   - `cch_cli/` → `rulez/` (binary now `rulez` not `cch`)
+   - `rulez_ui/` → `rulez-ui/`
+   - `mastering-hooks/` unchanged
+   - Empty `src/` directory removed
+   - All Cargo.toml, Taskfile.yml, CLAUDE.md updated
 
 ---
 
-## Active Concerns
+## Component Status
 
-1. **Monorepo structure needs reorganization** - Current layout doesn't reflect component priorities
-   - CCH Core binary is the primary product (not RuleZ UI)
-   - mastering-hooks should be a plugin
-   - Todo captured: `2026-02-06-reorganize-monorepo-structure.md`
+| Component | Status | Next Action |
+|-----------|--------|-------------|
+| **RuleZ Core** | v1.1.0 | Determine next features |
+| **Mastering Hooks** | Complete skill | Consider plugin conversion |
+| **RuleZ UI** | M1 done | Lower priority |
+
+---
+
+## Open Questions
+
+1. What's the next priority for RuleZ Core?
+   - More matchers/actions?
+   - Performance improvements?
+   - Better CLI UX?
+
+2. Should mastering-hooks become a plugin now?
+   - What's the plugin format?
+   - Use the agent-skill-converter?
+
+3. What about integration testing (IQ/OQ/PQ)?
+   - Is it fully set up?
+   - Are all tests passing?
 
 ---
 
 ## Pending Todos
 
-- 1 pending — `/gsd:check-todos` to review
-
----
-
-## Blockers
-
-- None
+- 0 pending (monorepo reorg completed)
 
 ---
 
 ## Context for Next Session
 
-Starting GSD workflow for RuleZ UI. Phase 1 (Monaco Editor) is ready for `/gsd:discuss-phase 1` or `/gsd:plan-phase 1`.
+Monorepo is reorganized. Ready to brainstorm next steps and reprioritize the roadmap based on actual needs rather than the RuleZ UI-focused roadmap that was converted from SDD.
 
-The existing M1 work (Tauri scaffold) is complete. We're picking up at M2 (Monaco Editor integration).
+Key files:
+- `rulez/` - Core binary (the main product)
+- `mastering-hooks/` - Skill to help users use RuleZ
+- `rulez-ui/` - Optional desktop app
 
 ---
 
