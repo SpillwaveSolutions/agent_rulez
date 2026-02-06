@@ -1,7 +1,7 @@
-# cch_cli/Taskfile.yml - CCH CLI (Rust) Tasks
+# rulez/Taskfile.yml - RuleZ Core (Rust) Tasks
 #
-# Rust/Cargo tasks for the CCH binary.
-# Parent can include this with: taskfile: ./cch_cli/Taskfile.yml
+# Rust/Cargo tasks for the RuleZ policy engine binary.
+# Parent can include this with: taskfile: ./rulez/Taskfile.yml
 #
 # Quick start:
 #   task --list           # Show available tasks
@@ -11,7 +11,7 @@
 version: '3'
 
 vars:
-  BINARY_NAME: cch
+  BINARY_NAME: rulez
 
 tasks:
   # ===========================================================================

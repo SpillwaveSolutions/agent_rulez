@@ -1,7 +1,7 @@
 [package]
-name = "cch"
-description = "Claude Code Hooks - High-performance policy engine for development workflows"
-keywords = ["claude", "hooks", "policy", "security"]
+name = "rulez"
+description = "RuleZ - High-performance AI policy engine for development workflows"
+keywords = ["claude", "hooks", "policy", "security", "ai", "rules"]
 categories = ["development-tools"]
 version.workspace = true
 authors.workspace = true
@@ -10,7 +10,7 @@ edition.workspace = true
 
 # Binaries
 [[bin]]
-name = "cch"
+name = "rulez"
 path = "src/main.rs"
 
 [dependencies]

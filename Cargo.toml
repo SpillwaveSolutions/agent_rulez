@@ -1,13 +1,18 @@
-# CCH Workspace - Claude Code Hooks Policy Engine
+# RuleZ Workspace - AI Policy Engine Monorepo
 #
-# This workspace contains the CCH binary and related packages.
+# This workspace contains the RuleZ policy engine and related packages.
 # The binary is a POLICY ENGINE that EXECUTES user-configured YAML rules.
 # It does NOT have built-in blocking/injection features - all behavior
 # is defined by user YAML configuration in .claude/hooks.yaml.
+#
+# Components:
+# - rulez/           Core policy engine binary (Rust)
+# - mastering-hooks/ Claude Code skill for RuleZ mastery
+# - rulez-ui/        Tauri desktop app for visual configuration
 
 [workspace]
-members = ["cch_cli"]
-exclude = ["rulez_ui/src-tauri"]
+members = ["rulez"]
+exclude = ["rulez-ui/src-tauri"]
 resolver = "2"
 
 [workspace.package]

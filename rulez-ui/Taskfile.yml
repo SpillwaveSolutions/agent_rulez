@@ -1,7 +1,7 @@
-# rulez_ui/Taskfile.yml - RuleZ UI (React/Tauri) Tasks
+# rulez-ui/Taskfile.yml - RuleZ UI (React/Tauri) Tasks
 #
 # Bun/Vite/Playwright/Tauri tasks for the desktop application.
-# Parent can include this with: taskfile: ./rulez_ui/Taskfile.yml
+# Parent can include this with: taskfile: ./rulez-ui/Taskfile.yml
 #
 # Quick start:
 #   task --list           # Show available tasks
