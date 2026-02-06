@@ -1,75 +1,72 @@
 # Living Memory
 
 **Last Updated:** 2026-02-06
-**Current Focus:** Brainstorming next steps after monorepo reorganization
+**Current Phase:** 1 (Inline Content Injection)
+**Current Plan:** 01-01-PLAN.md (ready to execute)
 
 ---
 
 ## Position
 
-- **Project:** RuleZ (renamed from CCH)
-- **Status:** Monorepo reorganization complete
-- **Next:** Determine priorities across all three components
+- **Milestone:** RuleZ v1.2 (P2 Features)
+- **Phase:** 1 of 3
+- **Status:** Planned - ready to execute
 
 ---
 
-## Recent Changes (2026-02-06)
+## Milestone Overview
+
+| Phase | Feature | Status |
+|-------|---------|--------|
+| 1 | `inject_inline` | Planned (1 plan) |
+| 2 | `inject_command` | Pending |
+| 3 | `enabled_when` | Pending |
+
+---
+
+## Recent Session (2026-02-06)
 
 1. **Converted SDD → GSD**
-   - Kept .speckit/ as reference
-   - Created .planning/ for GSD workflow
-   - Codebase mapped with 7 documents
-
-2. **Monorepo Reorganization**
-   - `cch_cli/` → `rulez/` (binary now `rulez` not `cch`)
-   - `rulez_ui/` → `rulez-ui/`
-   - `mastering-hooks/` unchanged
-   - Empty `src/` directory removed
-   - All Cargo.toml, Taskfile.yml, CLAUDE.md updated
+2. **Reorganized as monorepo** (cch → rulez)
+3. **Reprioritized roadmap** - RuleZ Core over UI
+4. **Selected P2 features** for v1.2:
+   - `inject_inline` - Inline markdown injection
+   - `inject_command` - Dynamic context via shell
+   - `enabled_when` - Conditional rule activation
 
 ---
 
-## Component Status
+## Key Decisions
 
-| Component | Status | Next Action |
-|-----------|--------|-------------|
-| **RuleZ Core** | v1.1.0 | Determine next features |
-| **Mastering Hooks** | Complete skill | Consider plugin conversion |
-| **RuleZ UI** | M1 done | Lower priority |
-
----
-
-## Open Questions
-
-1. What's the next priority for RuleZ Core?
-   - More matchers/actions?
-   - Performance improvements?
-   - Better CLI UX?
-
-2. Should mastering-hooks become a plugin now?
-   - What's the plugin format?
-   - Use the agent-skill-converter?
-
-3. What about integration testing (IQ/OQ/PQ)?
-   - Is it fully set up?
-   - Are all tests passing?
+1. **Binary renamed to `rulez`** (was `cch`)
+2. **RuleZ Core is P1** - UI is P3
+3. **All P2 features together** as v1.2 milestone
+4. **Start with inject_inline** - Simplest, high value
 
 ---
 
-## Pending Todos
+## Technical Notes
 
-- 0 pending (monorepo reorg completed)
+Files to modify:
+- `rulez/src/models.rs` - Add new fields to Actions/Rule
+- `rulez/src/hooks.rs` - Handle new action types
+- `rulez/src/config.rs` - Validation for new fields
+
+Expression evaluation for `enabled_when`:
+- Start simple: `env.VAR == 'value'`
+- Expand later if needed
 
 ---
 
 ## Context for Next Session
 
-Monorepo is reorganized. Ready to brainstorm next steps and reprioritize the roadmap based on actual needs rather than the RuleZ UI-focused roadmap that was converted from SDD.
+Phase 1 (`inject_inline`) is planned and ready to execute.
 
-Key files:
-- `rulez/` - Core binary (the main product)
-- `mastering-hooks/` - Skill to help users use RuleZ
-- `rulez-ui/` - Optional desktop app
+Run `/gsd:execute-phase 1` to implement:
+- Task 1: Add inject_inline field to models.rs, handle in hooks.rs
+- Task 2: Add unit tests and integration test
+
+Plan file: `.planning/phases/01-inline-content-injection/01-01-PLAN.md`
 
 ---
 
