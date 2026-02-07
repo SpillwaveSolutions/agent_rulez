@@ -932,6 +932,96 @@ metadata:
         assert_eq!(rule.effective_priority(), 10); // From legacy metadata
         assert!(rule.governance.is_none());
     }
+
+    // =========================================================================
+    // inject_inline Tests
+    // =========================================================================
+
+    #[test]
+    fn test_inject_inline_literal_block() {
+        // Tests YAML literal block style (|) which preserves newlines
+        let yaml = r#"
+inject_inline: |
+  ## Production Warning
+  You are editing production files.
+  Be extra careful.
+"#;
+        let actions: Actions = serde_yaml::from_str(yaml).unwrap();
+
+        assert!(actions.inject_inline.is_some());
+        let content = actions.inject_inline.unwrap();
+        assert!(content.contains("## Production Warning"));
+        assert!(content.contains("\n")); // Literal block preserves newlines
+        assert!(content.contains("Be extra careful"));
+    }
+
+    #[test]
+    fn test_inject_inline_folded_block() {
+        // Tests YAML folded block style (>) which folds newlines into spaces
+        let yaml = r#"
+inject_inline: >
+  This is a long paragraph that
+  will be folded into a single line.
+"#;
+        let actions: Actions = serde_yaml::from_str(yaml).unwrap();
+
+        assert!(actions.inject_inline.is_some());
+        let content = actions.inject_inline.unwrap();
+        assert!(content.contains("This is a long paragraph"));
+        // Folded style converts newlines within paragraph to spaces
+    }
+
+    #[test]
+    fn test_inject_inline_simple_string() {
+        // Tests simple quoted string parsing
+        let yaml = r#"
+inject_inline: "Single line warning"
+"#;
+        let actions: Actions = serde_yaml::from_str(yaml).unwrap();
+
+        assert!(actions.inject_inline.is_some());
+        assert_eq!(actions.inject_inline.unwrap(), "Single line warning");
+    }
+
+    #[test]
+    fn test_inject_inline_precedence() {
+        // Tests that both inject and inject_inline can coexist
+        // Runtime precedence is handled in hooks.rs
+        let yaml = r#"
+inject: "/path/to/file.md"
+inject_inline: "Inline takes precedence"
+"#;
+        let actions: Actions = serde_yaml::from_str(yaml).unwrap();
+
+        // Both fields parse successfully
+        assert!(actions.inject.is_some());
+        assert!(actions.inject_inline.is_some());
+        assert_eq!(actions.inject.unwrap(), "/path/to/file.md");
+        assert_eq!(actions.inject_inline.unwrap(), "Inline takes precedence");
+    }
+
+    #[test]
+    fn test_inject_inline_full_rule_yaml() {
+        // Tests inject_inline in a complete rule definition
+        let yaml = r#"
+name: prod-warning
+description: Warn when editing production files
+matchers:
+  directories: ["/prod/"]
+actions:
+  inject_inline: |
+    ## Production Warning
+    You are editing production files.
+    Be extra careful with these changes.
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+
+        assert_eq!(rule.name, "prod-warning");
+        assert!(rule.actions.inject_inline.is_some());
+        let content = rule.actions.inject_inline.unwrap();
+        assert!(content.contains("## Production Warning"));
+        assert!(content.contains("production files"));
+    }
 }
 
 #[cfg(test)]

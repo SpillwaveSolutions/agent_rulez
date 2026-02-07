@@ -177,3 +177,146 @@ fn test_us2_extension_based_injection() {
     );
     let _ = evidence.save(&evidence_dir());
 }
+
+/// Test that inline content injection works (inject_inline action)
+#[test]
+fn test_us2_inline_content_injection() {
+    let timer = Timer::start();
+    let mut evidence = TestEvidence::new("inline_content_injection", "OQ-US2");
+
+    // Setup test environment
+    let temp_dir = tempfile::tempdir().expect("create temp dir");
+
+    // Create .claude directory with config
+    let claude_dir = temp_dir.path().join(".claude");
+    fs::create_dir_all(&claude_dir).expect("create .claude");
+
+    // Create hooks.yaml with inject_inline rule
+    let config_content = r#"version: "1.0"
+rules:
+  - name: inline-warning
+    matchers:
+      directories: ["/prod/"]
+    actions:
+      inject_inline: |
+        ## Production Warning
+        You are editing production files.
+"#;
+    fs::write(claude_dir.join("hooks.yaml"), config_content).expect("write config");
+
+    // Create event for a file in /prod/ directory
+    let event = r#"{
+        "event_type": "PreToolUse",
+        "tool_name": "Edit",
+        "tool_input": {
+            "filePath": "/prod/config.yaml",
+            "oldString": "old",
+            "newString": "new"
+        },
+        "session_id": "test-session-inline",
+        "timestamp": "2025-01-22T12:00:00Z"
+    }"#;
+
+    // Run rulez binary with the event
+    Command::cargo_bin("rulez")
+        .expect("binary exists")
+        .current_dir(temp_dir.path())
+        .write_stdin(event)
+        .assert()
+        .success()
+        // Response should allow and include the inline content
+        .stdout(
+            predicate::str::contains(r#""continue":true"#)
+                .or(predicate::str::contains(r#""continue": true"#)),
+        )
+        .stdout(predicate::str::contains("Production Warning"));
+
+    evidence.pass(
+        "Inline content injection works via inject_inline action",
+        timer.elapsed_ms(),
+    );
+    let _ = evidence.save(&evidence_dir());
+}
+
+/// Test that inject_inline takes precedence over inject
+#[test]
+fn test_us2_inject_inline_precedence() {
+    let timer = Timer::start();
+    let mut evidence = TestEvidence::new("inject_inline_precedence", "OQ-US2");
+
+    // Setup test environment
+    let temp_dir = tempfile::tempdir().expect("create temp dir");
+
+    // Create .claude directory with config
+    let claude_dir = temp_dir.path().join(".claude");
+    fs::create_dir_all(&claude_dir).expect("create .claude");
+
+    // Create a context file that should NOT be used
+    let context_file = claude_dir.join("context.md");
+    fs::write(&context_file, "FILE CONTENT - SHOULD NOT APPEAR").expect("write context file");
+
+    // Create hooks.yaml with both inject and inject_inline
+    // inject_inline should take precedence
+    let config_content = format!(
+        r#"version: "1.0"
+rules:
+  - name: precedence-test
+    matchers:
+      directories: ["/test/"]
+    actions:
+      inject: "{}"
+      inject_inline: "INLINE CONTENT - SHOULD APPEAR"
+"#,
+        context_file.display()
+    );
+    fs::write(claude_dir.join("hooks.yaml"), config_content).expect("write config");
+
+    // Create event for a file in /test/ directory
+    let event = r#"{
+        "event_type": "PreToolUse",
+        "tool_name": "Edit",
+        "tool_input": {
+            "filePath": "/test/file.txt",
+            "oldString": "old",
+            "newString": "new"
+        },
+        "session_id": "test-session-precedence",
+        "timestamp": "2025-01-22T12:00:00Z"
+    }"#;
+
+    // Run rulez binary with the event and capture output
+    let output = Command::cargo_bin("rulez")
+        .expect("binary exists")
+        .current_dir(temp_dir.path())
+        .write_stdin(event)
+        .output()
+        .expect("run binary");
+
+    assert!(output.status.success());
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // Response should allow
+    assert!(
+        stdout.contains(r#""continue":true"#) || stdout.contains(r#""continue": true"#),
+        "Response should allow (continue: true)"
+    );
+
+    // Inline content should appear
+    assert!(
+        stdout.contains("INLINE CONTENT - SHOULD APPEAR"),
+        "inject_inline content should be in response"
+    );
+
+    // File content should NOT appear
+    assert!(
+        !stdout.contains("FILE CONTENT - SHOULD NOT APPEAR"),
+        "inject_inline should take precedence over inject"
+    );
+
+    evidence.pass(
+        "inject_inline correctly takes precedence over inject",
+        timer.elapsed_ms(),
+    );
+    let _ = evidence.save(&evidence_dir());
+}
