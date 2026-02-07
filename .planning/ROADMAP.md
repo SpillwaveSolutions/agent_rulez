@@ -8,40 +8,30 @@
 
 ## Milestone: RuleZ v1.2 (P2 Features)
 
-### Phase 1: Inline Content Injection
+### Phase 1: Inline Content Injection ✓
+
+**Status:** Complete (2026-02-06)
 
 **Goal:** Allow injecting markdown content directly in rules without separate files.
 
 **User Story:** US-ADV-04 from cch-advanced-rules spec
 
-**Plans:** 1 plan
+**Plans:** 1 plan (complete)
 
 Plans:
-- [ ] 01-01-PLAN.md - Add inject_inline field and tests
+- [x] 01-01-PLAN.md - Add inject_inline field and tests
 
-**Requirements:**
-- New action: `inject_inline: "markdown content"`
-- Supports multiline YAML strings (`|` or `>`)
-- Injects content into Claude's context just like `inject:`
-- Backward compatible (existing `inject:` file paths still work)
-
-**Example:**
-```yaml
-rules:
-  - name: warn-production
-    match:
-      directories: ["/prod/"]
-    actions:
-      inject_inline: |
-        ## Production Warning
-        You are editing production files. Be extra careful.
-```
+**Implementation:**
+- Added `inject_inline: Option<String>` to Actions struct
+- Handles in both normal and warn mode
+- inject_inline takes precedence over inject when both specified
+- 5 unit tests + 2 integration tests
 
 **Success Criteria:**
-- [ ] `inject_inline` parses from YAML
-- [ ] Content injected into response context
-- [ ] Works alongside existing `inject:` file action
-- [ ] Tests cover multiline content
+- [x] `inject_inline` parses from YAML
+- [x] Content injected into response context
+- [x] Works alongside existing `inject:` file action
+- [x] Tests cover multiline content
 
 ---
 
