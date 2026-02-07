@@ -320,3 +320,215 @@ rules:
     );
     let _ = evidence.save(&evidence_dir());
 }
+
+/// Test that inject_command executes shell command and injects stdout
+#[test]
+fn test_us2_inject_command_basic() {
+    let timer = Timer::start();
+    let mut evidence = TestEvidence::new("inject_command_basic", "OQ-US2");
+
+    // Setup test environment
+    let temp_dir = tempfile::tempdir().expect("create temp dir");
+
+    // Create .claude directory with config
+    let claude_dir = temp_dir.path().join(".claude");
+    fs::create_dir_all(&claude_dir).expect("create .claude");
+
+    // Create hooks.yaml with inject_command rule
+    // Use echo command which works on all Unix systems
+    let config_content = r#"version: "1.0"
+rules:
+  - name: command-context
+    matchers:
+      tools: [Bash]
+    actions:
+      inject_command: "echo 'Dynamic context from command'"
+"#;
+    fs::write(claude_dir.join("hooks.yaml"), config_content).expect("write config");
+
+    // Create event for Bash tool
+    let event = r#"{
+        "event_type": "PreToolUse",
+        "tool_name": "Bash",
+        "tool_input": {
+            "command": "ls -la"
+        },
+        "session_id": "test-session-command",
+        "timestamp": "2025-01-22T12:00:00Z"
+    }"#;
+
+    // Run rulez binary with the event
+    Command::cargo_bin("rulez")
+        .expect("binary exists")
+        .current_dir(temp_dir.path())
+        .write_stdin(event)
+        .assert()
+        .success()
+        // Response should allow and include command output
+        .stdout(
+            predicate::str::contains(r#""continue":true"#)
+                .or(predicate::str::contains(r#""continue": true"#)),
+        )
+        .stdout(predicate::str::contains("Dynamic context from command"));
+
+    evidence.pass(
+        "inject_command executes shell command and injects stdout",
+        timer.elapsed_ms(),
+    );
+    let _ = evidence.save(&evidence_dir());
+}
+
+/// Test that inject_inline takes precedence over inject_command
+#[test]
+fn test_us2_inject_inline_over_command() {
+    let timer = Timer::start();
+    let mut evidence = TestEvidence::new("inject_inline_over_command", "OQ-US2");
+
+    // Setup test environment
+    let temp_dir = tempfile::tempdir().expect("create temp dir");
+
+    // Create .claude directory with config
+    let claude_dir = temp_dir.path().join(".claude");
+    fs::create_dir_all(&claude_dir).expect("create .claude");
+
+    // Create hooks.yaml with both inject_inline and inject_command
+    // inject_inline should take precedence (same as it does over inject file)
+    let config_content = r#"version: "1.0"
+rules:
+  - name: precedence-test
+    matchers:
+      tools: [Bash]
+    actions:
+      inject_inline: "INLINE WINS"
+      inject_command: "echo COMMAND SHOULD NOT APPEAR"
+"#;
+    fs::write(claude_dir.join("hooks.yaml"), config_content).expect("write config");
+
+    // Create event for Bash tool
+    let event = r#"{
+        "event_type": "PreToolUse",
+        "tool_name": "Bash",
+        "tool_input": {
+            "command": "git status"
+        },
+        "session_id": "test-session-precedence",
+        "timestamp": "2025-01-22T12:00:00Z"
+    }"#;
+
+    // Run rulez binary with the event and capture output
+    let output = Command::cargo_bin("rulez")
+        .expect("binary exists")
+        .current_dir(temp_dir.path())
+        .write_stdin(event)
+        .output()
+        .expect("run binary");
+
+    assert!(output.status.success());
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // Response should allow
+    assert!(
+        stdout.contains(r#""continue":true"#) || stdout.contains(r#""continue": true"#),
+        "Response should allow (continue: true)"
+    );
+
+    // Inline content should appear
+    assert!(
+        stdout.contains("INLINE WINS"),
+        "inject_inline content should be in response"
+    );
+
+    // Command output should NOT appear
+    assert!(
+        !stdout.contains("COMMAND SHOULD NOT APPEAR"),
+        "inject_inline should take precedence over inject_command"
+    );
+
+    evidence.pass(
+        "inject_inline correctly takes precedence over inject_command",
+        timer.elapsed_ms(),
+    );
+    let _ = evidence.save(&evidence_dir());
+}
+
+/// Test that inject_command takes precedence over inject (file)
+#[test]
+fn test_us2_inject_command_over_file() {
+    let timer = Timer::start();
+    let mut evidence = TestEvidence::new("inject_command_over_file", "OQ-US2");
+
+    // Setup test environment
+    let temp_dir = tempfile::tempdir().expect("create temp dir");
+
+    // Create .claude directory with config
+    let claude_dir = temp_dir.path().join(".claude");
+    fs::create_dir_all(&claude_dir).expect("create .claude");
+
+    // Create a context file that should NOT be used
+    let context_file = claude_dir.join("context.md");
+    fs::write(&context_file, "FILE CONTENT - SHOULD NOT APPEAR").expect("write context file");
+
+    // Create hooks.yaml with both inject_command and inject
+    // inject_command should take precedence over inject (file)
+    let config_content = format!(
+        r#"version: "1.0"
+rules:
+  - name: command-over-file
+    matchers:
+      tools: [Bash]
+    actions:
+      inject_command: "echo COMMAND WINS"
+      inject: "{}"
+"#,
+        context_file.display()
+    );
+    fs::write(claude_dir.join("hooks.yaml"), config_content).expect("write config");
+
+    // Create event for Bash tool
+    let event = r#"{
+        "event_type": "PreToolUse",
+        "tool_name": "Bash",
+        "tool_input": {
+            "command": "pwd"
+        },
+        "session_id": "test-session-cmd-file",
+        "timestamp": "2025-01-22T12:00:00Z"
+    }"#;
+
+    // Run rulez binary with the event and capture output
+    let output = Command::cargo_bin("rulez")
+        .expect("binary exists")
+        .current_dir(temp_dir.path())
+        .write_stdin(event)
+        .output()
+        .expect("run binary");
+
+    assert!(output.status.success());
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // Response should allow
+    assert!(
+        stdout.contains(r#""continue":true"#) || stdout.contains(r#""continue": true"#),
+        "Response should allow (continue: true)"
+    );
+
+    // Command output should appear
+    assert!(
+        stdout.contains("COMMAND WINS"),
+        "inject_command content should be in response"
+    );
+
+    // File content should NOT appear
+    assert!(
+        !stdout.contains("FILE CONTENT - SHOULD NOT APPEAR"),
+        "inject_command should take precedence over inject file"
+    );
+
+    evidence.pass(
+        "inject_command correctly takes precedence over inject file",
+        timer.elapsed_ms(),
+    );
+    let _ = evidence.save(&evidence_dir());
+}
