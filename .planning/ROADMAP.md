@@ -37,15 +37,23 @@ Plans:
 
 ### Phase 2: Command-Based Context Generation
 
+**Status:** Planned
+
 **Goal:** Generate context dynamically by running a shell command.
 
 **User Story:** US-ADV-05 from cch-advanced-rules spec
+
+**Plans:** 2 plans
+
+Plans:
+- [ ] 02-01-PLAN.md - Add inject_command field and execute_inject_command function
+- [ ] 02-02-PLAN.md - Add integration tests for inject_command
 
 **Requirements:**
 - New action: `inject_command: "shell command"`
 - Runs command, captures stdout as context
 - Timeout protection (default 5s, like `run:` scripts)
-- Error handling (command fails → log warning, continue)
+- Error handling (command fails -> log warning, continue)
 
 **Example:**
 ```yaml
