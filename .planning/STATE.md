@@ -1,19 +1,19 @@
 # Living Memory
 
 **Last Updated:** 2026-02-06
-**Current Phase:** 1 (Complete) → Ready for Phase 2
+**Current Phase:** 2 (Complete) → Ready for Phase 3
 **Current Plan:** None (phase complete)
 
 ---
 
 ## Current Position
 
-Phase: 1 of 3 (Inline Content Injection)
-Plan: 1 of 1 in current phase
+Phase: 2 of 3 (Command-Based Context Generation)
+Plan: 2 of 2 in current phase
 Status: Phase complete
-Last activity: 2026-02-07 - Completed 01-01-PLAN.md
+Last activity: 2026-02-06 - Completed 02-02-PLAN.md
 
-Progress: ███░░░░░░░ 33%
+Progress: ██████░░░░ 66%
 
 ---
 
@@ -22,26 +22,28 @@ Progress: ███░░░░░░░ 33%
 | Phase | Feature | Status |
 |-------|---------|--------|
 | 1 | `inject_inline` | **Complete** (1/1 plans) |
-| 2 | `inject_command` | Pending |
+| 2 | `inject_command` | **Complete** (2/2 plans) |
 | 3 | `enabled_when` | Pending |
 
 ---
 
-## Recent Session (2026-02-07)
+## Recent Session (2026-02-06)
 
-### Completed Work
+### Completed Work - Phase 2
 
-1. **Task 1: Add inject_inline field and handling**
-   - Added `inject_inline: Option<String>` to Actions struct
-   - Handle in execute_rule_actions (precedence over inject)
-   - Handle in execute_rule_actions_warn_mode identically
-   - Commit: `3552faa`
+1. **Plan 02-01: Add inject_command field and execute_inject_command function**
+   - Added `inject_command: Option<String>` to Actions struct
+   - Implemented `execute_inject_command` async function with timeout
+   - Integrated into both execute_rule_actions and warn_mode
+   - Execution order: inject_inline > inject_command > inject > run
+   - Commit: `8611666`
 
-2. **Task 2: Add inject_inline tests**
-   - 5 unit tests for YAML parsing variations
-   - 2 integration tests for end-to-end injection
-   - All 73 tests pass
-   - Commit: `7229f3a`
+2. **Plan 02-02: Add integration tests for inject_command**
+   - test_us2_inject_command_basic: verifies command execution
+   - test_us2_inject_inline_over_command: confirms precedence
+   - test_us2_inject_command_over_file: confirms precedence over file
+   - All 205 tests pass
+   - Commit: `aa39a84`
 
 ---
 
@@ -50,28 +52,28 @@ Progress: ███░░░░░░░ 33%
 1. **Binary renamed to `rulez`** (was `cch`)
 2. **RuleZ Core is P1** - UI is P3
 3. **All P2 features together** as v1.2 milestone
-4. **Start with inject_inline** - Simplest, high value
-5. **inject_inline takes precedence** over inject when both specified
+4. **Execution precedence:** inject_inline > inject_command > inject > run
+5. **Fail-open semantics:** Command failures log warning but don't block
 
 ---
 
 ## Technical Notes
 
-Files modified in Phase 1:
-- `rulez/src/models.rs` - inject_inline field
-- `rulez/src/hooks.rs` - inject_inline handling
+Files modified in Phase 2:
+- `rulez/src/models.rs` - inject_command field + 3 YAML parsing tests
+- `rulez/src/hooks.rs` - execute_inject_command function + integration
 - `rulez/src/config.rs` - Updated test structs
-- `rulez/tests/oq_us2_injection.rs` - Integration tests
+- `rulez/tests/oq_us2_injection.rs` - 3 new integration tests
 
 ---
 
 ## Context for Next Session
 
-Phase 1 (`inject_inline`) is complete!
+Phase 2 (`inject_command`) is complete!
 
 Next steps:
-- Run `/gsd:plan-phase 2` to plan `inject_command`
-- Or run `/gsd:plan-phase 3` to plan `enabled_when`
+- Run `/gsd:plan-phase 3` to plan `enabled_when` (conditional rule activation)
+- After Phase 3, RuleZ v1.2 milestone will be complete
 
 ---
 

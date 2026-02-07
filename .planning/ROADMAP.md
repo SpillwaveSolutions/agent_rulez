@@ -35,41 +35,31 @@ Plans:
 
 ---
 
-### Phase 2: Command-Based Context Generation
+### Phase 2: Command-Based Context Generation ✓
 
-**Status:** Planned
+**Status:** Complete (2026-02-06)
 
 **Goal:** Generate context dynamically by running a shell command.
 
 **User Story:** US-ADV-05 from cch-advanced-rules spec
 
-**Plans:** 2 plans
+**Plans:** 2 plans (complete)
 
 Plans:
-- [ ] 02-01-PLAN.md - Add inject_command field and execute_inject_command function
-- [ ] 02-02-PLAN.md - Add integration tests for inject_command
+- [x] 02-01-PLAN.md - Add inject_command field and execute_inject_command function
+- [x] 02-02-PLAN.md - Add integration tests for inject_command
 
-**Requirements:**
-- New action: `inject_command: "shell command"`
-- Runs command, captures stdout as context
-- Timeout protection (default 5s, like `run:` scripts)
-- Error handling (command fails -> log warning, continue)
-
-**Example:**
-```yaml
-rules:
-  - name: branch-context
-    match:
-      tools: [Bash]
-    actions:
-      inject_command: "git branch --show-current"
-```
+**Implementation:**
+- Added `inject_command: Option<String>` to Actions struct
+- Implemented `execute_inject_command` async function with timeout and error handling
+- Execution order: inject_inline > inject_command > inject > run
+- 3 unit tests + 3 integration tests
 
 **Success Criteria:**
-- [ ] `inject_command` parses from YAML
-- [ ] Command executed with timeout
-- [ ] stdout injected as context
-- [ ] stderr/failure logged but doesn't block
+- [x] `inject_command` parses from YAML
+- [x] Command executed with timeout
+- [x] stdout injected as context
+- [x] stderr/failure logged but doesn't block
 
 ---
 
