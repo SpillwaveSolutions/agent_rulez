@@ -333,6 +333,83 @@ fn matches_rule_with_debug(event: &Event, rule: &Rule) -> (bool, Option<MatcherR
     (overall_match, Some(matcher_results))
 }
 
+/// Execute a shell command and capture stdout for context injection
+///
+/// Unlike validators:
+/// - No stdin input needed
+/// - Raw text output (not JSON)
+/// - Fail-open: command failures log warning but don't block
+async fn execute_inject_command(
+    command_str: &str,
+    rule: &Rule,
+    config: &Config,
+) -> Option<String> {
+    let timeout_secs = rule
+        .metadata
+        .as_ref()
+        .map(|m| m.timeout)
+        .unwrap_or(config.settings.script_timeout);
+
+    // Use shell to execute (enables pipes, redirects, etc.)
+    let mut command = Command::new("sh");
+    command.arg("-c");
+    command.arg(command_str);
+    command.stdout(std::process::Stdio::piped());
+    command.stderr(std::process::Stdio::piped());
+    // No stdin - don't pipe it (causes hangs)
+
+    let child = match command.spawn() {
+        Ok(c) => c,
+        Err(e) => {
+            tracing::warn!(
+                "Failed to spawn inject_command '{}' for rule '{}': {}",
+                command_str, rule.name, e
+            );
+            return None;
+        }
+    };
+
+    let output = match timeout(
+        Duration::from_secs(timeout_secs as u64),
+        child.wait_with_output(),
+    ).await {
+        Ok(Ok(output)) => output,
+        Ok(Err(e)) => {
+            tracing::warn!(
+                "inject_command '{}' for rule '{}' failed: {}",
+                command_str, rule.name, e
+            );
+            return None;
+        }
+        Err(_) => {
+            tracing::warn!(
+                "inject_command '{}' for rule '{}' timed out after {}s",
+                command_str, rule.name, timeout_secs
+            );
+            return None;
+        }
+    };
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        tracing::warn!(
+            "inject_command '{}' for rule '{}' failed with exit code {}: {}",
+            command_str,
+            rule.name,
+            output.status.code().unwrap_or(-1),
+            stderr.trim()
+        );
+        return None;
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    if stdout.trim().is_empty() {
+        return None; // No content to inject
+    }
+
+    Some(stdout)
+}
+
 /// Execute actions for a matching rule
 async fn execute_rule_actions(event: &Event, rule: &Rule, config: &Config) -> Result<Response> {
     let actions = &rule.actions;
@@ -371,6 +448,14 @@ async fn execute_rule_actions(event: &Event, rule: &Rule, config: &Config) -> Re
     // Handle inline content injection (takes precedence over inject)
     if let Some(ref inline_content) = actions.inject_inline {
         return Ok(Response::inject(inline_content.clone()));
+    }
+
+    // Handle command-based injection (after inject_inline, before inject file)
+    if let Some(ref command_str) = actions.inject_command {
+        if let Some(output) = execute_inject_command(command_str, rule, config).await {
+            return Ok(Response::inject(output));
+        }
+        // Command failed or produced no output - continue to next action
     }
 
     // Handle context injection
@@ -600,6 +685,14 @@ async fn execute_rule_actions_warn_mode(
     // Handle inline content injection (takes precedence over inject)
     if let Some(ref inline_content) = actions.inject_inline {
         return Ok(Response::inject(inline_content.clone()));
+    }
+
+    // Handle command-based injection (after inject_inline, before inject file)
+    if let Some(ref command_str) = actions.inject_command {
+        if let Some(output) = execute_inject_command(command_str, rule, config).await {
+            return Ok(Response::inject(output));
+        }
+        // Command failed or produced no output - continue to next action
     }
 
     // Context injection still works in warn mode
@@ -833,6 +926,7 @@ mod tests {
                 block: Some(true),
                 inject: None,
                 inject_inline: None,
+                inject_command: None,
                 run: None,
                 block_if_match: None,
             },
@@ -876,6 +970,7 @@ mod tests {
                 block: Some(true),
                 inject: None,
                 inject_inline: None,
+                inject_command: None,
                 run: None,
                 block_if_match: None,
             },
@@ -973,6 +1068,7 @@ mod tests {
             actions: Actions {
                 inject: None,
                 inject_inline: None,
+                inject_command: None,
                 run: None,
                 block: None,
                 block_if_match: None,
@@ -1000,6 +1096,7 @@ mod tests {
             actions: Actions {
                 inject: None,
                 inject_inline: None,
+                inject_command: None,
                 run: None,
                 block: None,
                 block_if_match: None,
@@ -1030,6 +1127,7 @@ mod tests {
             actions: Actions {
                 inject: None,
                 inject_inline: None,
+                inject_command: None,
                 run: None,
                 block: Some(true),
                 block_if_match: None,

@@ -194,6 +194,7 @@ mod tests {
                 actions: crate::models::Actions {
                     inject: None,
                     inject_inline: None,
+                    inject_command: None,
                     run: None,
                     block: Some(true),
                     block_if_match: None,
@@ -231,6 +232,7 @@ mod tests {
                     actions: crate::models::Actions {
                         inject: None,
                         inject_inline: None,
+                        inject_command: None,
                         run: None,
                         block: Some(true),
                         block_if_match: None,
@@ -253,6 +255,7 @@ mod tests {
                     actions: crate::models::Actions {
                         inject: None,
                         inject_inline: None,
+                        inject_command: None,
                         run: None,
                         block: Some(false),
                         block_if_match: None,
@@ -287,6 +290,7 @@ mod tests {
                     actions: crate::models::Actions {
                         inject: None,
                         inject_inline: None,
+                        inject_command: None,
                         run: None,
                         block: Some(true),
                         block_if_match: None,
@@ -313,6 +317,7 @@ mod tests {
                     actions: crate::models::Actions {
                         inject: None,
                         inject_inline: None,
+                        inject_command: None,
                         run: None,
                         block: Some(false),
                         block_if_match: None,

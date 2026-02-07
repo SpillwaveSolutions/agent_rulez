@@ -280,6 +280,10 @@ pub struct Actions {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub inject_inline: Option<String>,
 
+    /// Shell command to execute and inject stdout as context
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub inject_command: Option<String>,
+
     /// Validator script to execute (supports string or object format)
     ///
     /// Supports two formats for backward compatibility:
@@ -637,6 +641,7 @@ reason: Code quality
             actions: Actions {
                 inject: None,
                 inject_inline: None,
+                inject_command: None,
                 run: None,
                 block: None,
                 block_if_match: None,
@@ -664,6 +669,7 @@ reason: Code quality
             actions: Actions {
                 inject: None,
                 inject_inline: None,
+                inject_command: None,
                 run: None,
                 block: None,
                 block_if_match: None,
@@ -691,6 +697,7 @@ reason: Code quality
             actions: Actions {
                 inject: None,
                 inject_inline: None,
+                inject_command: None,
                 run: None,
                 block: None,
                 block_if_match: None,
@@ -718,6 +725,7 @@ reason: Code quality
             actions: Actions {
                 inject: None,
                 inject_inline: None,
+                inject_command: None,
                 run: None,
                 block: None,
                 block_if_match: None,
@@ -745,6 +753,7 @@ reason: Code quality
             actions: Actions {
                 inject: None,
                 inject_inline: None,
+                inject_command: None,
                 run: None,
                 block: None,
                 block_if_match: None,
@@ -776,6 +785,7 @@ reason: Code quality
             actions: Actions {
                 inject: None,
                 inject_inline: None,
+                inject_command: None,
                 run: None,
                 block: None,
                 block_if_match: None,
@@ -861,6 +871,7 @@ reason: Code quality
             actions: Actions {
                 inject: None,
                 inject_inline: None,
+                inject_command: None,
                 run: None,
                 block: None,
                 block_if_match: None,
@@ -1021,6 +1032,53 @@ actions:
         let content = rule.actions.inject_inline.unwrap();
         assert!(content.contains("## Production Warning"));
         assert!(content.contains("production files"));
+    }
+
+    // =========================================================================
+    // inject_command Tests
+    // =========================================================================
+
+    #[test]
+    fn test_inject_command_yaml() {
+        let yaml = r#"
+inject_command: "git branch --show-current"
+"#;
+        let actions: Actions = serde_yaml::from_str(yaml).unwrap();
+        assert!(actions.inject_command.is_some());
+        assert_eq!(actions.inject_command.unwrap(), "git branch --show-current");
+    }
+
+    #[test]
+    fn test_inject_command_full_rule_yaml() {
+        let yaml = r#"
+name: branch-context
+description: Inject current branch name
+matchers:
+  tools: [Bash]
+actions:
+  inject_command: "git branch --show-current"
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+
+        assert_eq!(rule.name, "branch-context");
+        assert!(rule.actions.inject_command.is_some());
+        assert_eq!(
+            rule.actions.inject_command.unwrap(),
+            "git branch --show-current"
+        );
+    }
+
+    #[test]
+    fn test_inject_command_with_pipes() {
+        let yaml = r#"
+inject_command: "cat package.json | jq .name"
+"#;
+        let actions: Actions = serde_yaml::from_str(yaml).unwrap();
+        assert!(actions.inject_command.is_some());
+        assert_eq!(
+            actions.inject_command.unwrap(),
+            "cat package.json | jq .name"
+        );
     }
 }
 
