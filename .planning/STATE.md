@@ -1,19 +1,19 @@
 # Living Memory
 
-**Last Updated:** 2026-02-06
-**Current Phase:** 2 (Complete) → Ready for Phase 3
-**Current Plan:** None (phase complete)
+**Last Updated:** 2026-02-07
+**Current Phase:** 3 (In Progress)
+**Current Plan:** 01 Complete, ready for 02
 
 ---
 
 ## Current Position
 
-Phase: 2 of 3 (Command-Based Context Generation)
-Plan: 2 of 2 in current phase
-Status: Phase complete
-Last activity: 2026-02-06 - Completed 02-02-PLAN.md
+Phase: 3 of 3 (Conditional Rule Activation)
+Plan: 1 of 3 in current phase
+Status: Plan 01 complete
+Last activity: 2026-02-07 - Completed 03-01-PLAN.md
 
-Progress: ██████░░░░ 66%
+Progress: ████████░░ 80%
 
 ---
 
@@ -23,27 +23,24 @@ Progress: ██████░░░░ 66%
 |-------|---------|--------|
 | 1 | `inject_inline` | **Complete** (1/1 plans) |
 | 2 | `inject_command` | **Complete** (2/2 plans) |
-| 3 | `enabled_when` | Pending |
+| 3 | `enabled_when` | **In Progress** (1/3 plans) |
 
 ---
 
-## Recent Session (2026-02-06)
+## Recent Session (2026-02-07)
 
-### Completed Work - Phase 2
+### Completed Work - Phase 3, Plan 01
 
-1. **Plan 02-01: Add inject_command field and execute_inject_command function**
-   - Added `inject_command: Option<String>` to Actions struct
-   - Implemented `execute_inject_command` async function with timeout
-   - Integrated into both execute_rule_actions and warn_mode
-   - Execution order: inject_inline > inject_command > inject > run
-   - Commit: `8611666`
+1. **Task 1: Add evalexpr dependency to Cargo.toml**
+   - Added `evalexpr = "13.1"` to dependencies
+   - Commit: `9f36948`
 
-2. **Plan 02-02: Add integration tests for inject_command**
-   - test_us2_inject_command_basic: verifies command execution
-   - test_us2_inject_inline_over_command: confirms precedence
-   - test_us2_inject_command_over_file: confirms precedence over file
-   - All 205 tests pass
-   - Commit: `aa39a84`
+2. **Task 2: Add enabled_when field to Rule struct and unit tests**
+   - Added `enabled_when: Option<String>` field to Rule struct
+   - Updated 16 Rule struct instantiations across 3 files
+   - Added 5 new unit tests for YAML parsing and evalexpr integration
+   - All 162 tests pass
+   - Commit: `f33229b`
 
 ---
 
@@ -54,25 +51,30 @@ Progress: ██████░░░░ 66%
 3. **All P2 features together** as v1.2 milestone
 4. **Execution precedence:** inject_inline > inject_command > inject > run
 5. **Fail-open semantics:** Command failures log warning but don't block
+6. **evalexpr 13.1** for expression evaluation (lightweight, no deps)
+7. **Underscore syntax** for variable names (env_CI, not env.CI)
 
 ---
 
 ## Technical Notes
 
-Files modified in Phase 2:
-- `rulez/src/models.rs` - inject_command field + 3 YAML parsing tests
-- `rulez/src/hooks.rs` - execute_inject_command function + integration
-- `rulez/src/config.rs` - Updated test structs
-- `rulez/tests/oq_us2_injection.rs` - 3 new integration tests
+Files modified in Phase 3 Plan 01:
+- `rulez/Cargo.toml` - evalexpr dependency
+- `rulez/src/models.rs` - enabled_when field + 5 new tests
+- `rulez/src/hooks.rs` - Updated test Rule instantiations
+- `rulez/src/config.rs` - Updated test Rule instantiations
+
+Test count: 162 (81 lib x2 + 62 integration)
 
 ---
 
 ## Context for Next Session
 
-Phase 2 (`inject_command`) is complete!
+Phase 3 Plan 01 (`enabled_when` foundation) is complete!
 
 Next steps:
-- Run `/gsd:plan-phase 3` to plan `enabled_when` (conditional rule activation)
+- Execute 03-02-PLAN.md: Build expression context and is_rule_enabled() function
+- Execute 03-03-PLAN.md: Integration with evaluate_rules() and validation
 - After Phase 3, RuleZ v1.2 milestone will be complete
 
 ---
