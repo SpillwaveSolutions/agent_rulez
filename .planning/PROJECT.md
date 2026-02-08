@@ -30,6 +30,15 @@ RuleZ positions itself as comparable to:
 - **No network access** - Pure local processing for security
 - **No telemetry** - User privacy is paramount
 
+## Current Milestone: v1.3 Advanced Matching & Validation
+
+**Goal:** Add prompt-based matching, field validation, and inline scripting to enable more powerful rule authoring.
+
+**Target features:**
+- `prompt_match` — Match rules against user prompt text for prompt-based routing
+- `require_fields` — Validate required fields exist in tool input, block if missing
+- Inline script blocks — Write validator scripts directly in YAML without separate files
+
 ## Current State
 
 ### RuleZ Core (v1.2.0)
@@ -82,6 +91,6 @@ RuleZ positions itself as comparable to:
 
 ---
 
-*Last updated: 2026-02-07 after v1.2 milestone*
+*Last updated: 2026-02-08 after v1.3 milestone start*
 *Reorganized as monorepo on 2026-02-06*
 *Renamed from CCH to RuleZ*

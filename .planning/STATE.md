@@ -1,44 +1,42 @@
 # Living Memory
 
-**Last Updated:** 2026-02-07
-**Current Phase:** Milestone Complete
-**Current Plan:** Ready for next milestone
+**Last Updated:** 2026-02-08
+**Current Phase:** Not started (defining requirements)
+**Current Plan:** —
 
 ---
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-07)
+See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Core value:** LLMs do not enforce policy. LLMs are subject to policy.
-**Current focus:** v1.2 complete, planning next milestone
+**Current focus:** v1.3 Advanced Matching & Validation
 
 ---
 
 ## Current Position
 
-Phase: v1.2 Complete
-Plan: Ready to plan next milestone
-Status: Milestone shipped
-Last activity: 2026-02-07 - Completed v1.2 milestone
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-08 — Milestone v1.3 started
 
-Progress: ██████████ 100% (v1.2)
-
----
-
-## v1.2 Milestone Summary
-
-| Phase | Feature | Plans | Status |
-|-------|---------|-------|--------|
-| 1 | `inject_inline` | 1/1 | ✓ Complete |
-| 2 | `inject_command` | 2/2 | ✓ Complete |
-| 3 | `enabled_when` | 3/3 | ✓ Complete |
-
-**Total:** 3 phases, 6 plans, 245 tests
+Progress: ░░░░░░░░░░ 0%
 
 ---
 
-## Key Decisions (v1.2)
+## v1.3 Target Features
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| `prompt_match` | Match rules against user prompt text | Not started |
+| `require_fields` | Validate required fields in tool input | Not started |
+| Inline scripts | Write validator scripts in YAML | Not started |
+
+---
+
+## Key Decisions (Carried from v1.2)
 
 1. **Binary renamed to `rulez`** (was `cch`)
 2. **RuleZ Core is P1** - UI is P3
@@ -51,28 +49,14 @@ Progress: ██████████ 100% (v1.2)
 
 ---
 
-## Technical Notes
-
-Total test count: 245
-LOC (src/): 6,098 Rust
-
-Key files modified in v1.2:
-- `rulez/Cargo.toml` - evalexpr dependency
-- `rulez/src/models.rs` - inject_inline, inject_command, enabled_when fields
-- `rulez/src/hooks.rs` - execute_inject_command, build_eval_context, is_rule_enabled
-- `rulez/src/config.rs` - Expression validation in validate()
-- `rulez/tests/oq_us2_injection.rs` - Injection integration tests
-- `rulez/tests/oq_us3_enabled_when.rs` - enabled_when integration tests
-
----
-
 ## Context for Next Session
 
-RuleZ v1.2 Milestone is COMPLETE!
+Starting v1.3 milestone with three features:
+- prompt_match matcher
+- require_fields action
+- Inline script blocks
 
-Next steps:
-- Run `/gsd:new-milestone` to start v1.3 planning
-- Future phases: prompt_match, require_fields, inline script blocks
+Next: Define requirements, create roadmap, then plan phases.
 
 ---
 
