@@ -2,6 +2,7 @@
 #![allow(clippy::unnecessary_map_or)]
 
 use anyhow::{Context, Result};
+use evalexpr::{build_operator_tree, DefaultNumericTypes};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
@@ -136,6 +137,16 @@ impl Config {
             // Validate rule name format
             if !regex::Regex::new(r"^[a-zA-Z0-9_-]+$")?.is_match(&rule.name) {
                 return Err(anyhow::anyhow!("Invalid rule name format: {}", rule.name));
+            }
+
+            // Validate enabled_when expression syntax
+            if let Some(ref expr) = rule.enabled_when {
+                build_operator_tree::<DefaultNumericTypes>(expr).with_context(|| {
+                    format!(
+                        "Invalid enabled_when expression '{}' in rule '{}': syntax error",
+                        expr, rule.name
+                    )
+                })?;
             }
         }
 
@@ -343,5 +354,127 @@ mod tests {
         let enabled_rules = config.enabled_rules();
         assert_eq!(enabled_rules[0].name, "high-priority");
         assert_eq!(enabled_rules[1].name, "low-priority");
+    }
+
+    // =========================================================================
+    // Phase 3: enabled_when Expression Validation Tests
+    // =========================================================================
+
+    #[test]
+    fn test_enabled_when_valid_expression() {
+        // Test that valid enabled_when expressions pass validation
+        let config = Config {
+            version: "1.0".to_string(),
+            rules: vec![Rule {
+                name: "valid-expr".to_string(),
+                description: None,
+                enabled_when: Some(r#"env_CI == "true""#.to_string()),
+                matchers: crate::models::Matchers {
+                    tools: Some(vec!["Bash".to_string()]),
+                    extensions: None,
+                    directories: None,
+                    operations: None,
+                    command_match: None,
+                },
+                actions: crate::models::Actions {
+                    inject: None,
+                    inject_inline: None,
+                    inject_command: None,
+                    run: None,
+                    block: Some(true),
+                    block_if_match: None,
+                },
+                mode: None,
+                priority: None,
+                governance: None,
+                metadata: None,
+            }],
+            settings: Settings::default(),
+        };
+
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn test_enabled_when_invalid_expression() {
+        // Test that invalid enabled_when expressions fail validation with clear error message
+        let config = Config {
+            version: "1.0".to_string(),
+            rules: vec![Rule {
+                name: "invalid-expr".to_string(),
+                description: None,
+                enabled_when: Some(r#"env_CI == ("true""#.to_string()), // Invalid: unclosed parenthesis
+                matchers: crate::models::Matchers {
+                    tools: Some(vec!["Bash".to_string()]),
+                    extensions: None,
+                    directories: None,
+                    operations: None,
+                    command_match: None,
+                },
+                actions: crate::models::Actions {
+                    inject: None,
+                    inject_inline: None,
+                    inject_command: None,
+                    run: None,
+                    block: Some(true),
+                    block_if_match: None,
+                },
+                mode: None,
+                priority: None,
+                governance: None,
+                metadata: None,
+            }],
+            settings: Settings::default(),
+        };
+
+        let result = config.validate();
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        // Error should include the rule name and expression
+        assert!(
+            err_msg.contains("invalid-expr"),
+            "Error should contain rule name: {}",
+            err_msg
+        );
+        assert!(
+            err_msg.contains("env_CI =="),
+            "Error should contain expression: {}",
+            err_msg
+        );
+    }
+
+    #[test]
+    fn test_enabled_when_complex_valid_expression() {
+        // Test that complex expressions with logical operators validate correctly
+        let config = Config {
+            version: "1.0".to_string(),
+            rules: vec![Rule {
+                name: "complex-expr".to_string(),
+                description: None,
+                enabled_when: Some(r#"env_CI == "true" && tool_name == "Bash""#.to_string()),
+                matchers: crate::models::Matchers {
+                    tools: Some(vec!["Bash".to_string()]),
+                    extensions: None,
+                    directories: None,
+                    operations: None,
+                    command_match: None,
+                },
+                actions: crate::models::Actions {
+                    inject: None,
+                    inject_inline: None,
+                    inject_command: None,
+                    run: None,
+                    block: Some(true),
+                    block_if_match: None,
+                },
+                mode: None,
+                priority: None,
+                governance: None,
+                metadata: None,
+            }],
+            settings: Settings::default(),
+        };
+
+        assert!(config.validate().is_ok());
     }
 }
