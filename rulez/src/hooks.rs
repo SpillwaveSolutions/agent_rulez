@@ -186,6 +186,18 @@ async fn evaluate_rules<'a>(
 
     // Get enabled rules (already sorted by priority in Config::enabled_rules)
     for rule in config.enabled_rules() {
+        // Check enabled_when before matchers (Phase 3: conditional rule activation)
+        if !is_rule_enabled(rule, event) {
+            if debug_config.enabled {
+                rule_evaluations.push(RuleEvaluation {
+                    rule_name: rule.name.clone(),
+                    matched: false,
+                    matcher_results: None,
+                });
+            }
+            continue; // Skip rule entirely
+        }
+
         let (matched, matcher_results) = if debug_config.enabled {
             matches_rule_with_debug(event, rule)
         } else {
@@ -1056,6 +1068,262 @@ mod tests {
         let merged = merge_responses(inject.clone(), inject.clone());
         assert!(merged.continue_);
         assert!(merged.context.as_ref().unwrap().contains("context"));
+    }
+
+    // =========================================================================
+    // Phase 3: is_rule_enabled Tests
+    // =========================================================================
+
+    #[test]
+    fn test_is_rule_enabled_no_condition() {
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Bash".to_string()),
+            tool_input: None,
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+        };
+
+        let rule = Rule {
+            name: "no-condition".to_string(),
+            description: None,
+            enabled_when: None, // No condition = always enabled
+            matchers: Matchers {
+                tools: None,
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: None,
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        assert!(is_rule_enabled(&rule, &event));
+    }
+
+    #[test]
+    fn test_is_rule_enabled_true_condition() {
+        // Use existing PATH env var (always exists on all systems)
+        // Check that it's not empty (which is always true)
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Bash".to_string()),
+            tool_input: None,
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+        };
+
+        let rule = Rule {
+            name: "true-condition".to_string(),
+            description: None,
+            // PATH exists and is not empty on all systems
+            enabled_when: Some(r#"env_PATH != """#.to_string()),
+            matchers: Matchers {
+                tools: None,
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: None,
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        assert!(is_rule_enabled(&rule, &event));
+    }
+
+    #[test]
+    fn test_is_rule_enabled_false_condition() {
+        // Test a condition that evaluates to false
+        // Check that a non-existent env var returns empty string and fails condition
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Bash".to_string()),
+            tool_input: None,
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+        };
+
+        let rule = Rule {
+            name: "false-condition".to_string(),
+            description: None,
+            // This non-existent var won't be in context, so comparison fails
+            // Use a simple false expression instead
+            enabled_when: Some(r#"1 == 2"#.to_string()), // Always false
+            matchers: Matchers {
+                tools: None,
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: None,
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        assert!(!is_rule_enabled(&rule, &event));
+    }
+
+    #[test]
+    fn test_is_rule_enabled_invalid_expression() {
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Bash".to_string()),
+            tool_input: None,
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+        };
+
+        let rule = Rule {
+            name: "invalid-expression".to_string(),
+            description: None,
+            enabled_when: Some("this is not a valid expression !!!".to_string()),
+            matchers: Matchers {
+                tools: None,
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: None,
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        // Invalid expressions should return false (fail-closed)
+        assert!(!is_rule_enabled(&rule, &event));
+    }
+
+    #[test]
+    fn test_is_rule_enabled_tool_name_context() {
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Bash".to_string()),
+            tool_input: None,
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+        };
+
+        let rule = Rule {
+            name: "tool-name-check".to_string(),
+            description: None,
+            enabled_when: Some(r#"tool_name == "Bash""#.to_string()),
+            matchers: Matchers {
+                tools: None,
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: None,
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        assert!(is_rule_enabled(&rule, &event));
+
+        // Test with different tool name in expression
+        let rule_edit = Rule {
+            name: "tool-name-check-edit".to_string(),
+            description: None,
+            enabled_when: Some(r#"tool_name == "Edit""#.to_string()),
+            matchers: Matchers {
+                tools: None,
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: None,
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        // Should be false because event.tool_name is "Bash", not "Edit"
+        assert!(!is_rule_enabled(&rule_edit, &event));
     }
 
     // =========================================================================
