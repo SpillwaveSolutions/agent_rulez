@@ -219,6 +219,12 @@ pub struct Rule {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
 
+    /// Condition expression that must be true for rule to be active
+    /// Evaluated against context variables: env_*, tool_name, event_type
+    /// Uses evalexpr syntax. Example: `env_CI == "true"`
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub enabled_when: Option<String>,
+
     /// Conditions that trigger the rule
     pub matchers: Matchers,
 
@@ -631,6 +637,7 @@ reason: Code quality
         let rule = Rule {
             name: "test".to_string(),
             description: None,
+            enabled_when: None,
             matchers: Matchers {
                 tools: None,
                 extensions: None,
@@ -659,6 +666,7 @@ reason: Code quality
         let rule = Rule {
             name: "test".to_string(),
             description: None,
+            enabled_when: None,
             matchers: Matchers {
                 tools: None,
                 extensions: None,
@@ -687,6 +695,7 @@ reason: Code quality
         let rule = Rule {
             name: "test".to_string(),
             description: None,
+            enabled_when: None,
             matchers: Matchers {
                 tools: None,
                 extensions: None,
@@ -715,6 +724,7 @@ reason: Code quality
         let rule = Rule {
             name: "test".to_string(),
             description: None,
+            enabled_when: None,
             matchers: Matchers {
                 tools: None,
                 extensions: None,
@@ -743,6 +753,7 @@ reason: Code quality
         let rule = Rule {
             name: "test".to_string(),
             description: None,
+            enabled_when: None,
             matchers: Matchers {
                 tools: None,
                 extensions: None,
@@ -775,6 +786,7 @@ reason: Code quality
         let rule = Rule {
             name: "test".to_string(),
             description: None,
+            enabled_when: None,
             matchers: Matchers {
                 tools: None,
                 extensions: None,
@@ -861,6 +873,7 @@ reason: Code quality
         Rule {
             name: name.to_string(),
             description: None,
+            enabled_when: None,
             matchers: Matchers {
                 tools: None,
                 extensions: None,
@@ -1079,6 +1092,95 @@ inject_command: "cat package.json | jq .name"
             actions.inject_command.unwrap(),
             "cat package.json | jq .name"
         );
+    }
+
+    // =========================================================================
+    // Phase 3: enabled_when Tests
+    // =========================================================================
+
+    #[test]
+    fn test_enabled_when_yaml_parsing() {
+        // Tests basic enabled_when YAML parsing with simple expression
+        let yaml = r#"
+name: ci-only
+enabled_when: 'env_CI == "true"'
+matchers:
+  tools: [Bash]
+actions:
+  block: true
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(rule.enabled_when, Some(r#"env_CI == "true""#.to_string()));
+    }
+
+    #[test]
+    fn test_enabled_when_with_logical_operators() {
+        // Tests enabled_when with complex logical operators
+        let yaml = r#"
+name: complex-condition
+enabled_when: 'env_CI == "true" && tool_name == "Bash"'
+matchers:
+  tools: [Bash]
+actions:
+  inject_inline: "CI mode active"
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            rule.enabled_when,
+            Some(r#"env_CI == "true" && tool_name == "Bash""#.to_string())
+        );
+    }
+
+    #[test]
+    fn test_enabled_when_none_by_default() {
+        // Tests that enabled_when is None when not specified
+        let yaml = r#"
+name: no-condition
+matchers:
+  tools: [Bash]
+actions:
+  block: true
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+        assert!(rule.enabled_when.is_none());
+    }
+
+    #[test]
+    fn test_enabled_when_full_rule_yaml() {
+        // Tests enabled_when in a complete rule with all fields
+        let yaml = r#"
+name: dev-helper
+description: "Only for local development"
+enabled_when: 'env_CI != "true"'
+matchers:
+  tools: [Bash]
+  command_match: "npm run"
+actions:
+  inject_inline: "Remember to run tests!"
+mode: warn
+priority: 50
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(rule.name, "dev-helper");
+        assert_eq!(rule.description, Some("Only for local development".to_string()));
+        assert_eq!(rule.enabled_when, Some(r#"env_CI != "true""#.to_string()));
+        assert_eq!(rule.effective_mode(), PolicyMode::Warn);
+        assert_eq!(rule.effective_priority(), 50);
+    }
+
+    #[test]
+    fn test_evalexpr_basic_expression() {
+        // Tests that evalexpr can parse and evaluate basic expressions
+        use evalexpr::{eval_boolean_with_context, ContextWithMutableVariables, DefaultNumericTypes, HashMapContext, Value};
+
+        let mut ctx: HashMapContext<DefaultNumericTypes> = HashMapContext::new();
+        ctx.set_value("env_CI".into(), Value::String("true".to_string())).unwrap();
+
+        let result = eval_boolean_with_context(r#"env_CI == "true""#, &ctx).unwrap();
+        assert!(result);
+
+        let result = eval_boolean_with_context(r#"env_CI == "false""#, &ctx).unwrap();
+        assert!(!result);
     }
 }
 

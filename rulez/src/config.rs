@@ -184,6 +184,7 @@ mod tests {
             rules: vec![Rule {
                 name: "test-rule".to_string(),
                 description: Some("Test rule".to_string()),
+                enabled_when: None,
                 matchers: crate::models::Matchers {
                     tools: Some(vec!["Bash".to_string()]),
                     extensions: None,
@@ -222,6 +223,7 @@ mod tests {
                 Rule {
                     name: "duplicate".to_string(),
                     description: None,
+                    enabled_when: None,
                     matchers: crate::models::Matchers {
                         tools: Some(vec!["Bash".to_string()]),
                         extensions: None,
@@ -245,6 +247,7 @@ mod tests {
                 Rule {
                     name: "duplicate".to_string(),
                     description: None,
+                    enabled_when: None,
                     matchers: crate::models::Matchers {
                         tools: Some(vec!["Edit".to_string()]),
                         extensions: None,
@@ -280,6 +283,7 @@ mod tests {
                 Rule {
                     name: "low-priority".to_string(),
                     description: None,
+                    enabled_when: None,
                     matchers: crate::models::Matchers {
                         tools: Some(vec!["Bash".to_string()]),
                         extensions: None,
@@ -307,6 +311,7 @@ mod tests {
                 Rule {
                     name: "high-priority".to_string(),
                     description: None,
+                    enabled_when: None,
                     matchers: crate::models::Matchers {
                         tools: Some(vec!["Edit".to_string()]),
                         extensions: None,

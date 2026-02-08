@@ -915,6 +915,7 @@ mod tests {
         let rule = Rule {
             name: "block-force-push".to_string(),
             description: Some("Block force push".to_string()),
+            enabled_when: None,
             matchers: Matchers {
                 tools: Some(vec!["Bash".to_string()]),
                 command_match: Some(r"git push.*--force".to_string()),
@@ -959,6 +960,7 @@ mod tests {
         let rule = Rule {
             name: "block-force-push".to_string(),
             description: Some("Block force push".to_string()),
+            enabled_when: None,
             matchers: Matchers {
                 tools: Some(vec!["Bash".to_string()]),
                 command_match: Some(r"git push.*--force".to_string()),
@@ -1058,6 +1060,7 @@ mod tests {
         let rule = Rule {
             name: "test".to_string(),
             description: None,
+            enabled_when: None,
             matchers: Matchers {
                 tools: None,
                 extensions: None,
@@ -1086,6 +1089,7 @@ mod tests {
         let rule = Rule {
             name: "test".to_string(),
             description: None,
+            enabled_when: None,
             matchers: Matchers {
                 tools: None,
                 extensions: None,
@@ -1117,6 +1121,7 @@ mod tests {
         Rule {
             name: name.to_string(),
             description: Some(format!("{} rule", name)),
+            enabled_when: None,
             matchers: Matchers {
                 tools: None,
                 extensions: None,
