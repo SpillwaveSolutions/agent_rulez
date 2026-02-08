@@ -1,108 +1,28 @@
-# RuleZ Core v1.2 Roadmap
+# RuleZ Core Roadmap
 
-**Milestone Goal:** Enhance the RuleZ policy engine with advanced injection and conditional rule features.
-
-**Target:** RuleZ v1.2.0 with inline injection, command-based context, and conditional rules.
+**Current Focus:** Planning next milestone
 
 ---
 
-## Milestone: RuleZ v1.2 (P2 Features)
+## Milestones
 
-### Phase 1: Inline Content Injection ✓
-
-**Status:** Complete (2026-02-06)
-
-**Goal:** Allow injecting markdown content directly in rules without separate files.
-
-**User Story:** US-ADV-04 from cch-advanced-rules spec
-
-**Plans:** 1 plan (complete)
-
-Plans:
-- [x] 01-01-PLAN.md - Add inject_inline field and tests
-
-**Implementation:**
-- Added `inject_inline: Option<String>` to Actions struct
-- Handles in both normal and warn mode
-- inject_inline takes precedence over inject when both specified
-- 5 unit tests + 2 integration tests
-
-**Success Criteria:**
-- [x] `inject_inline` parses from YAML
-- [x] Content injected into response context
-- [x] Works alongside existing `inject:` file action
-- [x] Tests cover multiline content
+- ✅ **v1.2 P2 Features** — Phases 1-3 (shipped 2026-02-07) — [Archive](milestones/v1.2-ROADMAP.md)
+- 📋 **v1.3 (Planned)** — TBD
 
 ---
 
-### Phase 2: Command-Based Context Generation ✓
+## Completed: v1.2 P2 Features
 
-**Status:** Complete (2026-02-06)
+<details>
+<summary>✅ v1.2 P2 Features (Phases 1-3) — SHIPPED 2026-02-07</summary>
 
-**Goal:** Generate context dynamically by running a shell command.
+- [x] Phase 1: Inline Content Injection (1/1 plans) — inject_inline field
+- [x] Phase 2: Command-Based Context Generation (2/2 plans) — inject_command field
+- [x] Phase 3: Conditional Rule Activation (3/3 plans) — enabled_when field
 
-**User Story:** US-ADV-05 from cch-advanced-rules spec
+See [v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md) for full details.
 
-**Plans:** 2 plans (complete)
-
-Plans:
-- [x] 02-01-PLAN.md - Add inject_command field and execute_inject_command function
-- [x] 02-02-PLAN.md - Add integration tests for inject_command
-
-**Implementation:**
-- Added `inject_command: Option<String>` to Actions struct
-- Implemented `execute_inject_command` async function with timeout and error handling
-- Execution order: inject_inline > inject_command > inject > run
-- 3 unit tests + 3 integration tests
-
-**Success Criteria:**
-- [x] `inject_command` parses from YAML
-- [x] Command executed with timeout
-- [x] stdout injected as context
-- [x] stderr/failure logged but doesn't block
-
----
-
-### Phase 3: Conditional Rule Activation ✓
-
-**Status:** Complete (2026-02-07)
-
-**Goal:** Rules that only activate under certain conditions.
-
-**User Story:** US-ADV-01 from cch-advanced-rules spec
-
-**Plans:** 3 plans (complete)
-
-Plans:
-- [x] 03-01-PLAN.md - Add evalexpr dependency and enabled_when field
-- [x] 03-02-PLAN.md - Implement build_eval_context and is_rule_enabled
-- [x] 03-03-PLAN.md - Add validation and integration tests
-
-**Implementation:**
-- Added `enabled_when: Option<String>` to Rule struct
-- Added evalexpr 13.1 for expression evaluation
-- Implemented build_eval_context() with env_*, tool_name, event_type
-- Implemented is_rule_enabled() with fail-closed semantics
-- Added validation in Config.validate() using build_operator_tree
-- 8 unit tests + 5 integration tests
-
-**Example:**
-```yaml
-rules:
-  - name: ci-only-strict
-    enabled_when: 'env_CI == "true"'
-    matchers:
-      tools: [Bash]
-      command_match: "git push"
-    actions:
-      block: true
-```
-
-**Success Criteria:**
-- [x] `enabled_when` parses from YAML
-- [x] Expression evaluation works for env vars
-- [x] Rule skipped when condition is false
-- [x] Syntax errors reported by `rulez validate`
+</details>
 
 ---
 
@@ -126,22 +46,17 @@ rules:
 
 ---
 
-## Technical Considerations
+## Progress
 
-**Models Changes (`rulez/src/models.rs`):**
-- Add `inject_inline: Option<String>` to Actions
-- Add `inject_command: Option<String>` to Actions
-- Add `enabled_when: Option<String>` to Rule
-
-**Hooks Changes (`rulez/src/hooks.rs`):**
-- Handle `inject_inline` in execute_rule_actions
-- Handle `inject_command` with subprocess execution
-- Evaluate `enabled_when` before rule matching
-
-**Expression Evaluation:**
-- Simple parser for `env.VAR == 'value'` expressions
-- Start minimal, expand later if needed
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1. Inline Content Injection | v1.2 | 1/1 | ✅ Complete | 2026-02-06 |
+| 2. Command-Based Context | v1.2 | 2/2 | ✅ Complete | 2026-02-06 |
+| 3. Conditional Rule Activation | v1.2 | 3/3 | ✅ Complete | 2026-02-07 |
+| 4. prompt_match | v1.3 | 0/? | Not started | - |
+| 5. require_fields | v1.3 | 0/? | Not started | - |
+| 6. Inline Script Blocks | v1.3 | 0/? | Not started | - |
 
 ---
 
-*Created 2026-02-06 - Focus on RuleZ Core P2 features*
+*Created 2026-02-06 - Updated 2026-02-07 after v1.2 milestone*

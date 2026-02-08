@@ -32,11 +32,15 @@ RuleZ positions itself as comparable to:
 
 ## Current State
 
-### RuleZ Core (v1.1.0)
+### RuleZ Core (v1.2.0)
 - Policy engine with blocking, injection, validation
 - CLI: init, install, uninstall, validate, logs, explain, debug, repl
-- 64+ tests, <3ms latency, comprehensive logging
+- 245 tests, <3ms latency, comprehensive logging
 - Phase 2 Governance: modes (enforce/warn/audit), priority, metadata
+- **v1.2 Features:**
+  - `inject_inline` - Embed context directly in YAML
+  - `inject_command` - Dynamic context via shell commands
+  - `enabled_when` - Conditional rule activation with expressions
 
 ### Mastering Hooks (Complete)
 - Claude Code skill for RuleZ mastery
@@ -78,5 +82,6 @@ RuleZ positions itself as comparable to:
 
 ---
 
+*Last updated: 2026-02-07 after v1.2 milestone*
 *Reorganized as monorepo on 2026-02-06*
 *Renamed from CCH to RuleZ*

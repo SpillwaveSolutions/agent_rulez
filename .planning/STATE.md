@@ -1,77 +1,68 @@
 # Living Memory
 
 **Last Updated:** 2026-02-07
-**Current Phase:** 3 (Complete)
-**Current Plan:** All 3 plans complete
+**Current Phase:** Milestone Complete
+**Current Plan:** Ready for next milestone
+
+---
+
+## Project Reference
+
+See: .planning/PROJECT.md (updated 2026-02-07)
+
+**Core value:** LLMs do not enforce policy. LLMs are subject to policy.
+**Current focus:** v1.2 complete, planning next milestone
 
 ---
 
 ## Current Position
 
-Phase: 3 of 3 (Conditional Rule Activation)
-Plan: 3 of 3 in current phase
-Status: Phase complete - Milestone complete
-Last activity: 2026-02-07 - Completed 03-03-PLAN.md
+Phase: v1.2 Complete
+Plan: Ready to plan next milestone
+Status: Milestone shipped
+Last activity: 2026-02-07 - Completed v1.2 milestone
 
-Progress: ██████████ 100%
-
----
-
-## Milestone Overview
-
-| Phase | Feature | Status |
-|-------|---------|--------|
-| 1 | `inject_inline` | **Complete** (1/1 plans) |
-| 2 | `inject_command` | **Complete** (2/2 plans) |
-| 3 | `enabled_when` | **Complete** (3/3 plans) |
+Progress: ██████████ 100% (v1.2)
 
 ---
 
-## Recent Session (2026-02-07)
+## v1.2 Milestone Summary
 
-### Completed Work - Phase 3, Plan 03
+| Phase | Feature | Plans | Status |
+|-------|---------|-------|--------|
+| 1 | `inject_inline` | 1/1 | ✓ Complete |
+| 2 | `inject_command` | 2/2 | ✓ Complete |
+| 3 | `enabled_when` | 3/3 | ✓ Complete |
 
-1. **Task 1: Add expression validation to Config.validate()**
-   - Added evalexpr::build_operator_tree import
-   - Implemented expression syntax validation in validate() method
-   - Invalid expressions produce clear errors with rule name
-   - Added 3 unit tests
-   - Commit: `46cfcf8`
-
-2. **Task 2: Create integration tests for enabled_when**
-   - Created rulez/tests/oq_us3_enabled_when.rs
-   - 5 integration tests: true/false conditions, tool_name, validate, logical operators
-   - All tests verify end-to-end workflow with actual rulez CLI
-   - Commit: `80ea5bd`
+**Total:** 3 phases, 6 plans, 245 tests
 
 ---
 
-## Key Decisions
+## Key Decisions (v1.2)
 
 1. **Binary renamed to `rulez`** (was `cch`)
 2. **RuleZ Core is P1** - UI is P3
-3. **All P2 features together** as v1.2 milestone
-4. **Execution precedence:** inject_inline > inject_command > inject > run
-5. **Fail-open semantics:** Command failures log warning but don't block
-6. **evalexpr 13.1** for expression evaluation (lightweight, no deps)
-7. **Underscore syntax** for variable names (env_CI, not env.CI)
-8. **Fail-closed for enabled_when:** Invalid expressions disable the rule
-9. **build_operator_tree** for syntax validation (parse without evaluate)
+3. **Execution precedence:** inject_inline > inject_command > inject > run
+4. **Fail-open semantics:** Command failures log warning but don't block
+5. **evalexpr 13.1** for expression evaluation (lightweight, no deps)
+6. **Underscore syntax** for variable names (env_CI, not env.CI)
+7. **Fail-closed for enabled_when:** Invalid expressions disable the rule
+8. **build_operator_tree** for syntax validation (parse without evaluate)
 
 ---
 
 ## Technical Notes
 
-Total test count: 245 (was 171 before Phase 3 Plan 03)
+Total test count: 245
+LOC (src/): 6,098 Rust
 
-Files modified in Phase 3 Plan 03:
-- `rulez/src/config.rs` - Expression validation in validate() + 3 tests
-- `rulez/tests/oq_us3_enabled_when.rs` - 5 integration tests (new file)
-
-Phase 3 complete implementation:
-- 03-01: evalexpr dependency + enabled_when field + YAML tests
-- 03-02: build_eval_context + is_rule_enabled + evaluate_rules integration
-- 03-03: Config.validate() syntax checking + integration tests
+Key files modified in v1.2:
+- `rulez/Cargo.toml` - evalexpr dependency
+- `rulez/src/models.rs` - inject_inline, inject_command, enabled_when fields
+- `rulez/src/hooks.rs` - execute_inject_command, build_eval_context, is_rule_enabled
+- `rulez/src/config.rs` - Expression validation in validate()
+- `rulez/tests/oq_us2_injection.rs` - Injection integration tests
+- `rulez/tests/oq_us3_enabled_when.rs` - enabled_when integration tests
 
 ---
 
@@ -79,13 +70,8 @@ Phase 3 complete implementation:
 
 RuleZ v1.2 Milestone is COMPLETE!
 
-All 3 phases implemented:
-- Phase 1: inject_inline - Inline content injection
-- Phase 2: inject_command - Command-based context generation
-- Phase 3: enabled_when - Conditional rule activation
-
 Next steps:
-- Run `/gsd:complete-milestone` to archive and prepare for next version
+- Run `/gsd:new-milestone` to start v1.3 planning
 - Future phases: prompt_match, require_fields, inline script blocks
 
 ---
