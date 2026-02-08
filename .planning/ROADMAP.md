@@ -63,35 +63,46 @@ Plans:
 
 ---
 
-### Phase 3: Conditional Rule Activation
+### Phase 3: Conditional Rule Activation ✓
+
+**Status:** Complete (2026-02-07)
 
 **Goal:** Rules that only activate under certain conditions.
 
 **User Story:** US-ADV-01 from cch-advanced-rules spec
 
-**Requirements:**
-- New field: `enabled_when: "expression"`
-- Expression evaluates against context variables
-- If false, rule is skipped entirely (not matched)
-- Context variables: `env.VAR`, `tool.name`, `event.type`
+**Plans:** 3 plans (complete)
+
+Plans:
+- [x] 03-01-PLAN.md - Add evalexpr dependency and enabled_when field
+- [x] 03-02-PLAN.md - Implement build_eval_context and is_rule_enabled
+- [x] 03-03-PLAN.md - Add validation and integration tests
+
+**Implementation:**
+- Added `enabled_when: Option<String>` to Rule struct
+- Added evalexpr 13.1 for expression evaluation
+- Implemented build_eval_context() with env_*, tool_name, event_type
+- Implemented is_rule_enabled() with fail-closed semantics
+- Added validation in Config.validate() using build_operator_tree
+- 8 unit tests + 5 integration tests
 
 **Example:**
 ```yaml
 rules:
   - name: ci-only-strict
-    enabled_when: "env.CI == 'true'"
-    match:
+    enabled_when: 'env_CI == "true"'
+    matchers:
       tools: [Bash]
-      command_patterns: ["git push"]
+      command_match: "git push"
     actions:
       block: true
 ```
 
 **Success Criteria:**
-- [ ] `enabled_when` parses from YAML
-- [ ] Expression evaluation works for env vars
-- [ ] Rule skipped when condition is false
-- [ ] Syntax errors reported by `rulez validate`
+- [x] `enabled_when` parses from YAML
+- [x] Expression evaluation works for env vars
+- [x] Rule skipped when condition is false
+- [x] Syntax errors reported by `rulez validate`
 
 ---
 

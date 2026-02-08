@@ -1,19 +1,19 @@
 # Living Memory
 
 **Last Updated:** 2026-02-07
-**Current Phase:** 3 (In Progress)
-**Current Plan:** 02 Complete, ready for 03
+**Current Phase:** 3 (Complete)
+**Current Plan:** All 3 plans complete
 
 ---
 
 ## Current Position
 
 Phase: 3 of 3 (Conditional Rule Activation)
-Plan: 2 of 3 in current phase
-Status: Plan 02 complete
-Last activity: 2026-02-07 - Completed 03-02-PLAN.md
+Plan: 3 of 3 in current phase
+Status: Phase complete - Milestone complete
+Last activity: 2026-02-07 - Completed 03-03-PLAN.md
 
-Progress: ████████░░ 87%
+Progress: ██████████ 100%
 
 ---
 
@@ -23,28 +23,26 @@ Progress: ████████░░ 87%
 |-------|---------|--------|
 | 1 | `inject_inline` | **Complete** (1/1 plans) |
 | 2 | `inject_command` | **Complete** (2/2 plans) |
-| 3 | `enabled_when` | **In Progress** (2/3 plans) |
+| 3 | `enabled_when` | **Complete** (3/3 plans) |
 
 ---
 
 ## Recent Session (2026-02-07)
 
-### Completed Work - Phase 3, Plan 02
+### Completed Work - Phase 3, Plan 03
 
-1. **Task 1: Implement build_eval_context and is_rule_enabled functions**
-   - Added evalexpr imports to hooks.rs
-   - Implemented build_eval_context() with env_*, tool_name, event_type
-   - Implemented is_rule_enabled() with fail-closed semantics
-   - Commit: `85ae1d9`
+1. **Task 1: Add expression validation to Config.validate()**
+   - Added evalexpr::build_operator_tree import
+   - Implemented expression syntax validation in validate() method
+   - Invalid expressions produce clear errors with rule name
+   - Added 3 unit tests
+   - Commit: `46cfcf8`
 
-2. **Task 2: Integrate is_rule_enabled into evaluate_rules loop**
-   - Added enabled_when check at START of for loop, BEFORE matches_rule
-   - Rules with false enabled_when are skipped entirely
-   - Disabled rules tracked in debug evaluations
-   - Added 5 unit tests for is_rule_enabled
-   - Fixed evalexpr type annotation in config.rs
-   - All 171 tests pass
-   - Commit: `c897226`
+2. **Task 2: Create integration tests for enabled_when**
+   - Created rulez/tests/oq_us3_enabled_when.rs
+   - 5 integration tests: true/false conditions, tool_name, validate, logical operators
+   - All tests verify end-to-end workflow with actual rulez CLI
+   - Commit: `80ea5bd`
 
 ---
 
@@ -58,30 +56,37 @@ Progress: ████████░░ 87%
 6. **evalexpr 13.1** for expression evaluation (lightweight, no deps)
 7. **Underscore syntax** for variable names (env_CI, not env.CI)
 8. **Fail-closed for enabled_when:** Invalid expressions disable the rule
+9. **build_operator_tree** for syntax validation (parse without evaluate)
 
 ---
 
 ## Technical Notes
 
-Files modified in Phase 3 Plan 02:
-- `rulez/src/hooks.rs` - evalexpr imports, build_eval_context, is_rule_enabled, integration, 5 tests
-- `rulez/src/config.rs` - Fixed type annotation for build_operator_tree
+Total test count: 245 (was 171 before Phase 3 Plan 03)
 
-Test count: 171 (89 lib x2 + 62 integration)
+Files modified in Phase 3 Plan 03:
+- `rulez/src/config.rs` - Expression validation in validate() + 3 tests
+- `rulez/tests/oq_us3_enabled_when.rs` - 5 integration tests (new file)
 
-Functions added:
-- `build_eval_context(event: &Event)` - Creates runtime context for expressions
-- `is_rule_enabled(rule: &Rule, event: &Event)` - Evaluates enabled_when condition
+Phase 3 complete implementation:
+- 03-01: evalexpr dependency + enabled_when field + YAML tests
+- 03-02: build_eval_context + is_rule_enabled + evaluate_rules integration
+- 03-03: Config.validate() syntax checking + integration tests
 
 ---
 
 ## Context for Next Session
 
-Phase 3 Plan 02 (`enabled_when` evaluation) is complete!
+RuleZ v1.2 Milestone is COMPLETE!
+
+All 3 phases implemented:
+- Phase 1: inject_inline - Inline content injection
+- Phase 2: inject_command - Command-based context generation
+- Phase 3: enabled_when - Conditional rule activation
 
 Next steps:
-- Execute 03-03-PLAN.md: Integration tests and validate command updates
-- After Phase 3, RuleZ v1.2 milestone will be complete
+- Run `/gsd:complete-milestone` to archive and prepare for next version
+- Future phases: prompt_match, require_fields, inline script blocks
 
 ---
 
