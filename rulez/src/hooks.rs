@@ -1,4 +1,5 @@
 use anyhow::Result;
+use evalexpr::{eval_boolean_with_context, ContextWithMutableVariables, DefaultNumericTypes, HashMapContext, Value};
 use regex::Regex;
 
 use std::path::Path;
@@ -113,6 +114,62 @@ fn extract_governance_data(
         (mode, priority, governance, trust_level)
     } else {
         (None, None, None, None)
+    }
+}
+
+/// Build evaluation context for enabled_when expressions
+///
+/// Creates a context with:
+/// - env_* variables for all environment variables
+/// - tool_name: the tool being used (or empty string)
+/// - event_type: the hook event type
+fn build_eval_context(event: &Event) -> HashMapContext<DefaultNumericTypes> {
+    let mut ctx = HashMapContext::new();
+
+    // Add environment variables with env_ prefix
+    for (key, value) in std::env::vars() {
+        let var_name = format!("env_{}", key);
+        ctx.set_value(var_name.into(), Value::String(value)).ok();
+    }
+
+    // Add tool name (empty string if none)
+    let tool_name = event.tool_name.as_deref().unwrap_or("").to_string();
+    ctx.set_value("tool_name".into(), Value::String(tool_name)).ok();
+
+    // Add event type
+    ctx.set_value(
+        "event_type".into(),
+        Value::String(event.hook_event_name.to_string())
+    ).ok();
+
+    ctx
+}
+
+/// Check if a rule is enabled based on its enabled_when expression
+///
+/// Returns true if:
+/// - No enabled_when expression (always enabled)
+/// - enabled_when expression evaluates to true
+///
+/// Returns false if:
+/// - enabled_when expression evaluates to false
+/// - Expression evaluation fails (fail-closed for safety)
+fn is_rule_enabled(rule: &Rule, event: &Event) -> bool {
+    match &rule.enabled_when {
+        None => true, // No condition = always enabled
+        Some(expr) => {
+            let ctx = build_eval_context(event);
+            match eval_boolean_with_context(expr, &ctx) {
+                Ok(result) => result,
+                Err(e) => {
+                    tracing::warn!(
+                        "enabled_when expression failed for rule '{}': {} - treating as disabled",
+                        rule.name, e
+                    );
+                    false // Fail-closed: invalid expression disables rule
+                }
+            }
+        }
     }
 }
 
