@@ -45,10 +45,13 @@ See [v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md) for full details.
 4. User can anchor patterns to match at start, end, or anywhere in prompt
 5. User can use evalexpr-based matching for complex prompt logic
 
-**Plans:** TBD
+**Plans:** 4 plans in 3 waves
 
 Plans:
-- [ ] 04-01: TBD during planning
+- [ ] 04-01-PLAN.md — Core types (PromptMatch enum, Matchers extension, Event prompt field)
+- [ ] 04-02-PLAN.md — Matching logic (regex caching, matches_prompt function)
+- [ ] 04-03-PLAN.md — Config validation for prompt_match patterns
+- [ ] 04-04-PLAN.md — Comprehensive unit and integration tests
 
 ### Phase 5: Field Validation
 
@@ -101,10 +104,10 @@ Phases execute in numeric order: 4 → 5 → 6
 | 1. Inline Content Injection | v1.2 | 1/1 | ✅ Complete | 2026-02-06 |
 | 2. Command-Based Context | v1.2 | 2/2 | ✅ Complete | 2026-02-06 |
 | 3. Conditional Rule Activation | v1.2 | 3/3 | ✅ Complete | 2026-02-07 |
-| 4. Prompt Matching | v1.3 | 0/? | Not started | - |
+| 4. Prompt Matching | v1.3 | 0/4 | Planned | - |
 | 5. Field Validation | v1.3 | 0/? | Not started | - |
 | 6. Inline Script Blocks | v1.3 | 0/? | Not started | - |
 
 ---
 
-*Created 2026-02-06 - Updated 2026-02-08 with v1.3 roadmap*
+*Created 2026-02-06 - Updated 2026-02-09 with Phase 4 plans*
