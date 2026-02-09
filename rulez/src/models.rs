@@ -2062,6 +2062,10 @@ pub struct MatcherResults {
     /// Whether operations matcher matched
     #[serde(skip_serializing_if = "Option::is_none")]
     pub operations_matched: Option<bool>,
+
+    /// Whether prompt_match regex matched
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prompt_match_matched: Option<bool>,
 }
 
 /// Debug mode configuration

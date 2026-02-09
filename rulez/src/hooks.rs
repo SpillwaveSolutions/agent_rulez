@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Mutex;
 
-use crate::models::{Anchor, MatchMode, PromptMatch};
+use crate::models::{MatchMode, PromptMatch};
 use tokio::process::Command;
 use tokio::time::{Duration, timeout};
 
@@ -252,6 +252,11 @@ fn build_eval_context(event: &Event) -> HashMapContext<DefaultNumericTypes> {
         Value::String(event.hook_event_name.to_string())
     ).ok();
 
+    // Add prompt text (if available - primarily for UserPromptSubmit events)
+    if let Some(ref prompt) = event.prompt {
+        ctx.set_value("prompt".into(), Value::String(prompt.clone())).ok();
+    }
+
     ctx
 }
 
@@ -409,6 +414,27 @@ fn matches_rule(event: &Event, rule: &Rule) -> bool {
         }
     }
 
+    // Check prompt patterns (for UserPromptSubmit events)
+    if let Some(ref prompt_match) = matchers.prompt_match {
+        // If rule has prompt_match but event has no prompt, rule doesn't match
+        if let Some(ref prompt_text) = event.prompt {
+            match matches_prompt(prompt_text, prompt_match) {
+                Ok(true) => { /* Pattern matched, continue checking other matchers */ }
+                Ok(false) => return false,
+                Err(e) => {
+                    tracing::warn!(
+                        "prompt_match evaluation failed: {} - treating as non-match",
+                        e
+                    );
+                    return false;
+                }
+            }
+        } else {
+            // No prompt field in event - rule doesn't match (safe default)
+            return false;
+        }
+    }
+
     true
 }
 
@@ -505,6 +531,29 @@ fn matches_rule_with_debug(event: &Event, rule: &Rule) -> (bool, Option<MatcherR
             operations.contains(&event_type_str)
         });
         if !matcher_results.operations_matched.unwrap() {
+            overall_match = false;
+        }
+    }
+
+    // Check prompt patterns
+    if let Some(ref prompt_match) = matchers.prompt_match {
+        matcher_results.prompt_match_matched = Some(
+            if let Some(ref prompt_text) = event.prompt {
+                match matches_prompt(prompt_text, prompt_match) {
+                    Ok(matched) => matched,
+                    Err(e) => {
+                        tracing::warn!(
+                            "prompt_match evaluation failed in debug mode: {} - treating as non-match",
+                            e
+                        );
+                        false
+                    }
+                }
+            } else {
+                false
+            }
+        );
+        if !matcher_results.prompt_match_matched.unwrap() {
             overall_match = false;
         }
     }
