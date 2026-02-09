@@ -2775,4 +2775,125 @@ mod field_validation_tests {
         assert_eq!(dot_to_pointer("path/to"), "/path~1to");
         assert_eq!(dot_to_pointer("file/name"), "/file~1name");
     }
+
+    #[test]
+    fn test_dot_to_pointer_combined_escapes() {
+        // Test both tilde and slash escaping together
+        assert_eq!(dot_to_pointer("a~b.c/d"), "/a~0b/c~1d");
+        assert_eq!(dot_to_pointer("x~/y"), "/x~0~1y");
+    }
+}
+
+// =============================================================================
+// Phase 5 Plan 3: Matchers Deserialization Tests for Field Validation
+// =============================================================================
+
+#[cfg(test)]
+mod matchers_field_validation_tests {
+    use super::*;
+
+    #[test]
+    fn test_matchers_require_fields_deserialization() {
+        // YAML with require_fields
+        let yaml = r#"
+name: test-require
+matchers:
+  require_fields: ["file_path", "command"]
+actions:
+  block: true
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(rule.name, "test-require");
+        assert!(rule.matchers.require_fields.is_some());
+        let fields = rule.matchers.require_fields.unwrap();
+        assert_eq!(fields.len(), 2);
+        assert_eq!(fields[0], "file_path");
+        assert_eq!(fields[1], "command");
+    }
+
+    #[test]
+    fn test_matchers_field_types_deserialization() {
+        // YAML with field_types
+        let yaml = r#"
+name: test-types
+matchers:
+  field_types:
+    count: number
+    name: string
+    enabled: boolean
+actions:
+  block: true
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(rule.name, "test-types");
+        assert!(rule.matchers.field_types.is_some());
+        let types = rule.matchers.field_types.unwrap();
+        assert_eq!(types.len(), 3);
+        assert_eq!(types.get("count"), Some(&"number".to_string()));
+        assert_eq!(types.get("name"), Some(&"string".to_string()));
+        assert_eq!(types.get("enabled"), Some(&"boolean".to_string()));
+    }
+
+    #[test]
+    fn test_matchers_both_require_and_types() {
+        // YAML with both require_fields and field_types
+        let yaml = r#"
+name: test-both
+matchers:
+  require_fields: ["file_path", "data"]
+  field_types:
+    count: number
+    data: object
+actions:
+  block: true
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(rule.name, "test-both");
+        assert!(rule.matchers.require_fields.is_some());
+        assert!(rule.matchers.field_types.is_some());
+
+        let fields = rule.matchers.require_fields.unwrap();
+        assert_eq!(fields.len(), 2);
+
+        let types = rule.matchers.field_types.unwrap();
+        assert_eq!(types.len(), 2);
+    }
+
+    #[test]
+    fn test_matchers_require_fields_with_nested_paths() {
+        // YAML with dot notation paths
+        let yaml = r#"
+name: test-nested
+matchers:
+  require_fields: ["user.name", "input.data.count", "simple"]
+actions:
+  block: true
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+        assert!(rule.matchers.require_fields.is_some());
+        let fields = rule.matchers.require_fields.unwrap();
+        assert_eq!(fields.len(), 3);
+        assert_eq!(fields[0], "user.name");
+        assert_eq!(fields[1], "input.data.count");
+        assert_eq!(fields[2], "simple");
+    }
+
+    #[test]
+    fn test_matchers_without_field_validation() {
+        // Matchers without require_fields/field_types still work
+        let yaml = r#"
+name: test-no-fields
+matchers:
+  tools: [Bash, Edit]
+  command_match: "git"
+actions:
+  block: true
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(rule.name, "test-no-fields");
+        assert!(rule.matchers.require_fields.is_none());
+        assert!(rule.matchers.field_types.is_none());
+        assert!(rule.matchers.tools.is_some());
+        assert!(rule.matchers.command_match.is_some());
+    }
 }

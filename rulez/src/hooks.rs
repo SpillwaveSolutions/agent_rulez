@@ -3047,4 +3047,1095 @@ mod tests {
         // Should fail because 'count' is missing (field_types implies existence)
         assert!(!validate_required_fields(&rule, &event));
     }
+
+    // =========================================================================
+    // Phase 5 Plan 3: Additional comprehensive tests for FIELD-01 through FIELD-04
+    // =========================================================================
+
+    // FIELD-01 tests (require specific fields)
+    #[test]
+    fn test_field_validation_single_required_field_present() {
+        let tool_input = serde_json::json!({
+            "file_path": "/test/file.txt"
+        });
+
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Edit".to_string()),
+            tool_input: Some(tool_input),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let rule = Rule {
+            name: "require-file-path".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: Some(vec!["Edit".to_string()]),
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: None,
+                require_fields: Some(vec!["file_path".to_string()]),
+                field_types: None,
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        assert!(validate_required_fields(&rule, &event));
+    }
+
+    #[test]
+    fn test_field_validation_multiple_required_fields_all_present() {
+        let tool_input = serde_json::json!({
+            "file_path": "/test/file.txt",
+            "content": "test content",
+            "mode": "overwrite"
+        });
+
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Write".to_string()),
+            tool_input: Some(tool_input),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let rule = Rule {
+            name: "require-write-fields".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: Some(vec!["Write".to_string()]),
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: None,
+                require_fields: Some(vec![
+                    "file_path".to_string(),
+                    "content".to_string(),
+                    "mode".to_string(),
+                ]),
+                field_types: None,
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        assert!(validate_required_fields(&rule, &event));
+    }
+
+    #[test]
+    fn test_field_validation_multiple_required_fields_one_missing() {
+        let tool_input = serde_json::json!({
+            "file_path": "/test/file.txt",
+            "mode": "overwrite"
+            // "content" is missing
+        });
+
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Write".to_string()),
+            tool_input: Some(tool_input),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let rule = Rule {
+            name: "require-write-fields".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: Some(vec!["Write".to_string()]),
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: None,
+                require_fields: Some(vec![
+                    "file_path".to_string(),
+                    "content".to_string(),
+                    "mode".to_string(),
+                ]),
+                field_types: None,
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        assert!(!validate_required_fields(&rule, &event));
+    }
+
+    // FIELD-02 tests (fail-closed blocking)
+    #[test]
+    fn test_field_validation_blocks_on_missing_field() {
+        let tool_input = serde_json::json!({
+            "other_field": "value"
+        });
+
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Bash".to_string()),
+            tool_input: Some(tool_input),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let rule = Rule {
+            name: "require-command".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: Some(vec!["Bash".to_string()]),
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: None,
+                require_fields: Some(vec!["command".to_string()]),
+                field_types: None,
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        assert!(!validate_required_fields(&rule, &event));
+    }
+
+    #[test]
+    fn test_field_validation_blocks_on_null_field() {
+        let tool_input = serde_json::json!({
+            "command": null
+        });
+
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Bash".to_string()),
+            tool_input: Some(tool_input),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let rule = Rule {
+            name: "require-command".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: Some(vec!["Bash".to_string()]),
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: None,
+                require_fields: Some(vec!["command".to_string()]),
+                field_types: None,
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        assert!(!validate_required_fields(&rule, &event));
+    }
+
+    #[test]
+    fn test_field_validation_blocks_on_non_object_tool_input() {
+        // tool_input is a string instead of object
+        let tool_input = serde_json::json!("not an object");
+
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Bash".to_string()),
+            tool_input: Some(tool_input),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let rule = Rule {
+            name: "require-command".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: Some(vec!["Bash".to_string()]),
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: None,
+                require_fields: Some(vec!["command".to_string()]),
+                field_types: None,
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        assert!(!validate_required_fields(&rule, &event));
+    }
+
+    // FIELD-03 tests (nested paths with dot notation)
+    #[test]
+    fn test_field_validation_nested_one_level() {
+        let tool_input = serde_json::json!({
+            "user": {
+                "name": "Alice"
+            }
+        });
+
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("API".to_string()),
+            tool_input: Some(tool_input),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let rule = Rule {
+            name: "require-user-name".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: Some(vec!["API".to_string()]),
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: None,
+                require_fields: Some(vec!["user.name".to_string()]),
+                field_types: None,
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        assert!(validate_required_fields(&rule, &event));
+    }
+
+    #[test]
+    fn test_field_validation_nested_three_levels() {
+        let tool_input = serde_json::json!({
+            "input": {
+                "user": {
+                    "address": {
+                        "city": "Seattle"
+                    }
+                }
+            }
+        });
+
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("API".to_string()),
+            tool_input: Some(tool_input),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let rule = Rule {
+            name: "require-city".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: Some(vec!["API".to_string()]),
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: None,
+                require_fields: Some(vec!["input.user.address.city".to_string()]),
+                field_types: None,
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        assert!(validate_required_fields(&rule, &event));
+    }
+
+    #[test]
+    fn test_field_validation_nested_missing_intermediate() {
+        let tool_input = serde_json::json!({
+            "user": {
+                "name": "Alice"
+                // "address" object is missing
+            }
+        });
+
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("API".to_string()),
+            tool_input: Some(tool_input),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let rule = Rule {
+            name: "require-city".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: Some(vec!["API".to_string()]),
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: None,
+                require_fields: Some(vec!["user.address.city".to_string()]),
+                field_types: None,
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        assert!(!validate_required_fields(&rule, &event));
+    }
+
+    #[test]
+    fn test_field_validation_nested_mixed_present_and_missing() {
+        let tool_input = serde_json::json!({
+            "user": {
+                "name": "Alice",
+                "email": "alice@example.com"
+            }
+        });
+
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("API".to_string()),
+            tool_input: Some(tool_input),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let rule = Rule {
+            name: "require-user-fields".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: Some(vec!["API".to_string()]),
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: None,
+                require_fields: Some(vec![
+                    "user.name".to_string(),
+                    "user.phone".to_string(), // Missing
+                ]),
+                field_types: None,
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        assert!(!validate_required_fields(&rule, &event));
+    }
+
+    // FIELD-04 tests (type validation)
+    #[test]
+    fn test_field_types_string_match() {
+        let tool_input = serde_json::json!({
+            "name": "test"
+        });
+
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("API".to_string()),
+            tool_input: Some(tool_input),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let mut field_types = std::collections::HashMap::new();
+        field_types.insert("name".to_string(), "string".to_string());
+
+        let rule = Rule {
+            name: "type-check".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: Some(vec!["API".to_string()]),
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: None,
+                require_fields: None,
+                field_types: Some(field_types),
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        assert!(validate_required_fields(&rule, &event));
+    }
+
+    #[test]
+    fn test_field_types_number_match() {
+        let tool_input = serde_json::json!({
+            "count": 42
+        });
+
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("API".to_string()),
+            tool_input: Some(tool_input),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let mut field_types = std::collections::HashMap::new();
+        field_types.insert("count".to_string(), "number".to_string());
+
+        let rule = Rule {
+            name: "type-check".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: Some(vec!["API".to_string()]),
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: None,
+                require_fields: None,
+                field_types: Some(field_types),
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        assert!(validate_required_fields(&rule, &event));
+    }
+
+    #[test]
+    fn test_field_types_boolean_match() {
+        let tool_input = serde_json::json!({
+            "enabled": true
+        });
+
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("API".to_string()),
+            tool_input: Some(tool_input),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let mut field_types = std::collections::HashMap::new();
+        field_types.insert("enabled".to_string(), "boolean".to_string());
+
+        let rule = Rule {
+            name: "type-check".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: Some(vec!["API".to_string()]),
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: None,
+                require_fields: None,
+                field_types: Some(field_types),
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        assert!(validate_required_fields(&rule, &event));
+    }
+
+    #[test]
+    fn test_field_types_array_match() {
+        let tool_input = serde_json::json!({
+            "items": [1, 2, 3]
+        });
+
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("API".to_string()),
+            tool_input: Some(tool_input),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let mut field_types = std::collections::HashMap::new();
+        field_types.insert("items".to_string(), "array".to_string());
+
+        let rule = Rule {
+            name: "type-check".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: Some(vec!["API".to_string()]),
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: None,
+                require_fields: None,
+                field_types: Some(field_types),
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        assert!(validate_required_fields(&rule, &event));
+    }
+
+    #[test]
+    fn test_field_types_object_match() {
+        let tool_input = serde_json::json!({
+            "config": {"key": "value"}
+        });
+
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("API".to_string()),
+            tool_input: Some(tool_input),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let mut field_types = std::collections::HashMap::new();
+        field_types.insert("config".to_string(), "object".to_string());
+
+        let rule = Rule {
+            name: "type-check".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: Some(vec!["API".to_string()]),
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: None,
+                require_fields: None,
+                field_types: Some(field_types),
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        assert!(validate_required_fields(&rule, &event));
+    }
+
+    #[test]
+    fn test_field_types_any_match_with_string() {
+        let tool_input = serde_json::json!({
+            "data": "some string"
+        });
+
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("API".to_string()),
+            tool_input: Some(tool_input),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let mut field_types = std::collections::HashMap::new();
+        field_types.insert("data".to_string(), "any".to_string());
+
+        let rule = Rule {
+            name: "type-check".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: Some(vec!["API".to_string()]),
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: None,
+                require_fields: None,
+                field_types: Some(field_types),
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        assert!(validate_required_fields(&rule, &event));
+    }
+
+    #[test]
+    fn test_field_types_any_match_with_number() {
+        let tool_input = serde_json::json!({
+            "data": 123
+        });
+
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("API".to_string()),
+            tool_input: Some(tool_input),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let mut field_types = std::collections::HashMap::new();
+        field_types.insert("data".to_string(), "any".to_string());
+
+        let rule = Rule {
+            name: "type-check".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: Some(vec!["API".to_string()]),
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: None,
+                require_fields: None,
+                field_types: Some(field_types),
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        assert!(validate_required_fields(&rule, &event));
+    }
+
+    #[test]
+    fn test_field_types_string_mismatch_with_number() {
+        let tool_input = serde_json::json!({
+            "name": 42  // number, not string
+        });
+
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("API".to_string()),
+            tool_input: Some(tool_input),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let mut field_types = std::collections::HashMap::new();
+        field_types.insert("name".to_string(), "string".to_string());
+
+        let rule = Rule {
+            name: "type-check".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: Some(vec!["API".to_string()]),
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: None,
+                require_fields: None,
+                field_types: Some(field_types),
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        assert!(!validate_required_fields(&rule, &event));
+    }
+
+    #[test]
+    fn test_field_types_number_mismatch_with_string() {
+        let tool_input = serde_json::json!({
+            "count": "42"  // string, not number
+        });
+
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("API".to_string()),
+            tool_input: Some(tool_input),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let mut field_types = std::collections::HashMap::new();
+        field_types.insert("count".to_string(), "number".to_string());
+
+        let rule = Rule {
+            name: "type-check".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: Some(vec!["API".to_string()]),
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: None,
+                require_fields: None,
+                field_types: Some(field_types),
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        assert!(!validate_required_fields(&rule, &event));
+    }
+
+    #[test]
+    fn test_field_types_all_errors_accumulated() {
+        let tool_input = serde_json::json!({
+            "name": 42,        // Should be string
+            "count": "wrong",  // Should be number
+            "enabled": "yes"   // Should be boolean
+        });
+
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("API".to_string()),
+            tool_input: Some(tool_input),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let mut field_types = std::collections::HashMap::new();
+        field_types.insert("name".to_string(), "string".to_string());
+        field_types.insert("count".to_string(), "number".to_string());
+        field_types.insert("enabled".to_string(), "boolean".to_string());
+
+        let rule = Rule {
+            name: "type-check-multiple".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: Some(vec!["API".to_string()]),
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: None,
+                require_fields: None,
+                field_types: Some(field_types),
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        // All three type errors should be accumulated and reported
+        assert!(!validate_required_fields(&rule, &event));
+    }
 }
