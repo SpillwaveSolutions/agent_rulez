@@ -126,6 +126,52 @@ impl std::fmt::Display for TrustLevel {
     }
 }
 
+// =============================================================================
+// Phase 4: Prompt Matching Types
+// =============================================================================
+
+/// Pattern matching mode for multiple prompt patterns
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum MatchMode {
+    /// Match if ANY pattern matches (OR logic) - default
+    #[default]
+    Any,
+    /// Match if ALL patterns match (AND logic)
+    All,
+}
+
+impl std::fmt::Display for MatchMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MatchMode::Any => write!(f, "any"),
+            MatchMode::All => write!(f, "all"),
+        }
+    }
+}
+
+/// Anchor position for prompt pattern matching
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum Anchor {
+    /// Pattern must match at start of prompt (^ prefix)
+    Start,
+    /// Pattern must match at end of prompt ($ suffix)
+    End,
+    /// Pattern can match anywhere in prompt (default)
+    Contains,
+}
+
+impl std::fmt::Display for Anchor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Anchor::Start => write!(f, "start"),
+            Anchor::End => write!(f, "end"),
+            Anchor::Contains => write!(f, "contains"),
+        }
+    }
+}
+
 /// Extended run action configuration supporting trust levels
 ///
 /// Supports two YAML formats for backward compatibility:
