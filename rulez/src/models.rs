@@ -209,6 +209,7 @@ pub enum PromptMatch {
     },
 }
 
+#[allow(dead_code)] // Methods will be used in Phase 4 Plan 2 (matching logic)
 impl PromptMatch {
     /// Get patterns regardless of variant
     pub fn patterns(&self) -> &[String] {
@@ -1333,6 +1334,140 @@ priority: 50
 
         let result = eval_boolean_with_context(r#"env_CI == "false""#, &ctx).unwrap();
         assert!(!result);
+    }
+
+    // =========================================================================
+    // Phase 4: Prompt Matching Tests
+    // =========================================================================
+
+    #[test]
+    fn test_match_mode_default() {
+        assert_eq!(MatchMode::default(), MatchMode::Any);
+    }
+
+    #[test]
+    fn test_match_mode_display() {
+        assert_eq!(format!("{}", MatchMode::Any), "any");
+        assert_eq!(format!("{}", MatchMode::All), "all");
+    }
+
+    #[test]
+    fn test_match_mode_deserialize() {
+        let any: MatchMode = serde_json::from_str(r#""any""#).unwrap();
+        let all: MatchMode = serde_json::from_str(r#""all""#).unwrap();
+        assert_eq!(any, MatchMode::Any);
+        assert_eq!(all, MatchMode::All);
+    }
+
+    #[test]
+    fn test_anchor_display() {
+        assert_eq!(format!("{}", Anchor::Start), "start");
+        assert_eq!(format!("{}", Anchor::End), "end");
+        assert_eq!(format!("{}", Anchor::Contains), "contains");
+    }
+
+    #[test]
+    fn test_anchor_deserialize() {
+        let start: Anchor = serde_json::from_str(r#""start""#).unwrap();
+        let end: Anchor = serde_json::from_str(r#""end""#).unwrap();
+        let contains: Anchor = serde_json::from_str(r#""contains""#).unwrap();
+        assert_eq!(start, Anchor::Start);
+        assert_eq!(end, Anchor::End);
+        assert_eq!(contains, Anchor::Contains);
+    }
+
+    #[test]
+    fn test_prompt_match_simple_array_syntax() {
+        let yaml = r#"prompt_match: ["delete", "drop"]"#;
+        let matchers: Matchers = serde_yaml::from_str(yaml).unwrap();
+        assert!(matchers.prompt_match.is_some());
+        let pm = matchers.prompt_match.as_ref().unwrap();
+        assert_eq!(pm.patterns(), &["delete".to_string(), "drop".to_string()]);
+        assert_eq!(pm.mode(), MatchMode::Any);
+        assert!(!pm.case_insensitive());
+        assert_eq!(pm.anchor(), None);
+    }
+
+    #[test]
+    fn test_prompt_match_complex_object_syntax() {
+        let yaml = r#"
+prompt_match:
+  patterns: ["secret", "password"]
+  mode: all
+  case_insensitive: true
+  anchor: start
+"#;
+        let matchers: Matchers = serde_yaml::from_str(yaml).unwrap();
+        assert!(matchers.prompt_match.is_some());
+        let pm = matchers.prompt_match.as_ref().unwrap();
+        assert_eq!(pm.patterns(), &["secret".to_string(), "password".to_string()]);
+        assert_eq!(pm.mode(), MatchMode::All);
+        assert!(pm.case_insensitive());
+        assert_eq!(pm.anchor(), Some(Anchor::Start));
+    }
+
+    #[test]
+    fn test_prompt_match_complex_with_defaults() {
+        let yaml = r#"
+prompt_match:
+  patterns: ["test"]
+"#;
+        let matchers: Matchers = serde_yaml::from_str(yaml).unwrap();
+        let pm = matchers.prompt_match.as_ref().unwrap();
+        assert_eq!(pm.mode(), MatchMode::Any); // default
+        assert!(!pm.case_insensitive()); // default
+        assert_eq!(pm.anchor(), None); // default
+    }
+
+    #[test]
+    fn test_prompt_match_expand_pattern_contains_word() {
+        let expanded = PromptMatch::expand_pattern("contains_word:delete");
+        assert_eq!(expanded, r"\bdelete\b");
+    }
+
+    #[test]
+    fn test_prompt_match_expand_pattern_passthrough() {
+        let expanded = PromptMatch::expand_pattern(".*force.*");
+        assert_eq!(expanded, ".*force.*");
+    }
+
+    #[test]
+    fn test_prompt_match_apply_anchor_start() {
+        let anchored = PromptMatch::apply_anchor("test", Some(Anchor::Start));
+        assert_eq!(anchored, "^test");
+    }
+
+    #[test]
+    fn test_prompt_match_apply_anchor_end() {
+        let anchored = PromptMatch::apply_anchor("test", Some(Anchor::End));
+        assert_eq!(anchored, "test$");
+    }
+
+    #[test]
+    fn test_prompt_match_apply_anchor_contains() {
+        let anchored = PromptMatch::apply_anchor("test", Some(Anchor::Contains));
+        assert_eq!(anchored, "test");
+    }
+
+    #[test]
+    fn test_prompt_match_apply_anchor_none() {
+        let anchored = PromptMatch::apply_anchor("test", None);
+        assert_eq!(anchored, "test");
+    }
+
+    #[test]
+    fn test_matchers_with_prompt_match_yaml() {
+        // Full rule with prompt_match
+        let yaml = r#"
+name: warn-on-dangerous-prompts
+matchers:
+  prompt_match: ["delete", "drop", "rm -rf"]
+actions:
+  inject_inline: "Warning: Dangerous operation detected"
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(rule.name, "warn-on-dangerous-prompts");
+        assert!(rule.matchers.prompt_match.is_some());
     }
 }
 
