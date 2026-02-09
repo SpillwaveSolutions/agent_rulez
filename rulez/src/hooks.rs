@@ -124,6 +124,131 @@ fn matches_prompt(prompt: &str, prompt_match: &PromptMatch) -> bool {
     }
 }
 
+// =============================================================================
+// Field Validation (Phase 5)
+// =============================================================================
+
+/// Validate required fields and field types in tool_input JSON
+///
+/// Returns Ok(true) if all validations pass, Ok(false) if any fail.
+/// Collects ALL errors before returning (does not short-circuit).
+///
+/// Behavior:
+/// - Missing tool_input -> all checks fail (fail-closed)
+/// - Null values -> treated as missing
+/// - Empty strings/arrays -> treated as present (JSON semantics)
+/// - field_types implies require_fields (field must exist AND match type)
+/// - Error messages show types only, not actual values (security)
+fn validate_required_fields(rule: &Rule, event: &Event) -> bool {
+    use crate::models::dot_to_pointer;
+
+    let matchers = &rule.matchers;
+
+    // If no field validation configured, pass validation
+    if matchers.require_fields.is_none() && matchers.field_types.is_none() {
+        return true;
+    }
+
+    // Get tool_input from event - fail-closed if missing
+    let tool_input = match &event.tool_input {
+        Some(input) => {
+            if !input.is_object() {
+                tracing::warn!(
+                    "Field validation failed for rule '{}': tool_input is not an object",
+                    rule.name
+                );
+                return false;
+            }
+            input
+        }
+        None => {
+            tracing::warn!(
+                "Field validation failed for rule '{}': tool_input is missing (fail-closed)",
+                rule.name
+            );
+            return false;
+        }
+    };
+
+    // Build combined field set: require_fields + field_types keys
+    let mut fields_to_check = std::collections::HashSet::new();
+
+    if let Some(ref require_fields) = matchers.require_fields {
+        for field in require_fields {
+            fields_to_check.insert(field.as_str());
+        }
+    }
+
+    // field_types implies existence check
+    if let Some(ref field_types) = matchers.field_types {
+        for field in field_types.keys() {
+            fields_to_check.insert(field.as_str());
+        }
+    }
+
+    // Collect all errors (don't short-circuit)
+    let mut errors = Vec::new();
+
+    for field_path in fields_to_check {
+        // Convert dot notation to JSON Pointer
+        let pointer_path = dot_to_pointer(field_path);
+
+        // Look up field value
+        match tool_input.pointer(&pointer_path) {
+            None => {
+                errors.push(format!("field '{}' is missing", field_path));
+            }
+            Some(serde_json::Value::Null) => {
+                errors.push(format!("field '{}' is null (treated as missing)", field_path));
+            }
+            Some(value) => {
+                // Field exists and is not null - check type if specified
+                if let Some(ref field_types) = matchers.field_types {
+                    if let Some(expected_type) = field_types.get(field_path) {
+                        let actual_type = match value {
+                            serde_json::Value::String(_) => "string",
+                            serde_json::Value::Number(_) => "number",
+                            serde_json::Value::Bool(_) => "boolean",
+                            serde_json::Value::Array(_) => "array",
+                            serde_json::Value::Object(_) => "object",
+                            serde_json::Value::Null => "null",
+                        };
+
+                        // "any" type accepts any non-null value
+                        let type_matches = expected_type == "any" || match expected_type.as_str() {
+                            "string" => value.is_string(),
+                            "number" => value.is_number(),
+                            "boolean" => value.is_boolean(),
+                            "array" => value.is_array(),
+                            "object" => value.is_object(),
+                            _ => false, // Config validation should prevent this
+                        };
+
+                        if !type_matches {
+                            errors.push(format!(
+                                "field '{}' expected {}, got {}",
+                                field_path, expected_type, actual_type
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // If any errors, log them all and return false
+    if !errors.is_empty() {
+        tracing::warn!(
+            "Field validation failed for rule '{}': {}",
+            rule.name,
+            errors.join("; ")
+        );
+        return false;
+    }
+
+    true
+}
+
 /// Process a hook event and return the appropriate response
 pub async fn process_event(event: Event, debug_config: &DebugConfig) -> Result<Response> {
     let start_time = std::time::Instant::now();
