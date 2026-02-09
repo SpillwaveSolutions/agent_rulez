@@ -62,6 +62,69 @@ fn get_or_compile_regex(pattern: &str, case_insensitive: bool) -> Result<Regex> 
     Ok(regex)
 }
 
+// =============================================================================
+// Prompt Pattern Matching (Phase 4)
+// =============================================================================
+
+/// Check if prompt text matches the given PromptMatch configuration
+///
+/// Handles:
+/// - Simple array syntax (ANY mode, case-sensitive)
+/// - Complex object syntax with mode, case_insensitive, anchor
+/// - Shorthand expansion (contains_word:, not:)
+/// - Negation patterns
+fn matches_prompt(prompt: &str, prompt_match: &PromptMatch) -> Result<bool> {
+    let patterns = prompt_match.patterns();
+    let mode = prompt_match.mode();
+    let case_insensitive = prompt_match.case_insensitive();
+    let anchor = prompt_match.anchor();
+
+    if patterns.is_empty() {
+        return Ok(false);
+    }
+
+    let mut results = Vec::with_capacity(patterns.len());
+
+    for pattern in patterns {
+        // Check for negation prefix
+        let (is_negated, effective_pattern) = if let Some(inner) = pattern.strip_prefix("not:") {
+            (true, inner.trim().to_string())
+        } else {
+            (false, pattern.clone())
+        };
+
+        // Expand shorthand patterns
+        let expanded = PromptMatch::expand_pattern(&effective_pattern);
+
+        // Apply anchor
+        let anchored = PromptMatch::apply_anchor(&expanded, anchor);
+
+        // Compile and match
+        match get_or_compile_regex(&anchored, case_insensitive) {
+            Ok(regex) => {
+                let matched = regex.is_match(prompt);
+                // Apply negation
+                let result = if is_negated { !matched } else { matched };
+                results.push(result);
+            }
+            Err(e) => {
+                // Log warning and treat as non-match (fail-closed)
+                tracing::warn!(
+                    "Invalid prompt_match pattern '{}': {} - treating as non-match",
+                    pattern, e
+                );
+                results.push(false);
+            }
+        }
+    }
+
+    // Apply match mode
+    match mode {
+        MatchMode::Any => Ok(results.iter().any(|&r| r)),
+        MatchMode::All => Ok(results.iter().all(|&r| r)),
+    }
+}
+
 /// Process a hook event and return the appropriate response
 pub async fn process_event(event: Event, debug_config: &DebugConfig) -> Result<Response> {
     let start_time = std::time::Instant::now();
