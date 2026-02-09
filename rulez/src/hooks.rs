@@ -1781,4 +1781,538 @@ mod tests {
         assert!(context.contains("Enforce context"));
         assert!(context.contains("Warning context"));
     }
+
+    // =========================================================================
+    // Phase 4 Plan 4: matches_prompt Unit Tests (PROMPT-01 through PROMPT-05)
+    // =========================================================================
+
+    #[test]
+    fn test_matches_prompt_simple_any_match() {
+        // PROMPT-01: Basic regex pattern matching
+        let pm = PromptMatch::Simple(vec!["delete".to_string(), "drop".to_string()]);
+
+        // Should match - contains "delete"
+        let result = matches_prompt("please delete the file", &pm);
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+
+        // Should match - contains "drop"
+        let result = matches_prompt("drop table users", &pm);
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+
+        // Should not match - neither pattern
+        let result = matches_prompt("create a new file", &pm);
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+    }
+
+    #[test]
+    fn test_matches_prompt_complex_all_mode() {
+        // PROMPT-03: ALL mode requires all patterns to match
+        let pm = PromptMatch::Complex {
+            patterns: vec!["database".to_string(), "production".to_string()],
+            mode: MatchMode::All,
+            case_insensitive: false,
+            anchor: None,
+        };
+
+        // Should match - contains both
+        let result = matches_prompt("access the production database", &pm);
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+
+        // Should not match - only one pattern
+        let result = matches_prompt("access the database", &pm);
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+
+        // Should not match - only one pattern
+        let result = matches_prompt("production server", &pm);
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+    }
+
+    #[test]
+    fn test_matches_prompt_case_insensitive() {
+        // PROMPT-02: Case-insensitive matching
+        let pm = PromptMatch::Complex {
+            patterns: vec!["DELETE".to_string()],
+            mode: MatchMode::Any,
+            case_insensitive: true,
+            anchor: None,
+        };
+
+        // Should match regardless of case
+        let result = matches_prompt("delete the file", &pm);
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+
+        let result = matches_prompt("DELETE the file", &pm);
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+
+        let result = matches_prompt("Delete the file", &pm);
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+    }
+
+    #[test]
+    fn test_matches_prompt_case_sensitive_default() {
+        // Default is case-sensitive
+        let pm = PromptMatch::Simple(vec!["DELETE".to_string()]);
+
+        // Should NOT match - case matters
+        let result = matches_prompt("delete the file", &pm);
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+
+        // Should match - exact case
+        let result = matches_prompt("DELETE the file", &pm);
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+    }
+
+    #[test]
+    fn test_matches_prompt_anchor_start() {
+        // PROMPT-04: Anchor at start of prompt
+        let pm = PromptMatch::Complex {
+            patterns: vec!["please".to_string()],
+            mode: MatchMode::Any,
+            case_insensitive: false,
+            anchor: Some(crate::models::Anchor::Start),
+        };
+
+        // Should match - starts with "please"
+        let result = matches_prompt("please delete the file", &pm);
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+
+        // Should not match - "please" not at start
+        let result = matches_prompt("could you please help", &pm);
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+    }
+
+    #[test]
+    fn test_matches_prompt_anchor_end() {
+        // PROMPT-04: Anchor at end of prompt
+        let pm = PromptMatch::Complex {
+            patterns: vec!["now".to_string()],
+            mode: MatchMode::Any,
+            case_insensitive: false,
+            anchor: Some(crate::models::Anchor::End),
+        };
+
+        // Should match - ends with "now"
+        let result = matches_prompt("do it now", &pm);
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+
+        // Should not match - "now" not at end
+        let result = matches_prompt("now is the time", &pm);
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+    }
+
+    #[test]
+    fn test_matches_prompt_contains_word_shorthand() {
+        // contains_word: shorthand expands to word boundary regex
+        let pm = PromptMatch::Simple(vec!["contains_word:delete".to_string()]);
+
+        // Should match - "delete" as whole word
+        let result = matches_prompt("please delete the file", &pm);
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+
+        // Should not match - "delete" is part of "undelete"
+        let result = matches_prompt("undelete the file", &pm);
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+
+        // Should not match - "delete" is part of "deleted"
+        let result = matches_prompt("I deleted the file", &pm);
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+    }
+
+    #[test]
+    fn test_matches_prompt_negation_pattern() {
+        // not: prefix negates the pattern
+        let pm = PromptMatch::Simple(vec!["not:safe".to_string()]);
+
+        // Should match - does NOT contain "safe"
+        let result = matches_prompt("delete the file", &pm);
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+
+        // Should not match - contains "safe"
+        let result = matches_prompt("this is safe to run", &pm);
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+    }
+
+    #[test]
+    fn test_matches_prompt_negation_with_all_mode() {
+        // ALL mode with negation - all conditions must be true
+        let pm = PromptMatch::Complex {
+            patterns: vec!["delete".to_string(), "not:safe".to_string()],
+            mode: MatchMode::All,
+            case_insensitive: false,
+            anchor: None,
+        };
+
+        // Should match - contains "delete" AND does NOT contain "safe"
+        let result = matches_prompt("delete the dangerous file", &pm);
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+
+        // Should not match - contains "delete" but also contains "safe"
+        let result = matches_prompt("safely delete the file", &pm);
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+    }
+
+    #[test]
+    fn test_matches_prompt_empty_patterns() {
+        // Empty patterns should not match
+        let pm = PromptMatch::Simple(vec![]);
+
+        let result = matches_prompt("any text here", &pm);
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+    }
+
+    #[test]
+    fn test_matches_prompt_invalid_regex() {
+        // Invalid regex should fail-closed (return false, not error)
+        let pm = PromptMatch::Simple(vec!["[invalid".to_string()]);
+
+        let result = matches_prompt("test", &pm);
+        assert!(result.is_ok());
+        assert!(!result.unwrap()); // Fail-closed: invalid regex = no match
+    }
+
+    #[test]
+    fn test_matches_prompt_regex_patterns() {
+        // Full regex patterns work
+        let pm = PromptMatch::Simple(vec![r"rm\s+-rf".to_string()]);
+
+        let result = matches_prompt("please run rm -rf /tmp", &pm);
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+
+        let result = matches_prompt("rm --recursive", &pm);
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+    }
+
+    // =========================================================================
+    // matches_rule Integration with prompt_match
+    // =========================================================================
+
+    #[test]
+    fn test_matches_rule_with_prompt_match() {
+        // Event with prompt field
+        let event = Event {
+            hook_event_name: EventType::UserPromptSubmit,
+            tool_name: None,
+            tool_input: None,
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: Some("please delete the database".to_string()),
+        };
+
+        let rule = Rule {
+            name: "block-delete".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: None,
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: Some(PromptMatch::Simple(vec!["delete".to_string()])),
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        assert!(matches_rule(&event, &rule));
+    }
+
+    #[test]
+    fn test_matches_rule_missing_prompt_no_match() {
+        // Event WITHOUT prompt field
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Bash".to_string()),
+            tool_input: None,
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None, // No prompt
+        };
+
+        let rule = Rule {
+            name: "requires-prompt".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: None,
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: Some(PromptMatch::Simple(vec!["test".to_string()])),
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        // Should NOT match - rule has prompt_match but event has no prompt
+        assert!(!matches_rule(&event, &rule));
+    }
+
+    #[test]
+    fn test_matches_rule_prompt_and_other_matchers() {
+        // Both prompt_match and other matchers must match
+        let event = Event {
+            hook_event_name: EventType::UserPromptSubmit,
+            tool_name: Some("Bash".to_string()),
+            tool_input: None,
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: Some("run sudo command".to_string()),
+        };
+
+        let rule = Rule {
+            name: "bash-sudo".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: Some(vec!["Bash".to_string()]),
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: Some(PromptMatch::Simple(vec!["sudo".to_string()])),
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        // Should match - tool AND prompt_match both match
+        assert!(matches_rule(&event, &rule));
+
+        // Now change tool to not match
+        let event_wrong_tool = Event {
+            hook_event_name: EventType::UserPromptSubmit,
+            tool_name: Some("Edit".to_string()), // Different tool
+            tool_input: None,
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: Some("run sudo command".to_string()),
+        };
+
+        // Should NOT match - tool doesn't match
+        assert!(!matches_rule(&event_wrong_tool, &rule));
+    }
+
+    // =========================================================================
+    // PROMPT-05: prompt variable in evalexpr context
+    // =========================================================================
+
+    #[test]
+    fn test_prompt_variable_available_in_evalexpr_context() {
+        // Verify prompt is available in evalexpr context for enabled_when
+        let event = Event {
+            hook_event_name: EventType::UserPromptSubmit,
+            tool_name: None,
+            tool_input: None,
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: Some("hello world".to_string()),
+        };
+
+        // Build context and verify prompt is there
+        let ctx = build_eval_context(&event);
+        let result = evalexpr::eval_boolean_with_context(r#"prompt == "hello world""#, &ctx);
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+    }
+
+    #[test]
+    fn test_enabled_when_can_use_prompt_variable() {
+        // enabled_when expression can access prompt
+        let event = Event {
+            hook_event_name: EventType::UserPromptSubmit,
+            tool_name: None,
+            tool_input: None,
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: Some("dangerous delete operation".to_string()),
+        };
+
+        // Rule with enabled_when checking prompt
+        // Note: evalexpr doesn't have str_contains, so we just check equality
+        let rule = Rule {
+            name: "check-prompt".to_string(),
+            description: None,
+            enabled_when: Some(r#"prompt != """#.to_string()), // Prompt is non-empty
+            matchers: Matchers {
+                tools: None,
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: None,
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: None,
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        assert!(is_rule_enabled(&rule, &event));
+
+        // Event without prompt - should disable the rule
+        let event_no_prompt = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Bash".to_string()),
+            tool_input: None,
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        // Rule should fail because prompt variable doesn't exist
+        assert!(!is_rule_enabled(&rule, &event_no_prompt));
+    }
+
+    // =========================================================================
+    // matches_rule_with_debug tests for prompt_match
+    // =========================================================================
+
+    #[test]
+    fn test_matches_rule_with_debug_prompt_match() {
+        let event = Event {
+            hook_event_name: EventType::UserPromptSubmit,
+            tool_name: None,
+            tool_input: None,
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: Some("delete everything".to_string()),
+        };
+
+        let rule = Rule {
+            name: "debug-prompt".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: None,
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: Some(PromptMatch::Simple(vec!["delete".to_string()])),
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        let (matched, results) = matches_rule_with_debug(&event, &rule);
+        assert!(matched);
+        assert!(results.is_some());
+        let results = results.unwrap();
+        assert_eq!(results.prompt_match_matched, Some(true));
+    }
 }
