@@ -185,6 +185,76 @@ impl Config {
                     }
                 }
             }
+
+            // Validate require_fields paths
+            if let Some(ref require_fields) = rule.matchers.require_fields {
+                // Reject empty arrays
+                if require_fields.is_empty() {
+                    return Err(anyhow::anyhow!(
+                        "Empty require_fields array for rule '{}'",
+                        rule.name
+                    ));
+                }
+
+                for field_path in require_fields {
+                    Self::validate_field_path(field_path, &rule.name, "require_fields")?;
+                }
+            }
+
+            // Validate field_types paths and type specifiers
+            if let Some(ref field_types) = rule.matchers.field_types {
+                let valid_types = ["string", "number", "boolean", "array", "object", "any"];
+
+                for (field_path, type_specifier) in field_types {
+                    // Validate field path
+                    Self::validate_field_path(field_path, &rule.name, "field_types")?;
+
+                    // Validate type specifier
+                    if !valid_types.contains(&type_specifier.as_str()) {
+                        return Err(anyhow::anyhow!(
+                            "Invalid type '{}' for field '{}' in field_types for rule '{}': must be one of string, number, boolean, array, object, any",
+                            type_specifier, field_path, rule.name
+                        ));
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Validate field path syntax
+    fn validate_field_path(field_path: &str, rule_name: &str, field_name: &str) -> Result<()> {
+        // Reject empty strings
+        if field_path.is_empty() {
+            return Err(anyhow::anyhow!(
+                "Invalid field path '' in {} for rule '{}': cannot be empty",
+                field_name, rule_name
+            ));
+        }
+
+        // Reject paths starting with '.'
+        if field_path.starts_with('.') {
+            return Err(anyhow::anyhow!(
+                "Invalid field path '{}' in {} for rule '{}': cannot start with '.'",
+                field_path, field_name, rule_name
+            ));
+        }
+
+        // Reject paths ending with '.'
+        if field_path.ends_with('.') {
+            return Err(anyhow::anyhow!(
+                "Invalid field path '{}' in {} for rule '{}': cannot end with '.'",
+                field_path, field_name, rule_name
+            ));
+        }
+
+        // Reject paths with consecutive dots
+        if field_path.contains("..") {
+            return Err(anyhow::anyhow!(
+                "Invalid field path '{}' in {} for rule '{}': cannot contain consecutive dots",
+                field_path, field_name, rule_name
+            ));
         }
 
         Ok(())
@@ -736,6 +806,463 @@ mod tests {
                     inject_command: None,
                     run: None,
                     block: Some(true),
+                    block_if_match: None,
+                },
+                mode: None,
+                priority: None,
+                governance: None,
+                metadata: None,
+            }],
+            settings: Settings::default(),
+        };
+
+        assert!(config.validate().is_ok());
+    }
+
+    // =========================================================================
+    // Phase 5: Field Validation Tests
+    // =========================================================================
+
+    #[test]
+    fn test_require_fields_valid_simple() {
+        let config = Config {
+            version: "1.0".to_string(),
+            rules: vec![Rule {
+                name: "test-require-simple".to_string(),
+                description: None,
+                enabled_when: None,
+                matchers: crate::models::Matchers {
+                    tools: None,
+                    extensions: None,
+                    directories: None,
+                    operations: None,
+                    command_match: None,
+                    prompt_match: None,
+                    require_fields: Some(vec!["file_path".to_string(), "content".to_string()]),
+                    field_types: None,
+                },
+                actions: crate::models::Actions {
+                    inject: None,
+                    inject_inline: None,
+                    inject_command: None,
+                    run: None,
+                    block: None,
+                    block_if_match: None,
+                },
+                mode: None,
+                priority: None,
+                governance: None,
+                metadata: None,
+            }],
+            settings: Settings::default(),
+        };
+
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn test_require_fields_valid_nested() {
+        let config = Config {
+            version: "1.0".to_string(),
+            rules: vec![Rule {
+                name: "test-require-nested".to_string(),
+                description: None,
+                enabled_when: None,
+                matchers: crate::models::Matchers {
+                    tools: None,
+                    extensions: None,
+                    directories: None,
+                    operations: None,
+                    command_match: None,
+                    prompt_match: None,
+                    require_fields: Some(vec![
+                        "user.name".to_string(),
+                        "input.data.value".to_string(),
+                    ]),
+                    field_types: None,
+                },
+                actions: crate::models::Actions {
+                    inject: None,
+                    inject_inline: None,
+                    inject_command: None,
+                    run: None,
+                    block: None,
+                    block_if_match: None,
+                },
+                mode: None,
+                priority: None,
+                governance: None,
+                metadata: None,
+            }],
+            settings: Settings::default(),
+        };
+
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn test_require_fields_empty_array_rejected() {
+        let config = Config {
+            version: "1.0".to_string(),
+            rules: vec![Rule {
+                name: "test-empty-array".to_string(),
+                description: None,
+                enabled_when: None,
+                matchers: crate::models::Matchers {
+                    tools: None,
+                    extensions: None,
+                    directories: None,
+                    operations: None,
+                    command_match: None,
+                    prompt_match: None,
+                    require_fields: Some(vec![]),
+                    field_types: None,
+                },
+                actions: crate::models::Actions {
+                    inject: None,
+                    inject_inline: None,
+                    inject_command: None,
+                    run: None,
+                    block: None,
+                    block_if_match: None,
+                },
+                mode: None,
+                priority: None,
+                governance: None,
+                metadata: None,
+            }],
+            settings: Settings::default(),
+        };
+
+        let result = config.validate();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Empty require_fields"));
+    }
+
+    #[test]
+    fn test_require_fields_empty_string_rejected() {
+        let config = Config {
+            version: "1.0".to_string(),
+            rules: vec![Rule {
+                name: "test-empty-string".to_string(),
+                description: None,
+                enabled_when: None,
+                matchers: crate::models::Matchers {
+                    tools: None,
+                    extensions: None,
+                    directories: None,
+                    operations: None,
+                    command_match: None,
+                    prompt_match: None,
+                    require_fields: Some(vec!["".to_string()]),
+                    field_types: None,
+                },
+                actions: crate::models::Actions {
+                    inject: None,
+                    inject_inline: None,
+                    inject_command: None,
+                    run: None,
+                    block: None,
+                    block_if_match: None,
+                },
+                mode: None,
+                priority: None,
+                governance: None,
+                metadata: None,
+            }],
+            settings: Settings::default(),
+        };
+
+        let result = config.validate();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("cannot be empty"));
+    }
+
+    #[test]
+    fn test_require_fields_leading_dot_rejected() {
+        let config = Config {
+            version: "1.0".to_string(),
+            rules: vec![Rule {
+                name: "test-leading-dot".to_string(),
+                description: None,
+                enabled_when: None,
+                matchers: crate::models::Matchers {
+                    tools: None,
+                    extensions: None,
+                    directories: None,
+                    operations: None,
+                    command_match: None,
+                    prompt_match: None,
+                    require_fields: Some(vec![".name".to_string()]),
+                    field_types: None,
+                },
+                actions: crate::models::Actions {
+                    inject: None,
+                    inject_inline: None,
+                    inject_command: None,
+                    run: None,
+                    block: None,
+                    block_if_match: None,
+                },
+                mode: None,
+                priority: None,
+                governance: None,
+                metadata: None,
+            }],
+            settings: Settings::default(),
+        };
+
+        let result = config.validate();
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("cannot start with '.'"));
+    }
+
+    #[test]
+    fn test_require_fields_trailing_dot_rejected() {
+        let config = Config {
+            version: "1.0".to_string(),
+            rules: vec![Rule {
+                name: "test-trailing-dot".to_string(),
+                description: None,
+                enabled_when: None,
+                matchers: crate::models::Matchers {
+                    tools: None,
+                    extensions: None,
+                    directories: None,
+                    operations: None,
+                    command_match: None,
+                    prompt_match: None,
+                    require_fields: Some(vec!["name.".to_string()]),
+                    field_types: None,
+                },
+                actions: crate::models::Actions {
+                    inject: None,
+                    inject_inline: None,
+                    inject_command: None,
+                    run: None,
+                    block: None,
+                    block_if_match: None,
+                },
+                mode: None,
+                priority: None,
+                governance: None,
+                metadata: None,
+            }],
+            settings: Settings::default(),
+        };
+
+        let result = config.validate();
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("cannot end with '.'"));
+    }
+
+    #[test]
+    fn test_require_fields_consecutive_dots_rejected() {
+        let config = Config {
+            version: "1.0".to_string(),
+            rules: vec![Rule {
+                name: "test-consecutive-dots".to_string(),
+                description: None,
+                enabled_when: None,
+                matchers: crate::models::Matchers {
+                    tools: None,
+                    extensions: None,
+                    directories: None,
+                    operations: None,
+                    command_match: None,
+                    prompt_match: None,
+                    require_fields: Some(vec!["name..field".to_string()]),
+                    field_types: None,
+                },
+                actions: crate::models::Actions {
+                    inject: None,
+                    inject_inline: None,
+                    inject_command: None,
+                    run: None,
+                    block: None,
+                    block_if_match: None,
+                },
+                mode: None,
+                priority: None,
+                governance: None,
+                metadata: None,
+            }],
+            settings: Settings::default(),
+        };
+
+        let result = config.validate();
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("cannot contain consecutive dots"));
+    }
+
+    #[test]
+    fn test_field_types_valid() {
+        let config = Config {
+            version: "1.0".to_string(),
+            rules: vec![Rule {
+                name: "test-field-types-valid".to_string(),
+                description: None,
+                enabled_when: None,
+                matchers: crate::models::Matchers {
+                    tools: None,
+                    extensions: None,
+                    directories: None,
+                    operations: None,
+                    command_match: None,
+                    prompt_match: None,
+                    require_fields: None,
+                    field_types: Some({
+                        let mut map = std::collections::HashMap::new();
+                        map.insert("file_path".to_string(), "string".to_string());
+                        map.insert("count".to_string(), "number".to_string());
+                        map
+                    }),
+                },
+                actions: crate::models::Actions {
+                    inject: None,
+                    inject_inline: None,
+                    inject_command: None,
+                    run: None,
+                    block: None,
+                    block_if_match: None,
+                },
+                mode: None,
+                priority: None,
+                governance: None,
+                metadata: None,
+            }],
+            settings: Settings::default(),
+        };
+
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn test_field_types_invalid_type_rejected() {
+        let config = Config {
+            version: "1.0".to_string(),
+            rules: vec![Rule {
+                name: "test-invalid-type".to_string(),
+                description: None,
+                enabled_when: None,
+                matchers: crate::models::Matchers {
+                    tools: None,
+                    extensions: None,
+                    directories: None,
+                    operations: None,
+                    command_match: None,
+                    prompt_match: None,
+                    require_fields: None,
+                    field_types: Some({
+                        let mut map = std::collections::HashMap::new();
+                        map.insert("count".to_string(), "integer".to_string());
+                        map
+                    }),
+                },
+                actions: crate::models::Actions {
+                    inject: None,
+                    inject_inline: None,
+                    inject_command: None,
+                    run: None,
+                    block: None,
+                    block_if_match: None,
+                },
+                mode: None,
+                priority: None,
+                governance: None,
+                metadata: None,
+            }],
+            settings: Settings::default(),
+        };
+
+        let result = config.validate();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Invalid type 'integer'"));
+    }
+
+    #[test]
+    fn test_field_types_invalid_path_rejected() {
+        let config = Config {
+            version: "1.0".to_string(),
+            rules: vec![Rule {
+                name: "test-invalid-path".to_string(),
+                description: None,
+                enabled_when: None,
+                matchers: crate::models::Matchers {
+                    tools: None,
+                    extensions: None,
+                    directories: None,
+                    operations: None,
+                    command_match: None,
+                    prompt_match: None,
+                    require_fields: None,
+                    field_types: Some({
+                        let mut map = std::collections::HashMap::new();
+                        map.insert(".name".to_string(), "string".to_string());
+                        map
+                    }),
+                },
+                actions: crate::models::Actions {
+                    inject: None,
+                    inject_inline: None,
+                    inject_command: None,
+                    run: None,
+                    block: None,
+                    block_if_match: None,
+                },
+                mode: None,
+                priority: None,
+                governance: None,
+                metadata: None,
+            }],
+            settings: Settings::default(),
+        };
+
+        let result = config.validate();
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("cannot start with '.'"));
+    }
+
+    #[test]
+    fn test_field_types_any_type_accepted() {
+        let config = Config {
+            version: "1.0".to_string(),
+            rules: vec![Rule {
+                name: "test-any-type".to_string(),
+                description: None,
+                enabled_when: None,
+                matchers: crate::models::Matchers {
+                    tools: None,
+                    extensions: None,
+                    directories: None,
+                    operations: None,
+                    command_match: None,
+                    prompt_match: None,
+                    require_fields: None,
+                    field_types: Some({
+                        let mut map = std::collections::HashMap::new();
+                        map.insert("data".to_string(), "any".to_string());
+                        map
+                    }),
+                },
+                actions: crate::models::Actions {
+                    inject: None,
+                    inject_inline: None,
+                    inject_command: None,
+                    run: None,
+                    block: None,
                     block_if_match: None,
                 },
                 mode: None,
