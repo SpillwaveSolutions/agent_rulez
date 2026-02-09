@@ -1134,6 +1134,8 @@ mod tests {
                 directories: None,
                 operations: None,
                 prompt_match: None,
+                require_fields: None,
+                field_types: None,
             },
             actions: Actions {
                 block: Some(true),
@@ -1181,6 +1183,8 @@ mod tests {
                 directories: None,
                 operations: None,
                 prompt_match: None,
+                require_fields: None,
+                field_types: None,
             },
             actions: Actions {
                 block: Some(true),
@@ -1246,6 +1250,8 @@ mod tests {
                 operations: None,
                 command_match: None,
                 prompt_match: None,
+                require_fields: None,
+                field_types: None,
             },
             actions: Actions {
                 inject: None,
@@ -1294,6 +1300,8 @@ mod tests {
                 operations: None,
                 command_match: None,
                 prompt_match: None,
+                require_fields: None,
+                field_types: None,
             },
             actions: Actions {
                 inject: None,
@@ -1343,6 +1351,8 @@ mod tests {
                 operations: None,
                 command_match: None,
                 prompt_match: None,
+                require_fields: None,
+                field_types: None,
             },
             actions: Actions {
                 inject: None,
@@ -1388,6 +1398,8 @@ mod tests {
                 operations: None,
                 command_match: None,
                 prompt_match: None,
+                require_fields: None,
+                field_types: None,
             },
             actions: Actions {
                 inject: None,
@@ -1434,6 +1446,8 @@ mod tests {
                 operations: None,
                 command_match: None,
                 prompt_match: None,
+                require_fields: None,
+                field_types: None,
             },
             actions: Actions {
                 inject: None,
@@ -1463,6 +1477,8 @@ mod tests {
                 operations: None,
                 command_match: None,
                 prompt_match: None,
+                require_fields: None,
+                field_types: None,
             },
             actions: Actions {
                 inject: None,
@@ -1549,6 +1565,8 @@ mod tests {
                 operations: None,
                 command_match: None,
                 prompt_match: None,
+                require_fields: None,
+                field_types: None,
             },
             actions: Actions {
                 inject: None,
@@ -1579,6 +1597,8 @@ mod tests {
                 operations: None,
                 command_match: None,
                 prompt_match: None,
+                require_fields: None,
+                field_types: None,
             },
             actions: Actions {
                 inject: None,
@@ -1612,6 +1632,8 @@ mod tests {
                 operations: None,
                 command_match: None,
                 prompt_match: None,
+                require_fields: None,
+                field_types: None,
             },
             actions: Actions {
                 inject: None,
@@ -1966,6 +1988,8 @@ mod tests {
                 operations: None,
                 command_match: None,
                 prompt_match: Some(PromptMatch::Simple(vec!["delete".to_string()])),
+                require_fields: None,
+                field_types: None,
             },
             actions: Actions {
                 inject: None,
@@ -2012,6 +2036,8 @@ mod tests {
                 operations: None,
                 command_match: None,
                 prompt_match: Some(PromptMatch::Simple(vec!["test".to_string()])),
+                require_fields: None,
+                field_types: None,
             },
             actions: Actions {
                 inject: None,
@@ -2059,6 +2085,8 @@ mod tests {
                 operations: None,
                 command_match: None,
                 prompt_match: Some(PromptMatch::Simple(vec!["sudo".to_string()])),
+                require_fields: None,
+                field_types: None,
             },
             actions: Actions {
                 inject: None,
@@ -2154,6 +2182,8 @@ mod tests {
                 operations: None,
                 command_match: None,
                 prompt_match: None,
+                require_fields: None,
+                field_types: None,
             },
             actions: Actions {
                 inject: None,
@@ -2221,6 +2251,8 @@ mod tests {
                 operations: None,
                 command_match: None,
                 prompt_match: Some(PromptMatch::Simple(vec!["delete".to_string()])),
+                require_fields: None,
+                field_types: None,
             },
             actions: Actions {
                 inject: None,

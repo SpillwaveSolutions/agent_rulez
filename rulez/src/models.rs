@@ -267,6 +267,28 @@ impl PromptMatch {
     }
 }
 
+// =============================================================================
+// Phase 5: Field Validation Utilities
+// =============================================================================
+
+/// Convert dot-notation field path to JSON Pointer format (RFC 6901)
+///
+/// Examples:
+/// - "file_path" -> "/file_path"
+/// - "user.name" -> "/user/name"
+/// - "input.user.address.city" -> "/input/user/address/city"
+///
+/// Handles RFC 6901 escaping: ~ becomes ~0, / becomes ~1
+pub fn dot_to_pointer(field_path: &str) -> String {
+    let escaped_segments: Vec<String> = field_path
+        .split('.')
+        .map(|segment| {
+            segment.replace('~', "~0").replace('/', "~1")
+        })
+        .collect();
+    format!("/{}", escaped_segments.join("/"))
+}
+
 /// Extended run action configuration supporting trust levels
 ///
 /// Supports two YAML formats for backward compatibility:
@@ -418,6 +440,18 @@ pub struct Matchers {
     /// Prompt text pattern matching for UserPromptSubmit events
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prompt_match: Option<PromptMatch>,
+
+    /// Required field paths that must exist in tool_input JSON
+    /// Dot notation for nested fields: ["file_path", "input.user.name"]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub require_fields: Option<Vec<String>>,
+
+    /// Expected types for fields in tool_input JSON
+    /// Keys are field paths (dot notation), values are type specifiers
+    /// Supported types: string, number, boolean, array, object, any
+    /// Implicitly requires field existence (field_types implies require_fields)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub field_types: Option<std::collections::HashMap<String, String>>,
 }
 
 /// Actions to take when rule matches
@@ -790,6 +824,8 @@ reason: Code quality
                 operations: None,
                 command_match: None,
                 prompt_match: None,
+                require_fields: None,
+                field_types: None,
             },
             actions: Actions {
                 inject: None,
@@ -820,6 +856,8 @@ reason: Code quality
                 operations: None,
                 command_match: None,
                 prompt_match: None,
+                require_fields: None,
+                field_types: None,
             },
             actions: Actions {
                 inject: None,
@@ -850,6 +888,8 @@ reason: Code quality
                 operations: None,
                 command_match: None,
                 prompt_match: None,
+                require_fields: None,
+                field_types: None,
             },
             actions: Actions {
                 inject: None,
@@ -880,6 +920,8 @@ reason: Code quality
                 operations: None,
                 command_match: None,
                 prompt_match: None,
+                require_fields: None,
+                field_types: None,
             },
             actions: Actions {
                 inject: None,
@@ -910,6 +952,8 @@ reason: Code quality
                 operations: None,
                 command_match: None,
                 prompt_match: None,
+                require_fields: None,
+                field_types: None,
             },
             actions: Actions {
                 inject: None,
@@ -944,6 +988,8 @@ reason: Code quality
                 operations: None,
                 command_match: None,
                 prompt_match: None,
+                require_fields: None,
+                field_types: None,
             },
             actions: Actions {
                 inject: None,
@@ -1032,6 +1078,8 @@ reason: Code quality
                 operations: None,
                 command_match: None,
                 prompt_match: None,
+                require_fields: None,
+                field_types: None,
             },
             actions: Actions {
                 inject: None,
@@ -2680,5 +2728,47 @@ impl Response {
             reason: None,
             timing: None,
         }
+    }
+}
+
+// =============================================================================
+// Phase 5: Field Validation Tests
+// =============================================================================
+
+#[cfg(test)]
+mod field_validation_tests {
+    use super::*;
+
+    #[test]
+    fn test_dot_to_pointer_simple() {
+        assert_eq!(dot_to_pointer("name"), "/name");
+        assert_eq!(dot_to_pointer("file_path"), "/file_path");
+    }
+
+    #[test]
+    fn test_dot_to_pointer_nested() {
+        assert_eq!(dot_to_pointer("user.name"), "/user/name");
+        assert_eq!(dot_to_pointer("input.data"), "/input/data");
+    }
+
+    #[test]
+    fn test_dot_to_pointer_deep_nested() {
+        assert_eq!(dot_to_pointer("a.b.c.d"), "/a/b/c/d");
+        assert_eq!(
+            dot_to_pointer("input.user.address.city"),
+            "/input/user/address/city"
+        );
+    }
+
+    #[test]
+    fn test_dot_to_pointer_special_chars_tilde() {
+        assert_eq!(dot_to_pointer("user~name"), "/user~0name");
+        assert_eq!(dot_to_pointer("field~test"), "/field~0test");
+    }
+
+    #[test]
+    fn test_dot_to_pointer_special_chars_slash() {
+        assert_eq!(dot_to_pointer("path/to"), "/path~1to");
+        assert_eq!(dot_to_pointer("file/name"), "/file~1name");
     }
 }

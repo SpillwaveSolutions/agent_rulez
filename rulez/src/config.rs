@@ -240,6 +240,8 @@ mod tests {
                     operations: None,
                     command_match: None,
                     prompt_match: None,
+                    require_fields: None,
+                    field_types: None,
                 },
                 actions: crate::models::Actions {
                     inject: None,
@@ -280,6 +282,8 @@ mod tests {
                         operations: None,
                         command_match: None,
                         prompt_match: None,
+                        require_fields: None,
+                        field_types: None,
                     },
                     actions: crate::models::Actions {
                         inject: None,
@@ -305,6 +309,8 @@ mod tests {
                         operations: None,
                         command_match: None,
                         prompt_match: None,
+                        require_fields: None,
+                        field_types: None,
                     },
                     actions: crate::models::Actions {
                         inject: None,
@@ -342,6 +348,8 @@ mod tests {
                         operations: None,
                         command_match: None,
                         prompt_match: None,
+                        require_fields: None,
+                        field_types: None,
                     },
                     actions: crate::models::Actions {
                         inject: None,
@@ -371,6 +379,8 @@ mod tests {
                         operations: None,
                         command_match: None,
                         prompt_match: None,
+                        require_fields: None,
+                        field_types: None,
                     },
                     actions: crate::models::Actions {
                         inject: None,
@@ -418,6 +428,8 @@ mod tests {
                     operations: None,
                     command_match: None,
                     prompt_match: None,
+                    require_fields: None,
+                    field_types: None,
                 },
                 actions: crate::models::Actions {
                     inject: None,
@@ -454,6 +466,8 @@ mod tests {
                     operations: None,
                     command_match: None,
                     prompt_match: None,
+                    require_fields: None,
+                    field_types: None,
                 },
                 actions: crate::models::Actions {
                     inject: None,
@@ -503,6 +517,8 @@ mod tests {
                     operations: None,
                     command_match: None,
                     prompt_match: None,
+                    require_fields: None,
+                    field_types: None,
                 },
                 actions: crate::models::Actions {
                     inject: None,
@@ -545,6 +561,8 @@ mod tests {
                         "delete".to_string(),
                         "drop database".to_string(),
                     ])),
+                    require_fields: None,
+                    field_types: None,
                 },
                 actions: crate::models::Actions {
                     inject: None,
@@ -585,6 +603,8 @@ mod tests {
                         case_insensitive: true,
                         anchor: Some(crate::models::Anchor::Contains),
                     }),
+                    require_fields: None,
+                    field_types: None,
                 },
                 actions: crate::models::Actions {
                     inject: None,
@@ -620,6 +640,8 @@ mod tests {
                     operations: None,
                     command_match: None,
                     prompt_match: Some(crate::models::PromptMatch::Simple(vec![])),
+                    require_fields: None,
+                    field_types: None,
                 },
                 actions: crate::models::Actions {
                     inject: None,
@@ -661,6 +683,8 @@ mod tests {
                     prompt_match: Some(crate::models::PromptMatch::Simple(vec![
                         "[invalid(regex".to_string(), // Unclosed brackets
                     ])),
+                    require_fields: None,
+                    field_types: None,
                 },
                 actions: crate::models::Actions {
                     inject: None,
@@ -703,6 +727,8 @@ mod tests {
                         "contains_word:delete".to_string(),
                         "not:review".to_string(),
                     ])),
+                    require_fields: None,
+                    field_types: None,
                 },
                 actions: crate::models::Actions {
                     inject: None,
