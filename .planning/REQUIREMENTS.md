@@ -9,11 +9,11 @@ Requirements for milestone v1.3: Advanced Matching & Validation.
 
 ### Prompt Matching
 
-- [ ] **PROMPT-01**: User can match rules against user prompt text using regex patterns
-- [ ] **PROMPT-02**: User can specify case-insensitive matching via `case_insensitive: true`
-- [ ] **PROMPT-03**: User can specify multiple patterns with any/all matching logic
-- [ ] **PROMPT-04**: User can anchor patterns to start, end, or contains
-- [ ] **PROMPT-05**: User can use script-based matching that returns true/false
+- [x] **PROMPT-01**: User can match rules against user prompt text using regex patterns
+- [x] **PROMPT-02**: User can specify case-insensitive matching via `case_insensitive: true`
+- [x] **PROMPT-03**: User can specify multiple patterns with any/all matching logic
+- [x] **PROMPT-04**: User can anchor patterns to start, end, or contains
+- [x] **PROMPT-05**: User can use script-based matching that returns true/false
 
 ### Field Validation
 
@@ -62,11 +62,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PROMPT-01 | Phase 4 | Pending |
-| PROMPT-02 | Phase 4 | Pending |
-| PROMPT-03 | Phase 4 | Pending |
-| PROMPT-04 | Phase 4 | Pending |
-| PROMPT-05 | Phase 4 | Pending |
+| PROMPT-01 | Phase 4 | Complete |
+| PROMPT-02 | Phase 4 | Complete |
+| PROMPT-03 | Phase 4 | Complete |
+| PROMPT-04 | Phase 4 | Complete |
+| PROMPT-05 | Phase 4 | Complete |
 | FIELD-01 | Phase 5 | Pending |
 | FIELD-02 | Phase 5 | Pending |
 | FIELD-03 | Phase 5 | Pending |
@@ -87,4 +87,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-08*
-*Last updated: 2026-02-08 after roadmap creation - 100% coverage*
+*Last updated: 2026-02-09 Phase 4 requirements complete*
