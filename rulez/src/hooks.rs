@@ -551,6 +551,13 @@ fn matches_rule(event: &Event, rule: &Rule) -> bool {
         }
     }
 
+    // Check field validation (require_fields / field_types)
+    if rule.matchers.require_fields.is_some() || rule.matchers.field_types.is_some() {
+        if !validate_required_fields(rule, event) {
+            return false;
+        }
+    }
+
     true
 }
 
@@ -661,6 +668,15 @@ fn matches_rule_with_debug(event: &Event, rule: &Rule) -> (bool, Option<MatcherR
             }
         );
         if !matcher_results.prompt_match_matched.unwrap() {
+            overall_match = false;
+        }
+    }
+
+    // Check field validation (require_fields / field_types)
+    if rule.matchers.require_fields.is_some() || rule.matchers.field_types.is_some() {
+        let field_valid = validate_required_fields(rule, event);
+        matcher_results.field_validation_matched = Some(field_valid);
+        if !field_valid {
             overall_match = false;
         }
     }
@@ -2398,5 +2414,637 @@ mod tests {
         assert!(results.is_some());
         let results = results.unwrap();
         assert_eq!(results.prompt_match_matched, Some(true));
+    }
+
+    // =========================================================================
+    // FIELD VALIDATION TESTS (Phase 5)
+    // =========================================================================
+
+    #[test]
+    fn test_field_validation_no_fields_configured() {
+        // Rule with no require_fields/field_types should pass validation
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Bash".to_string()),
+            tool_input: None,
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let rule = Rule {
+            name: "no-field-validation".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: Some(vec!["Bash".to_string()]),
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: None,
+                require_fields: None,
+                field_types: None,
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        assert!(validate_required_fields(&rule, &event));
+    }
+
+    #[test]
+    fn test_field_validation_missing_tool_input() {
+        // Rule with require_fields but event has no tool_input should fail
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Bash".to_string()),
+            tool_input: None,
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let rule = Rule {
+            name: "require-command".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: Some(vec!["Bash".to_string()]),
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: None,
+                require_fields: Some(vec!["command".to_string()]),
+                field_types: None,
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        assert!(!validate_required_fields(&rule, &event));
+    }
+
+    #[test]
+    fn test_field_validation_present_field() {
+        // tool_input has required field should pass
+        let mut tool_input = serde_json::Map::new();
+        tool_input.insert("command".to_string(), serde_json::json!("echo hello"));
+
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Bash".to_string()),
+            tool_input: Some(serde_json::Value::Object(tool_input)),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let rule = Rule {
+            name: "require-command".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: Some(vec!["Bash".to_string()]),
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: None,
+                require_fields: Some(vec!["command".to_string()]),
+                field_types: None,
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        assert!(validate_required_fields(&rule, &event));
+    }
+
+    #[test]
+    fn test_field_validation_missing_field() {
+        // tool_input missing required field should fail
+        let mut tool_input = serde_json::Map::new();
+        tool_input.insert("other_field".to_string(), serde_json::json!("value"));
+
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Bash".to_string()),
+            tool_input: Some(serde_json::Value::Object(tool_input)),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let rule = Rule {
+            name: "require-command".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: Some(vec!["Bash".to_string()]),
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: None,
+                require_fields: Some(vec!["command".to_string()]),
+                field_types: None,
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        assert!(!validate_required_fields(&rule, &event));
+    }
+
+    #[test]
+    fn test_field_validation_null_field_is_missing() {
+        // tool_input has null field should be treated as missing
+        let mut tool_input = serde_json::Map::new();
+        tool_input.insert("command".to_string(), serde_json::Value::Null);
+
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Bash".to_string()),
+            tool_input: Some(serde_json::Value::Object(tool_input)),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let rule = Rule {
+            name: "require-command".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: Some(vec!["Bash".to_string()]),
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: None,
+                require_fields: Some(vec!["command".to_string()]),
+                field_types: None,
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        assert!(!validate_required_fields(&rule, &event));
+    }
+
+    #[test]
+    fn test_field_validation_nested_field() {
+        // Nested field using dot notation should resolve correctly
+        let tool_input = serde_json::json!({
+            "user": {
+                "name": "Alice"
+            }
+        });
+
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Bash".to_string()),
+            tool_input: Some(tool_input),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let rule = Rule {
+            name: "require-user-name".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: Some(vec!["Bash".to_string()]),
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: None,
+                require_fields: Some(vec!["user.name".to_string()]),
+                field_types: None,
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        assert!(validate_required_fields(&rule, &event));
+    }
+
+    #[test]
+    fn test_field_validation_type_match() {
+        // field_types with matching type should pass
+        let tool_input = serde_json::json!({
+            "count": 42
+        });
+
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Bash".to_string()),
+            tool_input: Some(tool_input),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let mut field_types = std::collections::HashMap::new();
+        field_types.insert("count".to_string(), "number".to_string());
+
+        let rule = Rule {
+            name: "count-must-be-number".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: Some(vec!["Bash".to_string()]),
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: None,
+                require_fields: None,
+                field_types: Some(field_types),
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        assert!(validate_required_fields(&rule, &event));
+    }
+
+    #[test]
+    fn test_field_validation_type_mismatch() {
+        // field_types with wrong type should fail
+        let tool_input = serde_json::json!({
+            "count": "not a number"
+        });
+
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Bash".to_string()),
+            tool_input: Some(tool_input),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let mut field_types = std::collections::HashMap::new();
+        field_types.insert("count".to_string(), "number".to_string());
+
+        let rule = Rule {
+            name: "count-must-be-number".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: Some(vec!["Bash".to_string()]),
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: None,
+                require_fields: None,
+                field_types: Some(field_types),
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        assert!(!validate_required_fields(&rule, &event));
+    }
+
+    #[test]
+    fn test_field_validation_empty_string_is_present() {
+        // Empty string should count as present
+        let tool_input = serde_json::json!({
+            "command": ""
+        });
+
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Bash".to_string()),
+            tool_input: Some(tool_input),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let rule = Rule {
+            name: "require-command".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: Some(vec!["Bash".to_string()]),
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: None,
+                require_fields: Some(vec!["command".to_string()]),
+                field_types: None,
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        assert!(validate_required_fields(&rule, &event));
+    }
+
+    #[test]
+    fn test_field_validation_empty_array_is_present() {
+        // Empty array should count as present
+        let tool_input = serde_json::json!({
+            "items": []
+        });
+
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Bash".to_string()),
+            tool_input: Some(tool_input),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let rule = Rule {
+            name: "require-items".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: Some(vec!["Bash".to_string()]),
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: None,
+                require_fields: Some(vec!["items".to_string()]),
+                field_types: None,
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        assert!(validate_required_fields(&rule, &event));
+    }
+
+    #[test]
+    fn test_field_validation_any_type() {
+        // field_types with "any" should accept any non-null value
+        let tool_input = serde_json::json!({
+            "data": {"nested": "object"}
+        });
+
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Bash".to_string()),
+            tool_input: Some(tool_input),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let mut field_types = std::collections::HashMap::new();
+        field_types.insert("data".to_string(), "any".to_string());
+
+        let rule = Rule {
+            name: "data-any-type".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: Some(vec!["Bash".to_string()]),
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: None,
+                require_fields: None,
+                field_types: Some(field_types),
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        assert!(validate_required_fields(&rule, &event));
+    }
+
+    #[test]
+    fn test_field_validation_field_types_implies_existence() {
+        // Field in field_types but not require_fields should still be checked for existence
+        let tool_input = serde_json::json!({
+            "other_field": "value"
+        });
+
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Bash".to_string()),
+            tool_input: Some(tool_input),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let mut field_types = std::collections::HashMap::new();
+        field_types.insert("count".to_string(), "number".to_string());
+
+        let rule = Rule {
+            name: "count-must-exist-and-be-number".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: Some(vec!["Bash".to_string()]),
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: None,
+                require_fields: None, // NOT in require_fields
+                field_types: Some(field_types), // Only in field_types
+            },
+            actions: Actions {
+                inject: None,
+                inject_inline: None,
+                inject_command: None,
+                run: None,
+                block: Some(true),
+                block_if_match: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        // Should fail because 'count' is missing (field_types implies existence)
+        assert!(!validate_required_fields(&rule, &event));
     }
 }
