@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Core value:** LLMs do not enforce policy. LLMs are subject to policy.
-**Current focus:** v1.3 Advanced Matching & Validation - Phase 4 COMPLETE
+**Current focus:** v1.3 Advanced Matching & Validation - Phase 5 IN PROGRESS
 
 ## Current Position
 
-Phase: 4 of 6 (Prompt Matching) - COMPLETE
-Plan: 4 of 4 (all plans complete)
-Status: Phase complete
-Last activity: 2026-02-09 - Completed 04-04-PLAN.md (Comprehensive Tests)
+Phase: 5 of 6 (Field Validation)
+Plan: 1 of 2 (foundation complete)
+Status: In progress
+Last activity: 2026-02-09 - Completed 05-01-PLAN.md (Field Validation Foundation)
 
-Progress: ██████████████████░░ 75% (4 of 6 phases complete)
+Progress: ████████████████████ 83% (4 phases complete, phase 5 50% done)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10 (6 v1.2 + 4 v1.3)
-- Average duration: ~15min (Phase 4)
-- Total execution time: 61min (Phase 4)
+- Total plans completed: 11 (6 v1.2 + 5 v1.3)
+- Average duration: ~13min (Phases 4-5)
+- Total execution time: 69min (Phase 4: 61min, Phase 5: 8min so far)
 
 **By Phase:**
 
@@ -31,12 +31,13 @@ Progress: ██████████████████░░ 75% (4 of
 | 2. Command-Based Context | 2 | - | - |
 | 3. Conditional Rule Activation | 3 | - | - |
 | 4. Prompt Matching | 4/4 | 61min | 15min |
+| 5. Field Validation | 1/2 | 8min | 8min |
 
 **Recent Trend:**
-- v1.3 Phase 4 Plan 1 complete (15 min)
 - v1.3 Phase 4 Plan 2 complete (18 min)
 - v1.3 Phase 4 Plan 3 complete (10 min)
 - v1.3 Phase 4 Plan 4 complete (18 min)
+- v1.3 Phase 5 Plan 1 complete (8 min)
 
 ## Accumulated Context
 
@@ -59,6 +60,10 @@ Recent decisions affecting v1.3 work:
 - [v1.3-04-03]: Validate patterns after shorthand expansion and anchor application
 - [v1.3-04-03]: Include original pattern and expanded pattern in error messages
 - [v1.3-04-04]: Integration tests follow OQ (Operational Qualification) pattern
+- [v1.3-05-01]: Dot notation for field paths (user-friendly) with RFC 6901 JSON Pointer conversion
+- [v1.3-05-01]: Validate field paths at config load time (fail-fast pattern)
+- [v1.3-05-01]: Type specifiers whitelist: string, number, boolean, array, object, any
+- [v1.3-05-01]: field_types implicitly requires field existence
 
 ### v1.3 Research Findings
 
@@ -92,9 +97,9 @@ None yet for v1.3.
 
 Decision needed before Phase 6 planning.
 
-## Test Coverage Summary (Phase 4)
+## Test Coverage Summary
 
-Phase 4 added 70+ new tests covering all PROMPT requirements:
+Phase 4 added 70+ tests, Phase 5 Plan 1 added 16 tests:
 
 | Requirement | Description | Covered By |
 |-------------|-------------|------------|
@@ -103,13 +108,15 @@ Phase 4 added 70+ new tests covering all PROMPT requirements:
 | PROMPT-03 | Multiple patterns with any/all | Unit + Integration tests |
 | PROMPT-04 | Anchor positions | Unit + Integration tests |
 | PROMPT-05 | Prompt in evalexpr context | Unit + Integration tests |
+| FIELD-01 | Field path validation | Unit tests (11 tests) |
+| FIELD-02 | dot_to_pointer conversion | Unit tests (5 tests) |
 
-Total tests: 407 (up from 285)
+Total tests: 418 (Phase 4: 407, Phase 5 Plan 1: +11)
 
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 04-04-PLAN.md (Comprehensive Tests) - Phase 4 COMPLETE
+Stopped at: Completed 05-01-PLAN.md (Field Validation Foundation)
 Resume file: None
 
-Next action: Begin Phase 5 (Require Fields) or Phase 6 (Inline Scripts)
+Next action: Execute 05-02-PLAN.md (Field Matching Logic) to complete Phase 5
