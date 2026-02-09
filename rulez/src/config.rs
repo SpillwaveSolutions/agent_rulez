@@ -522,4 +522,204 @@ mod tests {
 
         assert!(config.validate().is_ok());
     }
+
+    // =========================================================================
+    // Phase 4: prompt_match Validation Tests
+    // =========================================================================
+
+    #[test]
+    fn test_prompt_match_valid_simple_array() {
+        let config = Config {
+            version: "1.0".to_string(),
+            rules: vec![Rule {
+                name: "valid-prompt".to_string(),
+                description: None,
+                enabled_when: None,
+                matchers: crate::models::Matchers {
+                    tools: None,
+                    extensions: None,
+                    directories: None,
+                    operations: Some(vec!["UserPromptSubmit".to_string()]),
+                    command_match: None,
+                    prompt_match: Some(crate::models::PromptMatch::Simple(vec![
+                        "delete".to_string(),
+                        "drop database".to_string(),
+                    ])),
+                },
+                actions: crate::models::Actions {
+                    inject: None,
+                    inject_inline: None,
+                    inject_command: None,
+                    run: None,
+                    block: Some(true),
+                    block_if_match: None,
+                },
+                mode: None,
+                priority: None,
+                governance: None,
+                metadata: None,
+            }],
+            settings: Settings::default(),
+        };
+
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn test_prompt_match_valid_complex_object() {
+        let config = Config {
+            version: "1.0".to_string(),
+            rules: vec![Rule {
+                name: "valid-prompt-complex".to_string(),
+                description: None,
+                enabled_when: None,
+                matchers: crate::models::Matchers {
+                    tools: None,
+                    extensions: None,
+                    directories: None,
+                    operations: Some(vec!["UserPromptSubmit".to_string()]),
+                    command_match: None,
+                    prompt_match: Some(crate::models::PromptMatch::Complex {
+                        patterns: vec!["test".to_string(), "staging".to_string()],
+                        mode: crate::models::MatchMode::All,
+                        case_insensitive: true,
+                        anchor: Some(crate::models::Anchor::Contains),
+                    }),
+                },
+                actions: crate::models::Actions {
+                    inject: None,
+                    inject_inline: None,
+                    inject_command: None,
+                    run: None,
+                    block: Some(true),
+                    block_if_match: None,
+                },
+                mode: None,
+                priority: None,
+                governance: None,
+                metadata: None,
+            }],
+            settings: Settings::default(),
+        };
+
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn test_prompt_match_empty_patterns_rejected() {
+        let config = Config {
+            version: "1.0".to_string(),
+            rules: vec![Rule {
+                name: "empty-patterns".to_string(),
+                description: None,
+                enabled_when: None,
+                matchers: crate::models::Matchers {
+                    tools: None,
+                    extensions: None,
+                    directories: None,
+                    operations: None,
+                    command_match: None,
+                    prompt_match: Some(crate::models::PromptMatch::Simple(vec![])),
+                },
+                actions: crate::models::Actions {
+                    inject: None,
+                    inject_inline: None,
+                    inject_command: None,
+                    run: None,
+                    block: Some(true),
+                    block_if_match: None,
+                },
+                mode: None,
+                priority: None,
+                governance: None,
+                metadata: None,
+            }],
+            settings: Settings::default(),
+        };
+
+        let result = config.validate();
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("Empty patterns"));
+        assert!(err_msg.contains("empty-patterns"));
+    }
+
+    #[test]
+    fn test_prompt_match_invalid_regex_rejected() {
+        let config = Config {
+            version: "1.0".to_string(),
+            rules: vec![Rule {
+                name: "invalid-regex".to_string(),
+                description: None,
+                enabled_when: None,
+                matchers: crate::models::Matchers {
+                    tools: None,
+                    extensions: None,
+                    directories: None,
+                    operations: None,
+                    command_match: None,
+                    prompt_match: Some(crate::models::PromptMatch::Simple(vec![
+                        "[invalid(regex".to_string(), // Unclosed brackets
+                    ])),
+                },
+                actions: crate::models::Actions {
+                    inject: None,
+                    inject_inline: None,
+                    inject_command: None,
+                    run: None,
+                    block: Some(true),
+                    block_if_match: None,
+                },
+                mode: None,
+                priority: None,
+                governance: None,
+                metadata: None,
+            }],
+            settings: Settings::default(),
+        };
+
+        let result = config.validate();
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("Invalid regex pattern"));
+        assert!(err_msg.contains("invalid-regex"));
+    }
+
+    #[test]
+    fn test_prompt_match_shorthand_valid() {
+        let config = Config {
+            version: "1.0".to_string(),
+            rules: vec![Rule {
+                name: "shorthand-valid".to_string(),
+                description: None,
+                enabled_when: None,
+                matchers: crate::models::Matchers {
+                    tools: None,
+                    extensions: None,
+                    directories: None,
+                    operations: None,
+                    command_match: None,
+                    prompt_match: Some(crate::models::PromptMatch::Simple(vec![
+                        "contains_word:delete".to_string(),
+                        "not:review".to_string(),
+                    ])),
+                },
+                actions: crate::models::Actions {
+                    inject: None,
+                    inject_inline: None,
+                    inject_command: None,
+                    run: None,
+                    block: Some(true),
+                    block_if_match: None,
+                },
+                mode: None,
+                priority: None,
+                governance: None,
+                metadata: None,
+            }],
+            settings: Settings::default(),
+        };
+
+        assert!(config.validate().is_ok());
+    }
 }
