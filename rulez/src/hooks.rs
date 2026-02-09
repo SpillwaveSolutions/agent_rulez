@@ -979,6 +979,7 @@ mod tests {
             cwd: None,
             permission_mode: None,
             tool_use_id: None,
+            prompt: None,
         };
 
         let rule = Rule {
@@ -991,6 +992,7 @@ mod tests {
                 extensions: None,
                 directories: None,
                 operations: None,
+                prompt_match: None,
             },
             actions: Actions {
                 block: Some(true),
@@ -1024,6 +1026,7 @@ mod tests {
             cwd: None,
             permission_mode: None,
             tool_use_id: None,
+            prompt: None,
         };
 
         let rule = Rule {
@@ -1036,6 +1039,7 @@ mod tests {
                 extensions: None,
                 directories: None,
                 operations: None,
+                prompt_match: None,
             },
             actions: Actions {
                 block: Some(true),
@@ -1087,6 +1091,7 @@ mod tests {
             cwd: None,
             permission_mode: None,
             tool_use_id: None,
+            prompt: None,
         };
 
         let rule = Rule {
@@ -1099,6 +1104,7 @@ mod tests {
                 directories: None,
                 operations: None,
                 command_match: None,
+                prompt_match: None,
             },
             actions: Actions {
                 inject: None,
@@ -1132,6 +1138,7 @@ mod tests {
             cwd: None,
             permission_mode: None,
             tool_use_id: None,
+            prompt: None,
         };
 
         let rule = Rule {
@@ -1145,6 +1152,7 @@ mod tests {
                 directories: None,
                 operations: None,
                 command_match: None,
+                prompt_match: None,
             },
             actions: Actions {
                 inject: None,
@@ -1178,6 +1186,7 @@ mod tests {
             cwd: None,
             permission_mode: None,
             tool_use_id: None,
+            prompt: None,
         };
 
         let rule = Rule {
@@ -1192,6 +1201,7 @@ mod tests {
                 directories: None,
                 operations: None,
                 command_match: None,
+                prompt_match: None,
             },
             actions: Actions {
                 inject: None,
@@ -1223,6 +1233,7 @@ mod tests {
             cwd: None,
             permission_mode: None,
             tool_use_id: None,
+            prompt: None,
         };
 
         let rule = Rule {
@@ -1235,6 +1246,7 @@ mod tests {
                 directories: None,
                 operations: None,
                 command_match: None,
+                prompt_match: None,
             },
             actions: Actions {
                 inject: None,
@@ -1267,6 +1279,7 @@ mod tests {
             cwd: None,
             permission_mode: None,
             tool_use_id: None,
+            prompt: None,
         };
 
         let rule = Rule {
@@ -1279,6 +1292,7 @@ mod tests {
                 directories: None,
                 operations: None,
                 command_match: None,
+                prompt_match: None,
             },
             actions: Actions {
                 inject: None,
@@ -1307,6 +1321,7 @@ mod tests {
                 directories: None,
                 operations: None,
                 command_match: None,
+                prompt_match: None,
             },
             actions: Actions {
                 inject: None,
@@ -1392,6 +1407,7 @@ mod tests {
                 directories: None,
                 operations: None,
                 command_match: None,
+                prompt_match: None,
             },
             actions: Actions {
                 inject: None,
@@ -1421,6 +1437,7 @@ mod tests {
                 directories: None,
                 operations: None,
                 command_match: None,
+                prompt_match: None,
             },
             actions: Actions {
                 inject: None,
@@ -1453,6 +1470,7 @@ mod tests {
                 directories: None,
                 operations: None,
                 command_match: None,
+                prompt_match: None,
             },
             actions: Actions {
                 inject: None,

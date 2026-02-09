@@ -156,6 +156,7 @@ fn build_event(
         cwd: None,
         permission_mode: None,
         tool_use_id: None,
+        prompt: None,
     }
 }
 

@@ -202,6 +202,7 @@ mod tests {
                     directories: None,
                     operations: None,
                     command_match: None,
+                    prompt_match: None,
                 },
                 actions: crate::models::Actions {
                     inject: None,
@@ -241,6 +242,7 @@ mod tests {
                         directories: None,
                         operations: None,
                         command_match: None,
+                        prompt_match: None,
                     },
                     actions: crate::models::Actions {
                         inject: None,
@@ -265,6 +267,7 @@ mod tests {
                         directories: None,
                         operations: None,
                         command_match: None,
+                        prompt_match: None,
                     },
                     actions: crate::models::Actions {
                         inject: None,
@@ -301,6 +304,7 @@ mod tests {
                         directories: None,
                         operations: None,
                         command_match: None,
+                        prompt_match: None,
                     },
                     actions: crate::models::Actions {
                         inject: None,
@@ -329,6 +333,7 @@ mod tests {
                         directories: None,
                         operations: None,
                         command_match: None,
+                        prompt_match: None,
                     },
                     actions: crate::models::Actions {
                         inject: None,
@@ -375,6 +380,7 @@ mod tests {
                     directories: None,
                     operations: None,
                     command_match: None,
+                    prompt_match: None,
                 },
                 actions: crate::models::Actions {
                     inject: None,
@@ -410,6 +416,7 @@ mod tests {
                     directories: None,
                     operations: None,
                     command_match: None,
+                    prompt_match: None,
                 },
                 actions: crate::models::Actions {
                     inject: None,
@@ -458,6 +465,7 @@ mod tests {
                     directories: None,
                     operations: None,
                     command_match: None,
+                    prompt_match: None,
                 },
                 actions: crate::models::Actions {
                     inject: None,

@@ -414,6 +414,10 @@ pub struct Matchers {
     /// Regex pattern for command matching
     #[serde(skip_serializing_if = "Option::is_none")]
     pub command_match: Option<String>,
+
+    /// Prompt text pattern matching for UserPromptSubmit events
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prompt_match: Option<PromptMatch>,
 }
 
 /// Actions to take when rule matches
@@ -785,6 +789,7 @@ reason: Code quality
                 directories: None,
                 operations: None,
                 command_match: None,
+                prompt_match: None,
             },
             actions: Actions {
                 inject: None,
@@ -814,6 +819,7 @@ reason: Code quality
                 directories: None,
                 operations: None,
                 command_match: None,
+                prompt_match: None,
             },
             actions: Actions {
                 inject: None,
@@ -843,6 +849,7 @@ reason: Code quality
                 directories: None,
                 operations: None,
                 command_match: None,
+                prompt_match: None,
             },
             actions: Actions {
                 inject: None,
@@ -872,6 +879,7 @@ reason: Code quality
                 directories: None,
                 operations: None,
                 command_match: None,
+                prompt_match: None,
             },
             actions: Actions {
                 inject: None,
@@ -901,6 +909,7 @@ reason: Code quality
                 directories: None,
                 operations: None,
                 command_match: None,
+                prompt_match: None,
             },
             actions: Actions {
                 inject: None,
@@ -934,6 +943,7 @@ reason: Code quality
                 directories: None,
                 operations: None,
                 command_match: None,
+                prompt_match: None,
             },
             actions: Actions {
                 inject: None,
@@ -1021,6 +1031,7 @@ reason: Code quality
                 directories: None,
                 operations: None,
                 command_match: None,
+                prompt_match: None,
             },
             actions: Actions {
                 inject: None,
@@ -1345,6 +1356,7 @@ mod event_details_tests {
             cwd: None,
             permission_mode: None,
             tool_use_id: None,
+            prompt: None,
         };
 
         let details = EventDetails::extract(&event);
@@ -1366,6 +1378,7 @@ mod event_details_tests {
             cwd: None,
             permission_mode: None,
             tool_use_id: None,
+            prompt: None,
         };
 
         let details = EventDetails::extract(&event);
@@ -1389,6 +1402,7 @@ mod event_details_tests {
             cwd: None,
             permission_mode: None,
             tool_use_id: None,
+            prompt: None,
         };
 
         let details = EventDetails::extract(&event);
@@ -1412,6 +1426,7 @@ mod event_details_tests {
             cwd: None,
             permission_mode: None,
             tool_use_id: None,
+            prompt: None,
         };
 
         let details = EventDetails::extract(&event);
@@ -1435,6 +1450,7 @@ mod event_details_tests {
             cwd: None,
             permission_mode: None,
             tool_use_id: None,
+            prompt: None,
         };
 
         let details = EventDetails::extract(&event);
@@ -1459,6 +1475,7 @@ mod event_details_tests {
             cwd: None,
             permission_mode: None,
             tool_use_id: None,
+            prompt: None,
         };
 
         let details = EventDetails::extract(&event);
@@ -1482,6 +1499,7 @@ mod event_details_tests {
             cwd: None,
             permission_mode: None,
             tool_use_id: None,
+            prompt: None,
         };
 
         let details = EventDetails::extract(&event);
@@ -1507,6 +1525,7 @@ mod event_details_tests {
             cwd: None,
             permission_mode: None,
             tool_use_id: None,
+            prompt: None,
         };
 
         let details = EventDetails::extract(&event);
@@ -1532,6 +1551,7 @@ mod event_details_tests {
             cwd: None,
             permission_mode: None,
             tool_use_id: None,
+            prompt: None,
         };
 
         let details = EventDetails::extract(&event);
@@ -1623,6 +1643,10 @@ pub struct Event {
     /// Tool use ID (sent by Claude Code)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tool_use_id: Option<String>,
+
+    /// User prompt text (sent by Claude Code on UserPromptSubmit events)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prompt: Option<String>,
 }
 
 /// Supported hook event types
