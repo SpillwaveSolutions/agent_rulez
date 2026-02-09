@@ -1471,6 +1471,418 @@ actions:
     }
 }
 
+// =============================================================================
+// Phase 4 Plan 4: Comprehensive PromptMatch Tests (PROMPT-01 through PROMPT-05)
+// =============================================================================
+
+#[cfg(test)]
+mod prompt_match_tests {
+    use super::*;
+
+    // =========================================================================
+    // PromptMatch Deserialization Tests (PROMPT-01)
+    // =========================================================================
+
+    #[test]
+    fn test_prompt_match_simple_array_deserialization() {
+        // Simple array syntax: ["pattern1", "pattern2"]
+        let json = r#"["delete", "drop"]"#;
+        let pm: PromptMatch = serde_json::from_str(json).unwrap();
+
+        match pm {
+            PromptMatch::Simple(patterns) => {
+                assert_eq!(patterns, vec!["delete".to_string(), "drop".to_string()]);
+            }
+            _ => panic!("Expected Simple variant"),
+        }
+    }
+
+    #[test]
+    fn test_prompt_match_complex_object_deserialization() {
+        // Complex object syntax with all fields
+        let yaml = r#"
+patterns: ["secret", "password"]
+mode: all
+case_insensitive: true
+anchor: start
+"#;
+        let pm: PromptMatch = serde_yaml::from_str(yaml).unwrap();
+
+        match pm {
+            PromptMatch::Complex { patterns, mode, case_insensitive, anchor } => {
+                assert_eq!(patterns, vec!["secret".to_string(), "password".to_string()]);
+                assert_eq!(mode, MatchMode::All);
+                assert!(case_insensitive);
+                assert_eq!(anchor, Some(Anchor::Start));
+            }
+            _ => panic!("Expected Complex variant"),
+        }
+    }
+
+    #[test]
+    fn test_prompt_match_complex_with_defaults() {
+        // Complex syntax with only patterns (defaults apply)
+        let yaml = r#"
+patterns: ["test"]
+"#;
+        let pm: PromptMatch = serde_yaml::from_str(yaml).unwrap();
+
+        match pm {
+            PromptMatch::Complex { patterns, mode, case_insensitive, anchor } => {
+                assert_eq!(patterns, vec!["test".to_string()]);
+                assert_eq!(mode, MatchMode::Any); // default
+                assert!(!case_insensitive); // default false
+                assert_eq!(anchor, None); // default None
+            }
+            _ => panic!("Expected Complex variant"),
+        }
+    }
+
+    #[test]
+    fn test_prompt_match_serialization_roundtrip() {
+        // Test that serialization and deserialization are consistent
+        let original = PromptMatch::Complex {
+            patterns: vec!["test".to_string()],
+            mode: MatchMode::All,
+            case_insensitive: true,
+            anchor: Some(Anchor::End),
+        };
+
+        let json = serde_json::to_string(&original).unwrap();
+        let deserialized: PromptMatch = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(original, deserialized);
+    }
+
+    // =========================================================================
+    // Helper Method Tests
+    // =========================================================================
+
+    #[test]
+    fn test_prompt_match_patterns_accessor_simple() {
+        let pm = PromptMatch::Simple(vec!["a".to_string(), "b".to_string()]);
+        assert_eq!(pm.patterns(), &["a".to_string(), "b".to_string()]);
+    }
+
+    #[test]
+    fn test_prompt_match_patterns_accessor_complex() {
+        let pm = PromptMatch::Complex {
+            patterns: vec!["x".to_string(), "y".to_string()],
+            mode: MatchMode::Any,
+            case_insensitive: false,
+            anchor: None,
+        };
+        assert_eq!(pm.patterns(), &["x".to_string(), "y".to_string()]);
+    }
+
+    #[test]
+    fn test_prompt_match_mode_accessor_simple() {
+        let pm = PromptMatch::Simple(vec!["test".to_string()]);
+        assert_eq!(pm.mode(), MatchMode::Any); // Simple always uses Any
+    }
+
+    #[test]
+    fn test_prompt_match_mode_accessor_complex() {
+        let pm = PromptMatch::Complex {
+            patterns: vec!["test".to_string()],
+            mode: MatchMode::All,
+            case_insensitive: false,
+            anchor: None,
+        };
+        assert_eq!(pm.mode(), MatchMode::All);
+    }
+
+    #[test]
+    fn test_prompt_match_case_insensitive_accessor_simple() {
+        let pm = PromptMatch::Simple(vec!["test".to_string()]);
+        assert!(!pm.case_insensitive()); // Simple always case-sensitive
+    }
+
+    #[test]
+    fn test_prompt_match_case_insensitive_accessor_complex() {
+        let pm = PromptMatch::Complex {
+            patterns: vec!["test".to_string()],
+            mode: MatchMode::Any,
+            case_insensitive: true,
+            anchor: None,
+        };
+        assert!(pm.case_insensitive());
+    }
+
+    #[test]
+    fn test_prompt_match_anchor_accessor_simple() {
+        let pm = PromptMatch::Simple(vec!["test".to_string()]);
+        assert_eq!(pm.anchor(), None); // Simple has no anchor
+    }
+
+    #[test]
+    fn test_prompt_match_anchor_accessor_complex() {
+        let pm = PromptMatch::Complex {
+            patterns: vec!["test".to_string()],
+            mode: MatchMode::Any,
+            case_insensitive: false,
+            anchor: Some(Anchor::Start),
+        };
+        assert_eq!(pm.anchor(), Some(Anchor::Start));
+    }
+
+    // =========================================================================
+    // Pattern Expansion Tests (contains_word shorthand)
+    // =========================================================================
+
+    #[test]
+    fn test_expand_pattern_contains_word_simple() {
+        let expanded = PromptMatch::expand_pattern("contains_word:delete");
+        assert_eq!(expanded, r"\bdelete\b");
+    }
+
+    #[test]
+    fn test_expand_pattern_contains_word_with_whitespace() {
+        let expanded = PromptMatch::expand_pattern("contains_word: foo ");
+        assert_eq!(expanded, r"\bfoo\b");
+    }
+
+    #[test]
+    fn test_expand_pattern_contains_word_escapes_special() {
+        // Special regex characters should be escaped in the word
+        let expanded = PromptMatch::expand_pattern("contains_word:foo.bar");
+        assert_eq!(expanded, r"\bfoo\.bar\b");
+    }
+
+    #[test]
+    fn test_expand_pattern_passthrough_regex() {
+        // Non-shorthand patterns pass through unchanged
+        let expanded = PromptMatch::expand_pattern(".*force.*");
+        assert_eq!(expanded, ".*force.*");
+    }
+
+    #[test]
+    fn test_expand_pattern_passthrough_simple() {
+        let expanded = PromptMatch::expand_pattern("simple text");
+        assert_eq!(expanded, "simple text");
+    }
+
+    // =========================================================================
+    // Anchor Application Tests (PROMPT-04)
+    // =========================================================================
+
+    #[test]
+    fn test_apply_anchor_start() {
+        let anchored = PromptMatch::apply_anchor("test", Some(Anchor::Start));
+        assert_eq!(anchored, "^test");
+    }
+
+    #[test]
+    fn test_apply_anchor_end() {
+        let anchored = PromptMatch::apply_anchor("test", Some(Anchor::End));
+        assert_eq!(anchored, "test$");
+    }
+
+    #[test]
+    fn test_apply_anchor_contains() {
+        let anchored = PromptMatch::apply_anchor("test", Some(Anchor::Contains));
+        assert_eq!(anchored, "test"); // No change
+    }
+
+    #[test]
+    fn test_apply_anchor_none() {
+        let anchored = PromptMatch::apply_anchor("test", None);
+        assert_eq!(anchored, "test"); // No change
+    }
+
+    #[test]
+    fn test_apply_anchor_preserves_complex_pattern() {
+        let anchored = PromptMatch::apply_anchor(r"\bdelete\b", Some(Anchor::Start));
+        assert_eq!(anchored, r"^\bdelete\b");
+    }
+
+    // =========================================================================
+    // MatchMode Tests
+    // =========================================================================
+
+    #[test]
+    fn test_match_mode_default_is_any() {
+        assert_eq!(MatchMode::default(), MatchMode::Any);
+    }
+
+    #[test]
+    fn test_match_mode_serialize() {
+        assert_eq!(serde_json::to_string(&MatchMode::Any).unwrap(), r#""any""#);
+        assert_eq!(serde_json::to_string(&MatchMode::All).unwrap(), r#""all""#);
+    }
+
+    #[test]
+    fn test_match_mode_deserialize() {
+        let any: MatchMode = serde_json::from_str(r#""any""#).unwrap();
+        let all: MatchMode = serde_json::from_str(r#""all""#).unwrap();
+        assert_eq!(any, MatchMode::Any);
+        assert_eq!(all, MatchMode::All);
+    }
+
+    // =========================================================================
+    // Anchor Enum Tests
+    // =========================================================================
+
+    #[test]
+    fn test_anchor_serialize() {
+        assert_eq!(serde_json::to_string(&Anchor::Start).unwrap(), r#""start""#);
+        assert_eq!(serde_json::to_string(&Anchor::End).unwrap(), r#""end""#);
+        assert_eq!(serde_json::to_string(&Anchor::Contains).unwrap(), r#""contains""#);
+    }
+
+    #[test]
+    fn test_anchor_deserialize() {
+        let start: Anchor = serde_json::from_str(r#""start""#).unwrap();
+        let end: Anchor = serde_json::from_str(r#""end""#).unwrap();
+        let contains: Anchor = serde_json::from_str(r#""contains""#).unwrap();
+        assert_eq!(start, Anchor::Start);
+        assert_eq!(end, Anchor::End);
+        assert_eq!(contains, Anchor::Contains);
+    }
+
+    // =========================================================================
+    // Full Rule YAML Parsing with prompt_match
+    // =========================================================================
+
+    #[test]
+    fn test_rule_yaml_with_simple_prompt_match() {
+        let yaml = r#"
+name: block-dangerous-prompts
+description: Block prompts with dangerous keywords
+matchers:
+  prompt_match: ["delete", "drop", "rm -rf"]
+actions:
+  block: true
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+
+        assert_eq!(rule.name, "block-dangerous-prompts");
+        assert!(rule.matchers.prompt_match.is_some());
+        let pm = rule.matchers.prompt_match.unwrap();
+        assert_eq!(pm.patterns().len(), 3);
+        assert_eq!(pm.mode(), MatchMode::Any);
+    }
+
+    #[test]
+    fn test_rule_yaml_with_complex_prompt_match() {
+        let yaml = r#"
+name: block-credential-prompts
+description: Block prompts containing credential patterns
+matchers:
+  prompt_match:
+    patterns: ["password", "secret", "api_key"]
+    mode: any
+    case_insensitive: true
+    anchor: contains
+actions:
+  block: true
+mode: warn
+priority: 100
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+
+        assert_eq!(rule.name, "block-credential-prompts");
+        assert_eq!(rule.effective_mode(), PolicyMode::Warn);
+        assert_eq!(rule.effective_priority(), 100);
+        let pm = rule.matchers.prompt_match.unwrap();
+        assert_eq!(pm.patterns().len(), 3);
+        assert_eq!(pm.mode(), MatchMode::Any);
+        assert!(pm.case_insensitive());
+        assert_eq!(pm.anchor(), Some(Anchor::Contains));
+    }
+
+    #[test]
+    fn test_rule_yaml_with_all_mode_prompt_match() {
+        let yaml = r#"
+name: require-both-keywords
+matchers:
+  prompt_match:
+    patterns: ["database", "production"]
+    mode: all
+actions:
+  inject_inline: "Warning: Production database operation"
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+
+        let pm = rule.matchers.prompt_match.unwrap();
+        assert_eq!(pm.mode(), MatchMode::All);
+    }
+
+    #[test]
+    fn test_rule_yaml_with_anchor_prompt_match() {
+        let yaml = r#"
+name: starts-with-please
+matchers:
+  prompt_match:
+    patterns: ["please"]
+    anchor: start
+actions:
+  inject_inline: "Polite request detected"
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+
+        let pm = rule.matchers.prompt_match.unwrap();
+        assert_eq!(pm.anchor(), Some(Anchor::Start));
+    }
+
+    #[test]
+    fn test_rule_yaml_prompt_match_with_other_matchers() {
+        // prompt_match can be combined with other matchers
+        let yaml = r#"
+name: combined-matchers
+matchers:
+  tools: ["Bash"]
+  prompt_match: ["sudo"]
+actions:
+  block: true
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+
+        assert!(rule.matchers.tools.is_some());
+        assert!(rule.matchers.prompt_match.is_some());
+    }
+
+    #[test]
+    fn test_rule_yaml_prompt_match_with_enabled_when() {
+        // prompt_match works with enabled_when (Phase 3 + Phase 4 combination)
+        let yaml = r#"
+name: ci-prompt-check
+enabled_when: 'env_CI == "true"'
+matchers:
+  prompt_match: ["deploy"]
+actions:
+  inject_inline: "CI deployment detected"
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+
+        assert!(rule.enabled_when.is_some());
+        assert!(rule.matchers.prompt_match.is_some());
+    }
+
+    // =========================================================================
+    // Edge Cases and Error Handling
+    // =========================================================================
+
+    #[test]
+    fn test_prompt_match_empty_patterns_simple() {
+        let pm = PromptMatch::Simple(vec![]);
+        assert!(pm.patterns().is_empty());
+    }
+
+    #[test]
+    fn test_prompt_match_single_pattern() {
+        let pm = PromptMatch::Simple(vec!["only-one".to_string()]);
+        assert_eq!(pm.patterns().len(), 1);
+    }
+
+    #[test]
+    fn test_prompt_match_contains_word_edge_empty() {
+        // Edge case: contains_word with empty word after colon
+        let expanded = PromptMatch::expand_pattern("contains_word:");
+        assert_eq!(expanded, r"\b\b"); // Empty word boundary (regex will still work)
+    }
+}
+
 #[cfg(test)]
 mod event_details_tests {
     use super::*;
