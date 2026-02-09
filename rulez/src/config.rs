@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 
-use crate::models::Rule;
+use crate::models::{PromptMatch, Rule};
 
 /// Global CCH settings
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -147,6 +147,43 @@ impl Config {
                         expr, rule.name
                     )
                 })?;
+            }
+
+            // Validate prompt_match patterns
+            if let Some(ref prompt_match) = rule.matchers.prompt_match {
+                let patterns = prompt_match.patterns();
+
+                // Reject empty patterns array
+                if patterns.is_empty() {
+                    return Err(anyhow::anyhow!(
+                        "Empty patterns array in prompt_match for rule '{}'",
+                        rule.name
+                    ));
+                }
+
+                // Validate each pattern is a valid regex
+                for pattern in patterns {
+                    // Extract actual pattern (handle negation and shorthands)
+                    let effective_pattern = if let Some(inner) = pattern.strip_prefix("not:") {
+                        inner.trim().to_string()
+                    } else {
+                        pattern.clone()
+                    };
+
+                    // Expand shorthands before validation
+                    let expanded = PromptMatch::expand_pattern(&effective_pattern);
+
+                    // Apply anchor for full pattern validation
+                    let anchored = PromptMatch::apply_anchor(&expanded, prompt_match.anchor());
+
+                    // Validate regex compiles
+                    if let Err(e) = regex::Regex::new(&anchored) {
+                        return Err(anyhow::anyhow!(
+                            "Invalid regex pattern '{}' (expanded to '{}') in prompt_match for rule '{}': {}",
+                            pattern, anchored, rule.name, e
+                        ));
+                    }
+                }
             }
         }
 
