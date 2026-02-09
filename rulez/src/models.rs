@@ -214,8 +214,7 @@ impl PromptMatch {
     /// Get patterns regardless of variant
     pub fn patterns(&self) -> &[String] {
         match self {
-            PromptMatch::Simple(patterns) => patterns,
-            PromptMatch::Complex { patterns, .. } => patterns,
+            PromptMatch::Simple(patterns) | PromptMatch::Complex { patterns, .. } => patterns,
         }
     }
 
@@ -1117,29 +1116,29 @@ metadata:
     #[test]
     fn test_inject_inline_literal_block() {
         // Tests YAML literal block style (|) which preserves newlines
-        let yaml = r#"
+        let yaml = r"
 inject_inline: |
   ## Production Warning
   You are editing production files.
   Be extra careful.
-"#;
+";
         let actions: Actions = serde_yaml::from_str(yaml).unwrap();
 
         assert!(actions.inject_inline.is_some());
         let content = actions.inject_inline.unwrap();
         assert!(content.contains("## Production Warning"));
-        assert!(content.contains("\n")); // Literal block preserves newlines
+        assert!(content.contains('\n')); // Literal block preserves newlines
         assert!(content.contains("Be extra careful"));
     }
 
     #[test]
     fn test_inject_inline_folded_block() {
         // Tests YAML folded block style (>) which folds newlines into spaces
-        let yaml = r#"
+        let yaml = r"
 inject_inline: >
   This is a long paragraph that
   will be folded into a single line.
-"#;
+";
         let actions: Actions = serde_yaml::from_str(yaml).unwrap();
 
         assert!(actions.inject_inline.is_some());
@@ -1287,13 +1286,13 @@ actions:
     #[test]
     fn test_enabled_when_none_by_default() {
         // Tests that enabled_when is None when not specified
-        let yaml = r#"
+        let yaml = r"
 name: no-condition
 matchers:
   tools: [Bash]
 actions:
   block: true
-"#;
+";
         let rule: Rule = serde_yaml::from_str(yaml).unwrap();
         assert!(rule.enabled_when.is_none());
     }
@@ -1493,7 +1492,7 @@ mod prompt_match_tests {
             PromptMatch::Simple(patterns) => {
                 assert_eq!(patterns, vec!["delete".to_string(), "drop".to_string()]);
             }
-            _ => panic!("Expected Simple variant"),
+            PromptMatch::Complex { .. } => panic!("Expected Simple variant"),
         }
     }
 
@@ -1515,7 +1514,7 @@ anchor: start
                 assert!(case_insensitive);
                 assert_eq!(anchor, Some(Anchor::Start));
             }
-            _ => panic!("Expected Complex variant"),
+            PromptMatch::Simple(_) => panic!("Expected Complex variant"),
         }
     }
 
@@ -1534,7 +1533,7 @@ patterns: ["test"]
                 assert!(!case_insensitive); // default false
                 assert_eq!(anchor, None); // default None
             }
-            _ => panic!("Expected Complex variant"),
+            PromptMatch::Simple(_) => panic!("Expected Complex variant"),
         }
     }
 

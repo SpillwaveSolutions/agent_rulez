@@ -1,10 +1,9 @@
 use anyhow::{Context, Result};
 use evalexpr::{eval_boolean_with_context, ContextWithMutableVariables, DefaultNumericTypes, HashMapContext, Value};
-use once_cell::sync::Lazy;
 use regex::{Regex, RegexBuilder};
 use std::collections::HashMap;
 use std::path::Path;
-use std::sync::Mutex;
+use std::sync::{LazyLock, Mutex};
 
 use crate::models::{MatchMode, PromptMatch};
 use tokio::process::Command;
@@ -31,8 +30,8 @@ use crate::models::{
 /// patterns across all loaded rules. For typical configs this is <100 patterns.
 /// If this becomes a concern in long-running services with dynamic configs,
 /// consider adding LRU eviction or size caps in a future phase.
-static REGEX_CACHE: Lazy<Mutex<HashMap<String, Regex>>> =
-    Lazy::new(|| Mutex::new(HashMap::new()));
+static REGEX_CACHE: LazyLock<Mutex<HashMap<String, Regex>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
 
 /// Get or compile a regex pattern with caching
 fn get_or_compile_regex(pattern: &str, case_insensitive: bool) -> Result<Regex> {
@@ -73,14 +72,14 @@ fn get_or_compile_regex(pattern: &str, case_insensitive: bool) -> Result<Regex> 
 /// - Complex object syntax with mode, case_insensitive, anchor
 /// - Shorthand expansion (contains_word:, not:)
 /// - Negation patterns
-fn matches_prompt(prompt: &str, prompt_match: &PromptMatch) -> Result<bool> {
+fn matches_prompt(prompt: &str, prompt_match: &PromptMatch) -> bool {
     let patterns = prompt_match.patterns();
     let mode = prompt_match.mode();
     let case_insensitive = prompt_match.case_insensitive();
     let anchor = prompt_match.anchor();
 
     if patterns.is_empty() {
-        return Ok(false);
+        return false;
     }
 
     let mut results = Vec::with_capacity(patterns.len());
@@ -120,8 +119,8 @@ fn matches_prompt(prompt: &str, prompt_match: &PromptMatch) -> Result<bool> {
 
     // Apply match mode
     match mode {
-        MatchMode::Any => Ok(results.iter().any(|&r| r)),
-        MatchMode::All => Ok(results.iter().all(|&r| r)),
+        MatchMode::Any => results.iter().any(|&r| r),
+        MatchMode::All => results.iter().all(|&r| r),
     }
 }
 
@@ -239,7 +238,7 @@ fn build_eval_context(event: &Event) -> HashMapContext<DefaultNumericTypes> {
     // Add environment variables with env_ prefix
     for (key, value) in std::env::vars() {
         let var_name = format!("env_{}", key);
-        ctx.set_value(var_name.into(), Value::String(value)).ok();
+        ctx.set_value(var_name, Value::String(value)).ok();
     }
 
     // Add tool name (empty string if none)
@@ -418,16 +417,8 @@ fn matches_rule(event: &Event, rule: &Rule) -> bool {
     if let Some(ref prompt_match) = matchers.prompt_match {
         // If rule has prompt_match but event has no prompt, rule doesn't match
         if let Some(ref prompt_text) = event.prompt {
-            match matches_prompt(prompt_text, prompt_match) {
-                Ok(true) => { /* Pattern matched, continue checking other matchers */ }
-                Ok(false) => return false,
-                Err(e) => {
-                    tracing::warn!(
-                        "prompt_match evaluation failed: {} - treating as non-match",
-                        e
-                    );
-                    return false;
-                }
+            if !matches_prompt(prompt_text, prompt_match) {
+                return false;
             }
         } else {
             // No prompt field in event - rule doesn't match (safe default)
@@ -539,16 +530,7 @@ fn matches_rule_with_debug(event: &Event, rule: &Rule) -> (bool, Option<MatcherR
     if let Some(ref prompt_match) = matchers.prompt_match {
         matcher_results.prompt_match_matched = Some(
             if let Some(ref prompt_text) = event.prompt {
-                match matches_prompt(prompt_text, prompt_match) {
-                    Ok(matched) => matched,
-                    Err(e) => {
-                        tracing::warn!(
-                            "prompt_match evaluation failed in debug mode: {} - treating as non-match",
-                            e
-                        );
-                        false
-                    }
-                }
+                matches_prompt(prompt_text, prompt_match)
             } else {
                 false
             }
@@ -1353,7 +1335,7 @@ mod tests {
             description: None,
             // This non-existent var won't be in context, so comparison fails
             // Use a simple false expression instead
-            enabled_when: Some(r#"1 == 2"#.to_string()), // Always false
+            enabled_when: Some(r"1 == 2".to_string()), // Always false
             matchers: Matchers {
                 tools: None,
                 extensions: None,
@@ -1792,19 +1774,13 @@ mod tests {
         let pm = PromptMatch::Simple(vec!["delete".to_string(), "drop".to_string()]);
 
         // Should match - contains "delete"
-        let result = matches_prompt("please delete the file", &pm);
-        assert!(result.is_ok());
-        assert!(result.unwrap());
+        assert!(matches_prompt("please delete the file", &pm));
 
         // Should match - contains "drop"
-        let result = matches_prompt("drop table users", &pm);
-        assert!(result.is_ok());
-        assert!(result.unwrap());
+        assert!(matches_prompt("drop table users", &pm));
 
         // Should not match - neither pattern
-        let result = matches_prompt("create a new file", &pm);
-        assert!(result.is_ok());
-        assert!(!result.unwrap());
+        assert!(!matches_prompt("create a new file", &pm));
     }
 
     #[test]
@@ -1818,19 +1794,13 @@ mod tests {
         };
 
         // Should match - contains both
-        let result = matches_prompt("access the production database", &pm);
-        assert!(result.is_ok());
-        assert!(result.unwrap());
+        assert!(matches_prompt("access the production database", &pm));
 
         // Should not match - only one pattern
-        let result = matches_prompt("access the database", &pm);
-        assert!(result.is_ok());
-        assert!(!result.unwrap());
+        assert!(!matches_prompt("access the database", &pm));
 
         // Should not match - only one pattern
-        let result = matches_prompt("production server", &pm);
-        assert!(result.is_ok());
-        assert!(!result.unwrap());
+        assert!(!matches_prompt("production server", &pm));
     }
 
     #[test]
@@ -1844,17 +1814,9 @@ mod tests {
         };
 
         // Should match regardless of case
-        let result = matches_prompt("delete the file", &pm);
-        assert!(result.is_ok());
-        assert!(result.unwrap());
-
-        let result = matches_prompt("DELETE the file", &pm);
-        assert!(result.is_ok());
-        assert!(result.unwrap());
-
-        let result = matches_prompt("Delete the file", &pm);
-        assert!(result.is_ok());
-        assert!(result.unwrap());
+        assert!(matches_prompt("delete the file", &pm));
+        assert!(matches_prompt("DELETE the file", &pm));
+        assert!(matches_prompt("Delete the file", &pm));
     }
 
     #[test]
@@ -1863,14 +1825,10 @@ mod tests {
         let pm = PromptMatch::Simple(vec!["DELETE".to_string()]);
 
         // Should NOT match - case matters
-        let result = matches_prompt("delete the file", &pm);
-        assert!(result.is_ok());
-        assert!(!result.unwrap());
+        assert!(!matches_prompt("delete the file", &pm));
 
         // Should match - exact case
-        let result = matches_prompt("DELETE the file", &pm);
-        assert!(result.is_ok());
-        assert!(result.unwrap());
+        assert!(matches_prompt("DELETE the file", &pm));
     }
 
     #[test]
@@ -1884,14 +1842,10 @@ mod tests {
         };
 
         // Should match - starts with "please"
-        let result = matches_prompt("please delete the file", &pm);
-        assert!(result.is_ok());
-        assert!(result.unwrap());
+        assert!(matches_prompt("please delete the file", &pm));
 
         // Should not match - "please" not at start
-        let result = matches_prompt("could you please help", &pm);
-        assert!(result.is_ok());
-        assert!(!result.unwrap());
+        assert!(!matches_prompt("could you please help", &pm));
     }
 
     #[test]
@@ -1905,14 +1859,10 @@ mod tests {
         };
 
         // Should match - ends with "now"
-        let result = matches_prompt("do it now", &pm);
-        assert!(result.is_ok());
-        assert!(result.unwrap());
+        assert!(matches_prompt("do it now", &pm));
 
         // Should not match - "now" not at end
-        let result = matches_prompt("now is the time", &pm);
-        assert!(result.is_ok());
-        assert!(!result.unwrap());
+        assert!(!matches_prompt("now is the time", &pm));
     }
 
     #[test]
@@ -1921,19 +1871,13 @@ mod tests {
         let pm = PromptMatch::Simple(vec!["contains_word:delete".to_string()]);
 
         // Should match - "delete" as whole word
-        let result = matches_prompt("please delete the file", &pm);
-        assert!(result.is_ok());
-        assert!(result.unwrap());
+        assert!(matches_prompt("please delete the file", &pm));
 
         // Should not match - "delete" is part of "undelete"
-        let result = matches_prompt("undelete the file", &pm);
-        assert!(result.is_ok());
-        assert!(!result.unwrap());
+        assert!(!matches_prompt("undelete the file", &pm));
 
         // Should not match - "delete" is part of "deleted"
-        let result = matches_prompt("I deleted the file", &pm);
-        assert!(result.is_ok());
-        assert!(!result.unwrap());
+        assert!(!matches_prompt("I deleted the file", &pm));
     }
 
     #[test]
@@ -1942,14 +1886,10 @@ mod tests {
         let pm = PromptMatch::Simple(vec!["not:safe".to_string()]);
 
         // Should match - does NOT contain "safe"
-        let result = matches_prompt("delete the file", &pm);
-        assert!(result.is_ok());
-        assert!(result.unwrap());
+        assert!(matches_prompt("delete the file", &pm));
 
         // Should not match - contains "safe"
-        let result = matches_prompt("this is safe to run", &pm);
-        assert!(result.is_ok());
-        assert!(!result.unwrap());
+        assert!(!matches_prompt("this is safe to run", &pm));
     }
 
     #[test]
@@ -1963,14 +1903,10 @@ mod tests {
         };
 
         // Should match - contains "delete" AND does NOT contain "safe"
-        let result = matches_prompt("delete the dangerous file", &pm);
-        assert!(result.is_ok());
-        assert!(result.unwrap());
+        assert!(matches_prompt("delete the dangerous file", &pm));
 
         // Should not match - contains "delete" but also contains "safe"
-        let result = matches_prompt("safely delete the file", &pm);
-        assert!(result.is_ok());
-        assert!(!result.unwrap());
+        assert!(!matches_prompt("safely delete the file", &pm));
     }
 
     #[test]
@@ -1978,9 +1914,7 @@ mod tests {
         // Empty patterns should not match
         let pm = PromptMatch::Simple(vec![]);
 
-        let result = matches_prompt("any text here", &pm);
-        assert!(result.is_ok());
-        assert!(!result.unwrap());
+        assert!(!matches_prompt("any text here", &pm));
     }
 
     #[test]
@@ -1988,9 +1922,7 @@ mod tests {
         // Invalid regex should fail-closed (return false, not error)
         let pm = PromptMatch::Simple(vec!["[invalid".to_string()]);
 
-        let result = matches_prompt("test", &pm);
-        assert!(result.is_ok());
-        assert!(!result.unwrap()); // Fail-closed: invalid regex = no match
+        assert!(!matches_prompt("test", &pm)); // Fail-closed: invalid regex = no match
     }
 
     #[test]
@@ -1998,13 +1930,8 @@ mod tests {
         // Full regex patterns work
         let pm = PromptMatch::Simple(vec![r"rm\s+-rf".to_string()]);
 
-        let result = matches_prompt("please run rm -rf /tmp", &pm);
-        assert!(result.is_ok());
-        assert!(result.unwrap());
-
-        let result = matches_prompt("rm --recursive", &pm);
-        assert!(result.is_ok());
-        assert!(!result.unwrap());
+        assert!(matches_prompt("please run rm -rf /tmp", &pm));
+        assert!(!matches_prompt("rm --recursive", &pm));
     }
 
     // =========================================================================
