@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 ## Current Position
 
 Phase: 5 of 6 (Field Validation)
-Plan: 1 of 2 (foundation complete)
+Plan: 2 of 3 (matching logic complete)
 Status: In progress
-Last activity: 2026-02-09 - Completed 05-01-PLAN.md (Field Validation Foundation)
+Last activity: 2026-02-09 - Completed 05-02-PLAN.md (Field Matching Logic)
 
-Progress: ████████████████████ 83% (4 phases complete, phase 5 50% done)
+Progress: ████████████████████ 87% (4 phases complete, phase 5 67% done)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11 (6 v1.2 + 5 v1.3)
-- Average duration: ~13min (Phases 4-5)
-- Total execution time: 69min (Phase 4: 61min, Phase 5: 8min so far)
+- Total plans completed: 12 (6 v1.2 + 6 v1.3)
+- Average duration: ~11min (Phases 4-5)
+- Total execution time: 74min (Phase 4: 61min, Phase 5: 13min so far)
 
 **By Phase:**
 
@@ -31,13 +31,13 @@ Progress: ████████████████████ 83% (4 ph
 | 2. Command-Based Context | 2 | - | - |
 | 3. Conditional Rule Activation | 3 | - | - |
 | 4. Prompt Matching | 4/4 | 61min | 15min |
-| 5. Field Validation | 1/2 | 8min | 8min |
+| 5. Field Validation | 2/3 | 13min | 6.5min |
 
 **Recent Trend:**
-- v1.3 Phase 4 Plan 2 complete (18 min)
 - v1.3 Phase 4 Plan 3 complete (10 min)
 - v1.3 Phase 4 Plan 4 complete (18 min)
 - v1.3 Phase 5 Plan 1 complete (8 min)
+- v1.3 Phase 5 Plan 2 complete (5 min)
 
 ## Accumulated Context
 
@@ -64,6 +64,9 @@ Recent decisions affecting v1.3 work:
 - [v1.3-05-01]: Validate field paths at config load time (fail-fast pattern)
 - [v1.3-05-01]: Type specifiers whitelist: string, number, boolean, array, object, any
 - [v1.3-05-01]: field_types implicitly requires field existence
+- [Phase 05-field-validation]: Field validation as final matcher check (fail-closed on validation failure)
+- [Phase 05-field-validation]: Null values treated as missing in field validation
+- [Phase 05-field-validation]: Error accumulation pattern (collect all errors before returning)
 
 ### v1.3 Research Findings
 
@@ -99,7 +102,7 @@ Decision needed before Phase 6 planning.
 
 ## Test Coverage Summary
 
-Phase 4 added 70+ tests, Phase 5 Plan 1 added 16 tests:
+Phase 4 added 70+ tests, Phase 5 Plan 1 added 11 tests, Phase 5 Plan 2 added 12 tests:
 
 | Requirement | Description | Covered By |
 |-------------|-------------|------------|
@@ -110,13 +113,15 @@ Phase 4 added 70+ tests, Phase 5 Plan 1 added 16 tests:
 | PROMPT-05 | Prompt in evalexpr context | Unit + Integration tests |
 | FIELD-01 | Field path validation | Unit tests (11 tests) |
 | FIELD-02 | dot_to_pointer conversion | Unit tests (5 tests) |
+| FIELD-03 | Field validation runtime matching | Unit tests (12 tests) |
+| FIELD-04 | Fail-closed behavior | Unit tests (validate_required_fields) |
 
-Total tests: 418 (Phase 4: 407, Phase 5 Plan 1: +11)
+Total tests: 430 (Phase 4: 407, Phase 5 Plan 1: +11, Phase 5 Plan 2: +12)
 
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: Completed 05-01-PLAN.md (Field Validation Foundation)
+Stopped at: Completed 05-02-PLAN.md (Field Matching Logic)
 Resume file: None
 
-Next action: Execute 05-02-PLAN.md (Field Matching Logic) to complete Phase 5
+Next action: Execute 05-03-PLAN.md (Field Validation Integration Tests) to complete Phase 5
