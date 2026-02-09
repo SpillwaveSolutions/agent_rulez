@@ -172,6 +172,101 @@ impl std::fmt::Display for Anchor {
     }
 }
 
+/// Prompt text pattern matching configuration
+///
+/// Supports two YAML formats:
+/// ```yaml
+/// # Simple array syntax (ANY mode, case-sensitive)
+/// prompt_match: ["pattern1", "pattern2"]
+///
+/// # Complex object syntax with options
+/// prompt_match:
+///   patterns: ["pattern1", "pattern2"]
+///   mode: all
+///   case_insensitive: true
+///   anchor: start
+/// ```
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(untagged)]
+pub enum PromptMatch {
+    /// Simple array syntax: ["pattern1", "pattern2"]
+    /// Uses ANY mode and case-sensitive matching
+    Simple(Vec<String>),
+
+    /// Complex object syntax with options
+    Complex {
+        /// Patterns to match against prompt text
+        patterns: Vec<String>,
+        /// Match mode: any (OR) or all (AND)
+        #[serde(default)]
+        mode: MatchMode,
+        /// Enable case-insensitive matching
+        #[serde(default)]
+        case_insensitive: bool,
+        /// Anchor position for patterns
+        #[serde(skip_serializing_if = "Option::is_none")]
+        anchor: Option<Anchor>,
+    },
+}
+
+impl PromptMatch {
+    /// Get patterns regardless of variant
+    pub fn patterns(&self) -> &[String] {
+        match self {
+            PromptMatch::Simple(patterns) => patterns,
+            PromptMatch::Complex { patterns, .. } => patterns,
+        }
+    }
+
+    /// Get match mode (defaults to Any for Simple variant)
+    pub fn mode(&self) -> MatchMode {
+        match self {
+            PromptMatch::Simple(_) => MatchMode::Any,
+            PromptMatch::Complex { mode, .. } => *mode,
+        }
+    }
+
+    /// Get case sensitivity setting (defaults to false for Simple variant)
+    pub fn case_insensitive(&self) -> bool {
+        match self {
+            PromptMatch::Simple(_) => false,
+            PromptMatch::Complex { case_insensitive, .. } => *case_insensitive,
+        }
+    }
+
+    /// Get anchor setting (defaults to None/Contains for Simple variant)
+    pub fn anchor(&self) -> Option<Anchor> {
+        match self {
+            PromptMatch::Simple(_) => None,
+            PromptMatch::Complex { anchor, .. } => *anchor,
+        }
+    }
+
+    /// Expand shorthand patterns into full regex patterns
+    ///
+    /// Supported shorthands:
+    /// - `contains_word:word` -> `\bword\b`
+    /// - `not:pattern` -> negative match (handled in matching logic)
+    pub fn expand_pattern(pattern: &str) -> String {
+        // Handle 'contains_word:' shorthand
+        if let Some(word) = pattern.strip_prefix("contains_word:") {
+            return format!(r"\b{}\b", regex::escape(word.trim()));
+        }
+
+        // No shorthand - return as-is
+        pattern.to_string()
+    }
+
+    /// Apply anchor to pattern
+    pub fn apply_anchor(pattern: &str, anchor: Option<Anchor>) -> String {
+        match anchor {
+            Some(Anchor::Start) => format!("^{}", pattern),
+            Some(Anchor::End) => format!("{}$", pattern),
+            Some(Anchor::Contains) | None => pattern.to_string(),
+        }
+    }
+}
+
 /// Extended run action configuration supporting trust levels
 ///
 /// Supports two YAML formats for backward compatibility:
