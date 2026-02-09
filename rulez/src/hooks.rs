@@ -1,8 +1,12 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use evalexpr::{eval_boolean_with_context, ContextWithMutableVariables, DefaultNumericTypes, HashMapContext, Value};
-use regex::Regex;
-
+use once_cell::sync::Lazy;
+use regex::{Regex, RegexBuilder};
+use std::collections::HashMap;
 use std::path::Path;
+use std::sync::Mutex;
+
+use crate::models::{Anchor, MatchMode, PromptMatch};
 use tokio::process::Command;
 use tokio::time::{Duration, timeout};
 
@@ -14,6 +18,49 @@ use crate::models::{
     MatcherResults, Outcome, PolicyMode, Response, ResponseSummary, Rule, RuleEvaluation, Timing,
     TrustLevel,
 };
+
+// =============================================================================
+// Regex Caching for Performance
+// =============================================================================
+
+/// Global cache for compiled regex patterns
+/// Key format: "pattern:case_insensitive" (e.g., "foo:true" or "bar:false")
+///
+/// NOTE: This cache is unbounded. Since patterns come from config files
+/// (not user input), the cache size is bounded by the number of unique
+/// patterns across all loaded rules. For typical configs this is <100 patterns.
+/// If this becomes a concern in long-running services with dynamic configs,
+/// consider adding LRU eviction or size caps in a future phase.
+static REGEX_CACHE: Lazy<Mutex<HashMap<String, Regex>>> =
+    Lazy::new(|| Mutex::new(HashMap::new()));
+
+/// Get or compile a regex pattern with caching
+fn get_or_compile_regex(pattern: &str, case_insensitive: bool) -> Result<Regex> {
+    let cache_key = format!("{}:{}", pattern, case_insensitive);
+
+    // Try to get from cache
+    {
+        let cache = REGEX_CACHE.lock().unwrap();
+        if let Some(regex) = cache.get(&cache_key) {
+            return Ok(regex.clone());
+        }
+    }
+
+    // Compile and cache
+    let regex = if case_insensitive {
+        RegexBuilder::new(pattern)
+            .case_insensitive(true)
+            .build()
+            .with_context(|| format!("Invalid regex pattern: {}", pattern))?
+    } else {
+        Regex::new(pattern)
+            .with_context(|| format!("Invalid regex pattern: {}", pattern))?
+    };
+
+    let mut cache = REGEX_CACHE.lock().unwrap();
+    cache.insert(cache_key, regex.clone());
+    Ok(regex)
+}
 
 /// Process a hook event and return the appropriate response
 pub async fn process_event(event: Event, debug_config: &DebugConfig) -> Result<Response> {
