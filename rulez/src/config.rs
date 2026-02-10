@@ -1368,4 +1368,294 @@ mod tests {
 
         assert!(config.validate().is_ok());
     }
+
+    // =========================================================================
+    // Phase 6: SCRIPT-06 - Config Validation Tests
+    // =========================================================================
+
+    #[test]
+    fn test_validate_expr_valid_syntax() {
+        let config = Config {
+            version: "1.0".to_string(),
+            rules: vec![Rule {
+                name: "valid-expr".to_string(),
+                description: None,
+                enabled_when: None,
+                matchers: crate::models::Matchers {
+                    tools: Some(vec!["Write".to_string()]),
+                    extensions: None,
+                    directories: None,
+                    operations: None,
+                    command_match: None,
+                    prompt_match: None,
+                    require_fields: None,
+                    field_types: None,
+                },
+                actions: crate::models::Actions {
+                    validate_expr: Some(r#"has_field("file_path") && get_field("content") != """#.to_string()),
+                    inject_inline: Some("Validated".to_string()),
+                    inject: None,
+                    inject_command: None,
+                    run: None,
+                    block: None,
+                    block_if_match: None,
+                    inline_script: None,
+                },
+                mode: None,
+                priority: None,
+                governance: None,
+                metadata: None,
+            }],
+            settings: Settings::default(),
+        };
+
+        let result = config.validate();
+        assert!(result.is_ok(), "Valid validate_expr syntax should pass: {:?}", result);
+    }
+
+    #[test]
+    fn test_validate_expr_invalid_syntax() {
+        let config = Config {
+            version: "1.0".to_string(),
+            rules: vec![Rule {
+                name: "invalid-expr".to_string(),
+                description: None,
+                enabled_when: None,
+                matchers: crate::models::Matchers {
+                    tools: Some(vec!["Write".to_string()]),
+                    extensions: None,
+                    directories: None,
+                    operations: None,
+                    command_match: None,
+                    prompt_match: None,
+                    require_fields: None,
+                    field_types: None,
+                },
+                actions: crate::models::Actions {
+                    validate_expr: Some(r#"((("#.to_string()), // Unclosed parentheses
+                    inject_inline: Some("Should not load".to_string()),
+                    inject: None,
+                    inject_command: None,
+                    run: None,
+                    block: None,
+                    block_if_match: None,
+                    inline_script: None,
+                },
+                mode: None,
+                priority: None,
+                governance: None,
+                metadata: None,
+            }],
+            settings: Settings::default(),
+        };
+
+        let result = config.validate();
+        assert!(result.is_err(), "Invalid validate_expr syntax should fail");
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("Invalid validate_expr") || err.contains("invalid-expr"), "Error should mention invalid validate_expr: {}", err);
+    }
+
+    #[test]
+    fn test_inline_script_valid() {
+        let config = Config {
+            version: "1.0".to_string(),
+            rules: vec![Rule {
+                name: "valid-script".to_string(),
+                description: None,
+                enabled_when: None,
+                matchers: crate::models::Matchers {
+                    tools: Some(vec!["Bash".to_string()]),
+                    extensions: None,
+                    directories: None,
+                    operations: None,
+                    command_match: None,
+                    prompt_match: None,
+                    require_fields: None,
+                    field_types: None,
+                },
+                actions: crate::models::Actions {
+                    inline_script: Some("#!/bin/bash\nexit 0\n".to_string()),
+                    inject: None,
+                    inject_inline: None,
+                    inject_command: None,
+                    run: None,
+                    block: None,
+                    block_if_match: None,
+                    validate_expr: None,
+                },
+                mode: None,
+                priority: None,
+                governance: None,
+                metadata: None,
+            }],
+            settings: Settings::default(),
+        };
+
+        let result = config.validate();
+        assert!(result.is_ok(), "Valid inline_script should pass: {:?}", result);
+    }
+
+    #[test]
+    fn test_inline_script_empty_rejected() {
+        let config = Config {
+            version: "1.0".to_string(),
+            rules: vec![Rule {
+                name: "empty-script".to_string(),
+                description: None,
+                enabled_when: None,
+                matchers: crate::models::Matchers {
+                    tools: Some(vec!["Bash".to_string()]),
+                    extensions: None,
+                    directories: None,
+                    operations: None,
+                    command_match: None,
+                    prompt_match: None,
+                    require_fields: None,
+                    field_types: None,
+                },
+                actions: crate::models::Actions {
+                    inline_script: Some("   \n  \t  ".to_string()), // Whitespace only
+                    inject: None,
+                    inject_inline: None,
+                    inject_command: None,
+                    run: None,
+                    block: None,
+                    block_if_match: None,
+                    validate_expr: None,
+                },
+                mode: None,
+                priority: None,
+                governance: None,
+                metadata: None,
+            }],
+            settings: Settings::default(),
+        };
+
+        let result = config.validate();
+        assert!(result.is_err(), "Empty/whitespace inline_script should fail");
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("inline_script cannot be empty") || err.contains("empty-script"), "Error should mention empty inline_script: {}", err);
+    }
+
+    #[test]
+    fn test_validate_expr_and_inline_script_mutual_exclusion() {
+        let config = Config {
+            version: "1.0".to_string(),
+            rules: vec![Rule {
+                name: "both-present".to_string(),
+                description: None,
+                enabled_when: None,
+                matchers: crate::models::Matchers {
+                    tools: Some(vec!["Write".to_string()]),
+                    extensions: None,
+                    directories: None,
+                    operations: None,
+                    command_match: None,
+                    prompt_match: None,
+                    require_fields: None,
+                    field_types: None,
+                },
+                actions: crate::models::Actions {
+                    validate_expr: Some(r#"has_field("file_path")"#.to_string()),
+                    inline_script: Some("#!/bin/bash\nexit 0\n".to_string()),
+                    inject_inline: Some("Both present".to_string()),
+                    inject: None,
+                    inject_command: None,
+                    run: None,
+                    block: None,
+                    block_if_match: None,
+                },
+                mode: None,
+                priority: None,
+                governance: None,
+                metadata: None,
+            }],
+            settings: Settings::default(),
+        };
+
+        let result = config.validate();
+        assert!(result.is_err(), "Both validate_expr and inline_script should fail");
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("mutually exclusive") || err.contains("both-present"), "Error should mention mutual exclusion: {}", err);
+    }
+
+    #[test]
+    fn test_validate_expr_only_passes() {
+        let config = Config {
+            version: "1.0".to_string(),
+            rules: vec![Rule {
+                name: "expr-only".to_string(),
+                description: None,
+                enabled_when: None,
+                matchers: crate::models::Matchers {
+                    tools: Some(vec!["Write".to_string()]),
+                    extensions: None,
+                    directories: None,
+                    operations: None,
+                    command_match: None,
+                    prompt_match: None,
+                    require_fields: None,
+                    field_types: None,
+                },
+                actions: crate::models::Actions {
+                    validate_expr: Some(r#"has_field("file_path")"#.to_string()),
+                    inject_inline: Some("Expression only".to_string()),
+                    inject: None,
+                    inject_command: None,
+                    run: None,
+                    block: None,
+                    block_if_match: None,
+                    inline_script: None,
+                },
+                mode: None,
+                priority: None,
+                governance: None,
+                metadata: None,
+            }],
+            settings: Settings::default(),
+        };
+
+        let result = config.validate();
+        assert!(result.is_ok(), "validate_expr only should pass: {:?}", result);
+    }
+
+    #[test]
+    fn test_inline_script_only_passes() {
+        let config = Config {
+            version: "1.0".to_string(),
+            rules: vec![Rule {
+                name: "script-only".to_string(),
+                description: None,
+                enabled_when: None,
+                matchers: crate::models::Matchers {
+                    tools: Some(vec!["Bash".to_string()]),
+                    extensions: None,
+                    directories: None,
+                    operations: None,
+                    command_match: None,
+                    prompt_match: None,
+                    require_fields: None,
+                    field_types: None,
+                },
+                actions: crate::models::Actions {
+                    inline_script: Some("#!/bin/bash\nexit 0\n".to_string()),
+                    inject_inline: Some("Script only".to_string()),
+                    inject: None,
+                    inject_command: None,
+                    run: None,
+                    block: None,
+                    block_if_match: None,
+                    validate_expr: None,
+                },
+                mode: None,
+                priority: None,
+                governance: None,
+                metadata: None,
+            }],
+            settings: Settings::default(),
+        };
+
+        let result = config.validate();
+        assert!(result.is_ok(), "inline_script only should pass: {:?}", result);
+    }
 }

@@ -2941,3 +2941,112 @@ actions:
         assert!(rule.matchers.command_match.is_some());
     }
 }
+
+// =============================================================================
+// Phase 6: SCRIPT-06 - Actions Deserialization Tests for validate_expr and inline_script
+// =============================================================================
+
+#[cfg(test)]
+mod actions_inline_script_tests {
+    use super::*;
+
+    #[test]
+    fn test_actions_validate_expr_deserialization() {
+        // YAML with validate_expr
+        let yaml = r#"
+name: test-validate-expr
+matchers:
+  tools: [Write]
+actions:
+  validate_expr: 'has_field("file_path") && get_field("content") != ""'
+  inject_inline: "Validation passed"
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(rule.name, "test-validate-expr");
+        assert!(rule.actions.validate_expr.is_some());
+        assert!(rule.actions.inline_script.is_none());
+
+        let expr = rule.actions.validate_expr.unwrap();
+        assert!(expr.contains("has_field"));
+        assert!(expr.contains("get_field"));
+    }
+
+    #[test]
+    fn test_actions_inline_script_deserialization() {
+        // YAML with inline_script using literal block (|)
+        let yaml = r#"
+name: test-inline-script
+matchers:
+  tools: [Bash]
+actions:
+  inline_script: |
+    #!/bin/bash
+    # Check if command is safe
+    exit 0
+  inject_inline: "Script validated"
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(rule.name, "test-inline-script");
+        assert!(rule.actions.inline_script.is_some());
+        assert!(rule.actions.validate_expr.is_none());
+
+        let script = rule.actions.inline_script.unwrap();
+        assert!(script.contains("#!/bin/bash"));
+        assert!(script.contains("exit 0"));
+    }
+
+    #[test]
+    fn test_actions_validate_expr_simple() {
+        // Simple validate_expr without quotes
+        let yaml = r#"
+name: test-simple-expr
+matchers:
+  tools: [API]
+actions:
+  validate_expr: has_field("count")
+  inject_inline: "Count present"
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(rule.name, "test-simple-expr");
+        assert!(rule.actions.validate_expr.is_some());
+
+        let expr = rule.actions.validate_expr.unwrap();
+        assert_eq!(expr, r#"has_field("count")"#);
+    }
+
+    #[test]
+    fn test_actions_inline_script_multiline() {
+        // Multi-line script with complex logic
+        let yaml = r#"
+name: test-multiline-script
+matchers:
+  tools: [Bash]
+actions:
+  inline_script: |
+    #!/bin/bash
+    set -e
+
+    # Parse JSON from stdin
+    INPUT=$(cat)
+
+    # Extract command field
+    COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // ""')
+
+    # Check if command is safe
+    if [[ "$COMMAND" == *"--force"* ]]; then
+      exit 1
+    fi
+
+    exit 0
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(rule.name, "test-multiline-script");
+        assert!(rule.actions.inline_script.is_some());
+
+        let script = rule.actions.inline_script.unwrap();
+        assert!(script.contains("#!/bin/bash"));
+        assert!(script.contains("set -e"));
+        assert!(script.contains("jq -r"));
+        assert!(script.contains("--force"));
+    }
+}

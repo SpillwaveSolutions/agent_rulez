@@ -4512,4 +4512,591 @@ mod tests {
         // All three type errors should be accumulated and reported
         assert!(!validate_required_fields(&rule, &event));
     }
+
+    // =========================================================================
+    // Phase 6: SCRIPT-01/02 - Custom Functions Tests (get_field, has_field)
+    // =========================================================================
+
+    #[test]
+    fn test_get_field_string_value() {
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Write".to_string()),
+            tool_input: Some(serde_json::json!({
+                "file_path": "/test/file.txt",
+                "content": "hello world"
+            })),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let ctx = build_eval_context_with_custom_functions(&event);
+        let result = eval_boolean_with_context(r#"get_field("file_path") == "/test/file.txt""#, &ctx);
+
+        assert!(result.is_ok(), "Should evaluate expression: {:?}", result);
+        assert_eq!(result.unwrap(), true, "Should return correct string value");
+    }
+
+    #[test]
+    fn test_get_field_number_value() {
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("API".to_string()),
+            tool_input: Some(serde_json::json!({
+                "count": 42,
+                "price": 99.95
+            })),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let ctx = build_eval_context_with_custom_functions(&event);
+        let result = eval_boolean_with_context(r#"get_field("count") == 42.0"#, &ctx);
+
+        assert!(result.is_ok(), "Should evaluate expression: {:?}", result);
+        assert_eq!(result.unwrap(), true, "Should return correct number value");
+    }
+
+    #[test]
+    fn test_get_field_boolean_value() {
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("API".to_string()),
+            tool_input: Some(serde_json::json!({
+                "enabled": true,
+                "active": false
+            })),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let ctx = build_eval_context_with_custom_functions(&event);
+        let result = eval_boolean_with_context(r#"get_field("enabled") == true"#, &ctx);
+
+        assert!(result.is_ok(), "Should evaluate expression: {:?}", result);
+        assert_eq!(result.unwrap(), true, "Should return correct boolean value");
+    }
+
+    #[test]
+    fn test_get_field_missing_field() {
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("API".to_string()),
+            tool_input: Some(serde_json::json!({
+                "existing": "value"
+            })),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let ctx = build_eval_context_with_custom_functions(&event);
+        let result = eval_boolean_with_context(r#"get_field("nonexistent") == """#, &ctx);
+
+        assert!(result.is_ok(), "Should evaluate expression: {:?}", result);
+        assert_eq!(result.unwrap(), true, "Should return empty string for missing field");
+    }
+
+    #[test]
+    fn test_get_field_null_field() {
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("API".to_string()),
+            tool_input: Some(serde_json::json!({
+                "nullable": null
+            })),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let ctx = build_eval_context_with_custom_functions(&event);
+        let result = eval_boolean_with_context(r#"get_field("nullable") == """#, &ctx);
+
+        assert!(result.is_ok(), "Should evaluate expression: {:?}", result);
+        assert_eq!(result.unwrap(), true, "Should return empty string for null field");
+    }
+
+    #[test]
+    fn test_get_field_nested_path() {
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("API".to_string()),
+            tool_input: Some(serde_json::json!({
+                "user": {
+                    "name": "Alice",
+                    "profile": {
+                        "email": "alice@example.com"
+                    }
+                }
+            })),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let ctx = build_eval_context_with_custom_functions(&event);
+        let result = eval_boolean_with_context(r#"get_field("user.name") == "Alice""#, &ctx);
+
+        assert!(result.is_ok(), "Should evaluate expression: {:?}", result);
+        assert_eq!(result.unwrap(), true, "Should return nested field value");
+
+        let result2 = eval_boolean_with_context(r#"get_field("user.profile.email") == "alice@example.com""#, &ctx);
+        assert!(result2.is_ok(), "Should evaluate nested expression: {:?}", result2);
+        assert_eq!(result2.unwrap(), true, "Should return deeply nested field value");
+    }
+
+    #[test]
+    fn test_has_field_present() {
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Write".to_string()),
+            tool_input: Some(serde_json::json!({
+                "file_path": "/test/file.txt"
+            })),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let ctx = build_eval_context_with_custom_functions(&event);
+        let result = eval_boolean_with_context(r#"has_field("file_path")"#, &ctx);
+
+        assert!(result.is_ok(), "Should evaluate expression: {:?}", result);
+        assert_eq!(result.unwrap(), true, "Should return true for present field");
+    }
+
+    #[test]
+    fn test_has_field_missing() {
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Write".to_string()),
+            tool_input: Some(serde_json::json!({
+                "file_path": "/test/file.txt"
+            })),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let ctx = build_eval_context_with_custom_functions(&event);
+        let result = eval_boolean_with_context(r#"has_field("nonexistent")"#, &ctx);
+
+        assert!(result.is_ok(), "Should evaluate expression: {:?}", result);
+        assert_eq!(result.unwrap(), false, "Should return false for missing field");
+    }
+
+    #[test]
+    fn test_has_field_null() {
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("API".to_string()),
+            tool_input: Some(serde_json::json!({
+                "nullable": null
+            })),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let ctx = build_eval_context_with_custom_functions(&event);
+        let result = eval_boolean_with_context(r#"has_field("nullable")"#, &ctx);
+
+        assert!(result.is_ok(), "Should evaluate expression: {:?}", result);
+        assert_eq!(result.unwrap(), false, "Should return false for null field");
+    }
+
+    #[test]
+    fn test_has_field_nested() {
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("API".to_string()),
+            tool_input: Some(serde_json::json!({
+                "user": {
+                    "name": "Alice"
+                }
+            })),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let ctx = build_eval_context_with_custom_functions(&event);
+        let result = eval_boolean_with_context(r#"has_field("user.name")"#, &ctx);
+
+        assert!(result.is_ok(), "Should evaluate expression: {:?}", result);
+        assert_eq!(result.unwrap(), true, "Should return true for nested field");
+    }
+
+    // =========================================================================
+    // Phase 6: SCRIPT-03 - Boolean Return from validate_expr Tests
+    // =========================================================================
+
+    #[test]
+    fn test_validate_expr_returns_true_allows() {
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Write".to_string()),
+            tool_input: Some(serde_json::json!({
+                "file_path": "/test/file.txt"
+            })),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let ctx = build_eval_context_with_custom_functions(&event);
+        let result = eval_boolean_with_context(r#"has_field("file_path")"#, &ctx);
+
+        assert!(result.is_ok(), "Expression should evaluate: {:?}", result);
+        assert_eq!(result.unwrap(), true, "Expression returning true should allow");
+    }
+
+    #[test]
+    fn test_validate_expr_returns_false_blocks() {
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Write".to_string()),
+            tool_input: Some(serde_json::json!({
+                "file_path": "/test/file.txt"
+            })),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let ctx = build_eval_context_with_custom_functions(&event);
+        let result = eval_boolean_with_context(r#"has_field("missing")"#, &ctx);
+
+        assert!(result.is_ok(), "Expression should evaluate: {:?}", result);
+        assert_eq!(result.unwrap(), false, "Expression returning false should block");
+    }
+
+    #[test]
+    fn test_validate_expr_comparison() {
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("API".to_string()),
+            tool_input: Some(serde_json::json!({
+                "count": 5
+            })),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let ctx = build_eval_context_with_custom_functions(&event);
+        let result = eval_boolean_with_context(r#"get_field("count") > 0"#, &ctx);
+
+        assert!(result.is_ok(), "Expression should evaluate: {:?}", result);
+        assert_eq!(result.unwrap(), true, "Comparison should return correct result");
+    }
+
+    #[test]
+    fn test_validate_expr_complex_expression() {
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Write".to_string()),
+            tool_input: Some(serde_json::json!({
+                "file_path": "/test/file.txt",
+                "content": "hello"
+            })),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let ctx = build_eval_context_with_custom_functions(&event);
+        let result = eval_boolean_with_context(
+            r#"has_field("file_path") && get_field("content") != """#,
+            &ctx
+        );
+
+        assert!(result.is_ok(), "Complex expression should evaluate: {:?}", result);
+        assert_eq!(result.unwrap(), true, "Complex expression should return correct result");
+    }
+
+    #[test]
+    fn test_validate_expr_error_blocks() {
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Write".to_string()),
+            tool_input: Some(serde_json::json!({
+                "file_path": "/test/file.txt"
+            })),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let ctx = build_eval_context_with_custom_functions(&event);
+        // Invalid syntax: unclosed parenthesis
+        let result = eval_boolean_with_context(r#"has_field("file_path""#, &ctx);
+
+        assert!(result.is_err(), "Invalid syntax should return error (fail-closed)");
+    }
+
+    // =========================================================================
+    // Phase 6: SCRIPT-01 - validate_expr in execute_rule_actions Tests
+    // =========================================================================
+
+    #[tokio::test]
+    async fn test_validate_expr_blocks_before_inject() {
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Write".to_string()),
+            tool_input: Some(serde_json::json!({
+                "file_path": "/test/file.txt"
+            })),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let rule = Rule {
+            name: "validate-blocks".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: Some(vec!["Write".to_string()]),
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: None,
+                require_fields: None,
+                field_types: None,
+            },
+            actions: Actions {
+                validate_expr: Some(r#"has_field("missing_field")"#.to_string()),
+                inject_inline: Some("Should not appear".to_string()),
+                inject: None,
+                inject_command: None,
+                run: None,
+                block: None,
+                block_if_match: None,
+                inline_script: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        let config = Config {
+            version: "1.0".to_string(),
+            rules: vec![],
+            settings: crate::config::Settings::default(),
+        };
+
+        let response = execute_rule_actions(&event, &rule, &config).await.unwrap();
+
+        assert!(!response.continue_, "validate_expr returning false should block");
+        assert!(response.context.is_none(), "Should not inject when validation fails");
+    }
+
+    #[tokio::test]
+    async fn test_validate_expr_allows_then_injects() {
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Write".to_string()),
+            tool_input: Some(serde_json::json!({
+                "file_path": "/test/file.txt"
+            })),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let rule = Rule {
+            name: "validate-allows".to_string(),
+            description: None,
+            enabled_when: None,
+            matchers: Matchers {
+                tools: Some(vec!["Write".to_string()]),
+                extensions: None,
+                directories: None,
+                operations: None,
+                command_match: None,
+                prompt_match: None,
+                require_fields: None,
+                field_types: None,
+            },
+            actions: Actions {
+                validate_expr: Some(r#"has_field("file_path")"#.to_string()),
+                inject_inline: Some("Validation passed".to_string()),
+                inject: None,
+                inject_command: None,
+                run: None,
+                block: None,
+                block_if_match: None,
+                inline_script: None,
+            },
+            mode: None,
+            priority: None,
+            governance: None,
+            metadata: None,
+        };
+
+        let config = Config {
+            version: "1.0".to_string(),
+            rules: vec![],
+            settings: crate::config::Settings::default(),
+        };
+
+        let response = execute_rule_actions(&event, &rule, &config).await.unwrap();
+
+        assert!(response.continue_, "validate_expr returning true should allow");
+        assert!(response.context.is_some(), "Should inject when validation passes");
+        assert!(response.context.unwrap().contains("Validation passed"));
+    }
+
+    #[tokio::test]
+    async fn test_validate_expr_no_tool_input_custom_functions() {
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Write".to_string()),
+            tool_input: None, // No tool_input
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let ctx = build_eval_context_with_custom_functions(&event);
+
+        // get_field should return empty string when tool_input is None
+        let result = eval_boolean_with_context(r#"get_field("any_field") == """#, &ctx);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), true, "get_field should return empty string when tool_input is None");
+
+        // has_field should return false when tool_input is None
+        let result2 = eval_boolean_with_context(r#"has_field("any_field")"#, &ctx);
+        assert!(result2.is_ok());
+        assert_eq!(result2.unwrap(), false, "has_field should return false when tool_input is None");
+    }
+
+    #[tokio::test]
+    async fn test_validate_expr_with_env_vars() {
+        // Test that custom functions work alongside existing env vars
+        // Use PATH which always exists on all systems
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Write".to_string()),
+            tool_input: Some(serde_json::json!({
+                "file_path": "/test/file.txt"
+            })),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let ctx = build_eval_context_with_custom_functions(&event);
+
+        // Should be able to use both custom functions and env vars (PATH always exists)
+        let result = eval_boolean_with_context(
+            r#"has_field("file_path") && env_PATH != """#,
+            &ctx
+        );
+
+        assert!(result.is_ok(), "Should evaluate expression with both custom functions and env vars: {:?}", result);
+        assert_eq!(result.unwrap(), true, "Should work with both custom functions and env vars");
+    }
 }
