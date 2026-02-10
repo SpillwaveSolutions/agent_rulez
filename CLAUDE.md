@@ -95,7 +95,7 @@ rulez repl              # Interactive debug mode
 
 ## Pre-Push Checklist
 
-**CRITICAL: Always run the full CI pipeline locally before pushing or creating PRs.**
+**CRITICAL: Always run the FULL CI pipeline locally before pushing or creating PRs. ALL steps must pass.**
 
 ```bash
 # 1. Format check
@@ -106,9 +106,16 @@ cargo clippy --all-targets --all-features --workspace -- -D warnings
 
 # 3. Full test suite (remove stale binaries first if binary was renamed)
 cargo test --tests --all-features --workspace
+
+# 4. Code coverage (runs ALL tests including e2e — catches pipe/process bugs)
+cargo llvm-cov --all-features --workspace --no-report
 ```
 
-**Why this matters:** Tests may pass locally due to stale build artifacts (e.g., old binary names in `target/`) that don't exist on CI. Always verify with a clean state.
+**Why this matters:**
+- Tests may pass locally due to stale build artifacts (e.g., old binary names in `target/`) that don't exist on CI.
+- The code coverage step (`cargo llvm-cov`) runs tests with instrumentation that can surface pipe, process, and concurrency bugs that `cargo test` alone does not.
+- If `cargo llvm-cov` is not installed: `cargo install cargo-llvm-cov`
+- **Do NOT push if any step fails.**
 
 ## Exit Codes
 

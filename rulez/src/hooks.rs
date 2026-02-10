@@ -362,10 +362,12 @@ async fn execute_inline_script(
     }
 
     // Execute script with sh
+    // Use Stdio::null() for stdout/stderr since we only check exit code.
+    // Piped handles that are never drained cause "Broken pipe" on Linux.
     let mut command = Command::new("sh");
     command.arg(&script_path);
-    command.stdout(std::process::Stdio::piped());
-    command.stderr(std::process::Stdio::piped());
+    command.stdout(std::process::Stdio::null());
+    command.stderr(std::process::Stdio::null());
     command.stdin(std::process::Stdio::piped());
 
     let mut child = command
@@ -384,12 +386,11 @@ async fn execute_inline_script(
         drop(stdin);
     }
 
-    // Wait for script with timeout using tokio::time::timeout
+    // Wait for script with timeout
     let wait_result = timeout(Duration::from_secs(timeout_secs as u64), child.wait()).await;
 
     match wait_result {
         Ok(Ok(status)) => {
-            // Script completed - check exit status
             let success = status.success();
 
             if !success {
@@ -406,21 +407,19 @@ async fn execute_inline_script(
             Ok(success)
         }
         Ok(Err(e)) => {
-            // Script execution error
             tokio::fs::remove_file(&script_path).await.ok();
             Err(e.into())
         }
         Err(_) => {
-            // Timeout occurred - kill process and fail-closed
+            // Timeout — kill the child process and reap it
+            child.kill().await.ok();
+            child.wait().await.ok();
+
             tracing::warn!(
                 "Inline script for rule '{}' timed out after {}s - blocking (fail-closed)",
                 rule.name,
                 timeout_secs
             );
-
-            // Attempt to kill the child process (child is still owned here since wait() was in timeout future)
-            // Note: child was moved into the timeout future, so we can't access it here
-            // This is acceptable - the process will be killed by the OS when temp file is deleted
 
             // Clean up temp file
             tokio::fs::remove_file(&script_path).await.ok();
