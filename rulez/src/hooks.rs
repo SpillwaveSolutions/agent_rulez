@@ -946,6 +946,55 @@ async fn execute_inject_command(
 async fn execute_rule_actions(event: &Event, rule: &Rule, config: &Config) -> Result<Response> {
     let actions = &rule.actions;
 
+    // Step 0: Run inline validation (if present) - gates all subsequent actions
+    if let Some(ref expr) = actions.validate_expr {
+        let ctx = build_eval_context_with_custom_functions(event);
+        match eval_boolean_with_context(expr, &ctx) {
+            Ok(true) => {
+                // Validation passed, continue to other actions
+            }
+            Ok(false) => {
+                return Ok(Response::block(format!(
+                    "Validation failed for rule '{}': expression '{}' returned false",
+                    rule.name, expr
+                )));
+            }
+            Err(e) => {
+                // Expression error = fail-closed
+                tracing::warn!(
+                    "validate_expr error for rule '{}': {} - blocking (fail-closed)",
+                    rule.name, e
+                );
+                return Ok(Response::block(format!(
+                    "Validation error for rule '{}': {}",
+                    rule.name, e
+                )));
+            }
+        }
+    } else if let Some(ref script) = actions.inline_script {
+        match execute_inline_script(script, event, rule, config).await {
+            Ok(true) => {
+                // Validation passed, continue
+            }
+            Ok(false) => {
+                return Ok(Response::block(format!(
+                    "Inline script validation failed for rule '{}'",
+                    rule.name
+                )));
+            }
+            Err(e) => {
+                tracing::warn!(
+                    "inline_script error for rule '{}': {} - blocking (fail-closed)",
+                    rule.name, e
+                );
+                return Ok(Response::block(format!(
+                    "Inline script error for rule '{}': {}",
+                    rule.name, e
+                )));
+            }
+        }
+    }
+
     // Handle blocking
     if let Some(block) = actions.block {
         if block {
@@ -1178,6 +1227,54 @@ async fn execute_rule_actions_warn_mode(
     config: &Config,
 ) -> Result<Response> {
     let actions = &rule.actions;
+
+    // Step 0: Run inline validation (if present) - convert failures to warnings
+    if let Some(ref expr) = actions.validate_expr {
+        let ctx = build_eval_context_with_custom_functions(event);
+        match eval_boolean_with_context(expr, &ctx) {
+            Ok(true) => {
+                // Validation passed
+            }
+            Ok(false) => {
+                let warning = format!(
+                    "[WARNING] Rule '{}' validation expression '{}' returned false.\n\
+                     This rule is in 'warn' mode - operation will proceed.",
+                    rule.name, expr
+                );
+                return Ok(Response::inject(warning));
+            }
+            Err(e) => {
+                let warning = format!(
+                    "[WARNING] Rule '{}' validation expression error: {}.\n\
+                     This rule is in 'warn' mode - operation will proceed.",
+                    rule.name, e
+                );
+                return Ok(Response::inject(warning));
+            }
+        }
+    } else if let Some(ref script) = actions.inline_script {
+        match execute_inline_script(script, event, rule, config).await {
+            Ok(true) => {
+                // Validation passed
+            }
+            Ok(false) => {
+                let warning = format!(
+                    "[WARNING] Rule '{}' inline script validation failed.\n\
+                     This rule is in 'warn' mode - operation will proceed.",
+                    rule.name
+                );
+                return Ok(Response::inject(warning));
+            }
+            Err(e) => {
+                let warning = format!(
+                    "[WARNING] Rule '{}' inline script error: {}.\n\
+                     This rule is in 'warn' mode - operation will proceed.",
+                    rule.name, e
+                );
+                return Ok(Response::inject(warning));
+            }
+        }
+    }
 
     // Convert blocks to warnings
     if let Some(block) = actions.block {
