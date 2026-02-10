@@ -218,6 +218,51 @@ impl Config {
                     }
                 }
             }
+
+            // Validate validate_expr syntax
+            if let Some(ref expr) = rule.actions.validate_expr {
+                build_operator_tree::<DefaultNumericTypes>(expr).with_context(|| {
+                    format!(
+                        "Invalid validate_expr '{}' in rule '{}': syntax error",
+                        expr, rule.name
+                    )
+                })?;
+            }
+
+            // Validate inline_script structure
+            if let Some(ref script) = rule.actions.inline_script {
+                // Reject empty or whitespace-only scripts
+                if script.trim().is_empty() {
+                    return Err(anyhow::anyhow!(
+                        "Empty inline_script in rule '{}'",
+                        rule.name
+                    ));
+                }
+
+                // Warn if missing shebang
+                if !script.trim_start().starts_with("#!") {
+                    tracing::warn!(
+                        "inline_script in rule '{}' missing shebang - may not execute correctly",
+                        rule.name
+                    );
+                }
+
+                // Warn if script is very large
+                if script.len() > 10_000 {
+                    tracing::warn!(
+                        "inline_script in rule '{}' is very large ({} bytes) - consider external file",
+                        rule.name, script.len()
+                    );
+                }
+            }
+
+            // Validate mutual exclusivity of validate_expr and inline_script
+            if rule.actions.validate_expr.is_some() && rule.actions.inline_script.is_some() {
+                return Err(anyhow::anyhow!(
+                    "Rule '{}' cannot have both validate_expr and inline_script - choose one",
+                    rule.name
+                ));
+            }
         }
 
         Ok(())
