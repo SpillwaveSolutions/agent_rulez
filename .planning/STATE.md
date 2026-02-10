@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Core value:** LLMs do not enforce policy. LLMs are subject to policy.
-**Current focus:** v1.3 Advanced Matching & Validation - Phase 5 IN PROGRESS
+**Current focus:** v1.3 Advanced Matching & Validation - Phase 6 IN PROGRESS
 
 ## Current Position
 
-Phase: 5 of 6 (Field Validation)
-Plan: 3 of 3 (PHASE COMPLETE)
-Status: Phase 5 complete
-Last activity: 2026-02-09 - Completed 05-03-PLAN.md (Field Validation Integration Tests)
+Phase: 6 of 6 (Inline Script Blocks)
+Plan: 2 of 3
+Status: Phase 6 in progress
+Last activity: 2026-02-10 - Completed 06-01-PLAN.md (Data Model & Config Validation)
 
-Progress: █████████████████████ 91% (5 phases complete)
+Progress: ██████████████████████ 94% (5 phases complete + 1/3 of phase 6)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 13 (6 v1.2 + 7 v1.3)
-- Average duration: ~9min (Phases 4-5)
-- Total execution time: 82min (Phase 4: 61min, Phase 5: 21min)
+- Total plans completed: 14 (6 v1.2 + 8 v1.3)
+- Average duration: ~8min (Phases 4-6)
+- Total execution time: 87min (Phase 4: 61min, Phase 5: 21min, Phase 6: 5min so far)
 
 **By Phase:**
 
@@ -32,12 +32,13 @@ Progress: █████████████████████ 91% (5
 | 3. Conditional Rule Activation | 3 | - | - |
 | 4. Prompt Matching | 4/4 | 61min | 15min |
 | 5. Field Validation | 3/3 | 21min | 7min |
+| 6. Inline Script Blocks | 1/3 | 5min | 5min |
 
 **Recent Trend:**
-- v1.3 Phase 4 Plan 4 complete (18 min)
 - v1.3 Phase 5 Plan 1 complete (8 min)
 - v1.3 Phase 5 Plan 2 complete (5 min)
 - v1.3 Phase 5 Plan 3 complete (8 min)
+- v1.3 Phase 6 Plan 1 complete (5 min)
 
 ## Accumulated Context
 
@@ -67,6 +68,9 @@ Recent decisions affecting v1.3 work:
 - [Phase 05-field-validation]: Field validation as final matcher check (fail-closed on validation failure)
 - [Phase 05-field-validation]: Null values treated as missing in field validation
 - [Phase 05-field-validation]: Error accumulation pattern (collect all errors before returning)
+- [v1.3-06-01]: validate_expr and inline_script are mutually exclusive (enforced at config load)
+- [v1.3-06-01]: Warn (not error) on missing shebang or large inline scripts (>10KB)
+- [v1.3-06-01]: validate_expr uses build_operator_tree for syntax validation (same pattern as enabled_when)
 
 ### v1.3 Research Findings
 
@@ -123,8 +127,8 @@ Total tests: 247 (232 unit tests + 15 integration tests)
 
 ## Session Continuity
 
-Last session: 2026-02-09
-Stopped at: Completed 05-03-PLAN.md (Field Validation Integration Tests) - Phase 5 COMPLETE
+Last session: 2026-02-10
+Stopped at: Completed 06-01-PLAN.md (Data Model & Config Validation) - Phase 6 Plan 1 COMPLETE
 Resume file: None
 
-Next action: Phase 5 complete. Ready for next phase or v1.3 completion activities.
+Next action: Continue Phase 6 with Plan 02 (validate_expr execution) or Plan 03 (inline_script execution).
