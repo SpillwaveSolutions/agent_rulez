@@ -28,3 +28,38 @@
 **What's next:** RuleZ v1.3 with prompt_match, require_fields, or inline script blocks
 
 ---
+
+## v1.3 Advanced Matching & Validation (Shipped: 2026-02-10)
+
+**Delivered:** Intent-based routing, required field validation, and inline validation logic for more powerful rule authoring.
+
+**Phases completed:** 4-6 (10 plans total)
+
+**Key accomplishments:**
+
+- Added `prompt_match` for regex-based intent routing with case-insensitive, anchored, and AND/OR logic
+- Added `require_fields` and `field_types` for fail-closed field validation with dot-notation paths
+- Added `validate_expr` for inline evalexpr expressions with custom functions (get_field, has_field)
+- Added `inline_script` for YAML-embedded shell scripts with timeout protection
+- Zero new dependencies — extended evalexpr with custom functions, reused regex crate
+- Comprehensive test coverage: 262 tests (247 unit + 15 integration) across all 15 requirements
+
+**Stats:**
+
+- 31 files created/modified
+- 22,339 lines of Rust (src/)
+- 3 phases, 10 plans
+- 262 tests passing (up from 245)
+- 2 days from start to ship (2026-02-09 → 2026-02-10)
+
+**Git range:** `337f6a7` (feat 04-01) → `4fb39c7` (audit)
+
+**Tech debt accepted:**
+- Debug CLI can't simulate UserPromptSubmit (medium)
+- Regex cache unbounded (low)
+- Inline scripts unsandboxed (deferred to v1.4)
+
+**What's next:** v1.4 with script sandboxing, JSON Schema validation, and debug CLI improvements
+
+---
+
