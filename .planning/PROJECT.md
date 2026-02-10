@@ -82,11 +82,13 @@ RuleZ positions itself as comparable to:
 
 ### Active — v1.4 Stability & Polish
 
-- [ ] JSON Schema validation for hook event payloads
-- [ ] Debug CLI: simulate UserPromptSubmit events
-- [ ] Debug CLI: improved output and diagnostics
-- [ ] E2E test suite fixes (CI-green across all platforms)
-- [ ] Tauri UI build and CI integration
+- [ ] REQ-SCHEMA-01..06: JSON Schema validation for hook event payloads
+- [ ] REQ-DEBUG-01..05: Debug CLI enhancements (UserPromptSubmit, improved output)
+- [ ] REQ-E2E-01..05: E2E test suite fixes (CI-green across all platforms)
+- [ ] REQ-TAURI-01..06: Tauri UI build and CI integration
+- [ ] REQ-PERF-01..02, REQ-COMPAT-01..02: Cross-cutting quality gates
+
+See [REQUIREMENTS.md](REQUIREMENTS.md) for full requirement details.
 
 ### Out of Scope
 

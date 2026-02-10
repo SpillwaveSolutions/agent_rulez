@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Milestone: v1.4 Stability & Polish
-Phase: Not started (defining requirements)
-Status: Defining requirements
-Last activity: 2026-02-10 — Milestone v1.4 started
+Phase: 7 (JSON Schema Validation) — ready for planning
+Status: Roadmap created, ready to plan phases
+Last activity: 2026-02-10 — v1.4 roadmap created (Phases 7-10)
 
 Progress: ░░░░░░░░░░░░░░░░░░░░ 0%
 
@@ -40,7 +40,7 @@ None active.
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Defining v1.4 requirements
+Stopped at: v1.4 roadmap created
 Resume file: None
 
-Next action: Define requirements → create roadmap
+Next action: `/gsd:plan-phase 7` (JSON Schema Validation) or `/gsd:plan-phase 8` (Debug CLI) — phases 7 & 8 are independent
