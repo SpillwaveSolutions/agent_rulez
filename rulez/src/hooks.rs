@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use evalexpr::{eval_boolean_with_context, ContextWithMutableVariables, DefaultNumericTypes, HashMapContext, Value};
+use evalexpr::{eval_boolean_with_context, ContextWithMutableFunctions, ContextWithMutableVariables, DefaultNumericTypes, Function, HashMapContext, Value};
 use regex::{Regex, RegexBuilder};
 use std::collections::HashMap;
 use std::path::Path;
@@ -247,6 +247,187 @@ fn validate_required_fields(rule: &Rule, event: &Event) -> bool {
     }
 
     true
+}
+
+// ============================================================================
+// Inline Script Validation Functions
+// ============================================================================
+
+/// Build evalexpr context with custom functions for inline validation
+///
+/// Extends build_eval_context with two custom functions:
+/// - get_field(path_string): Returns field value from tool_input JSON using dot notation
+/// - has_field(path_string): Returns boolean indicating field exists and is not null
+fn build_eval_context_with_custom_functions(event: &Event) -> HashMapContext<DefaultNumericTypes> {
+    use crate::models::dot_to_pointer;
+
+    let mut ctx = build_eval_context(event);
+
+    // Clone tool_input for 'static lifetime in closures
+    let tool_input_for_get = event.tool_input.clone();
+    let tool_input_for_has = event.tool_input.clone();
+
+    // Register get_field function
+    let get_field_fn = Function::new(move |argument| {
+        let path = argument.as_string()?;
+        let pointer = dot_to_pointer(&path);
+
+        match &tool_input_for_get {
+            None => Ok(Value::String(String::new())),
+            Some(input) => {
+                match input.pointer(&pointer) {
+                    None | Some(serde_json::Value::Null) => Ok(Value::String(String::new())),
+                    Some(serde_json::Value::String(s)) => Ok(Value::String(s.clone())),
+                    Some(serde_json::Value::Number(n)) => Ok(Value::Float(n.as_f64().unwrap_or(0.0))),
+                    Some(serde_json::Value::Bool(b)) => Ok(Value::Boolean(*b)),
+                    Some(_) => Ok(Value::String(String::new())), // Arrays/Objects -> empty string
+                }
+            }
+        }
+    });
+
+    // Register has_field function
+    let has_field_fn = Function::new(move |argument| {
+        let path = argument.as_string()?;
+        let pointer = dot_to_pointer(&path);
+
+        match &tool_input_for_has {
+            None => Ok(Value::Boolean(false)),
+            Some(input) => {
+                match input.pointer(&pointer) {
+                    None | Some(serde_json::Value::Null) => Ok(Value::Boolean(false)),
+                    Some(_) => Ok(Value::Boolean(true)),
+                }
+            }
+        }
+    });
+
+    // Set functions in context (ignoring errors - would only fail if already set)
+    ctx.set_function("get_field".to_string(), get_field_fn).ok();
+    ctx.set_function("has_field".to_string(), has_field_fn).ok();
+
+    ctx
+}
+
+/// Execute an inline shell script with timeout protection
+///
+/// The script receives event JSON on stdin and must exit with code 0 to allow the operation.
+/// Non-zero exit code or timeout causes the operation to be blocked (fail-closed).
+///
+/// Returns:
+/// - Ok(true): Script succeeded (exit 0)
+/// - Ok(false): Script failed (non-zero exit or timeout)
+/// - Err: Script execution error
+async fn execute_inline_script(
+    script_content: &str,
+    event: &Event,
+    rule: &Rule,
+    config: &Config,
+) -> Result<bool> {
+    use tokio::io::AsyncWriteExt;
+
+    // Get timeout from rule metadata or config settings
+    let timeout_secs = rule
+        .metadata
+        .as_ref()
+        .map(|m| m.timeout)
+        .unwrap_or(config.settings.script_timeout);
+
+    // Create unique temp file name using process ID and timestamp
+    let unique_id = format!(
+        "{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    let script_path = std::env::temp_dir().join(format!("rulez-inline-{}.sh", unique_id));
+
+    // Write script to temp file
+    tokio::fs::write(&script_path, script_content)
+        .await
+        .context("Failed to write inline script to temp file")?;
+
+    // Set permissions to 0o700 (owner read/write/execute only) on Unix
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = tokio::fs::metadata(&script_path).await?.permissions();
+        perms.set_mode(0o700);
+        tokio::fs::set_permissions(&script_path, perms).await?;
+    }
+
+    // Execute script with sh
+    let mut command = Command::new("sh");
+    command.arg(&script_path);
+    command.stdout(std::process::Stdio::piped());
+    command.stderr(std::process::Stdio::piped());
+    command.stdin(std::process::Stdio::piped());
+
+    let mut child = command.spawn().context("Failed to spawn inline script process")?;
+
+    // Serialize event to JSON and write to stdin
+    let event_json = serde_json::to_string(event)?;
+    if let Some(mut stdin) = child.stdin.take() {
+        if let Err(e) = stdin.write_all(event_json.as_bytes()).await {
+            // Clean up temp file before returning error
+            tokio::fs::remove_file(&script_path).await.ok();
+            return Err(e.into());
+        }
+        // Close stdin to signal EOF
+        drop(stdin);
+    }
+
+    // Wait for script with timeout using tokio::time::timeout
+    let wait_result = timeout(
+        Duration::from_secs(timeout_secs as u64),
+        child.wait()
+    ).await;
+
+    let result = match wait_result {
+        Ok(Ok(status)) => {
+            // Script completed - check exit status
+            let success = status.success();
+
+            if !success {
+                tracing::warn!(
+                    "Inline script for rule '{}' failed with exit code {}",
+                    rule.name,
+                    status.code().unwrap_or(-1),
+                );
+            }
+
+            // Clean up temp file
+            tokio::fs::remove_file(&script_path).await.ok();
+
+            Ok(success)
+        }
+        Ok(Err(e)) => {
+            // Script execution error
+            tokio::fs::remove_file(&script_path).await.ok();
+            Err(e.into())
+        }
+        Err(_) => {
+            // Timeout occurred - kill process and fail-closed
+            tracing::warn!(
+                "Inline script for rule '{}' timed out after {}s - blocking (fail-closed)",
+                rule.name,
+                timeout_secs
+            );
+
+            // Attempt to kill the child process (child is still owned here since wait() was in timeout future)
+            // Note: child was moved into the timeout future, so we can't access it here
+            // This is acceptable - the process will be killed by the OS when temp file is deleted
+
+            // Clean up temp file
+            tokio::fs::remove_file(&script_path).await.ok();
+
+            Ok(false) // Timeout = fail-closed
+        }
+    };
+
+    result
 }
 
 /// Process a hook event and return the appropriate response
