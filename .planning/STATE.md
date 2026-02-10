@@ -5,14 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** LLMs do not enforce policy. LLMs are subject to policy.
-**Current focus:** Planning next milestone
+**Current focus:** v1.4 Stability & Polish
 
 ## Current Position
 
-Milestone: v1.3 Advanced Matching & Validation — SHIPPED 2026-02-10
-Status: Between milestones — ready for /gsd:new-milestone
+Milestone: v1.4 Stability & Polish
+Phase: Not started (defining requirements)
+Status: Defining requirements
+Last activity: 2026-02-10 — Milestone v1.4 started
 
-Progress: █████████████████████████ 100% (v1.2 + v1.3 complete)
+Progress: ░░░░░░░░░░░░░░░░░░░░ 0%
 
 ## Performance Metrics
 
@@ -29,16 +31,16 @@ All decisions logged in PROJECT.md Key Decisions table.
 
 ### Pending Todos
 
-0 pending — all todos resolved
+0 pending
 
 ### Blockers/Concerns
 
-None active. Tech debt from v1.3 tracked in MILESTONES.md.
+None active.
 
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: v1.3 milestone archived
+Stopped at: Defining v1.4 requirements
 Resume file: None
 
-Next action: /gsd:new-milestone to start v1.4 planning
+Next action: Define requirements → create roadmap

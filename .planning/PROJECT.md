@@ -8,7 +8,7 @@
 
 | Component | Location | Priority | Status |
 |-----------|----------|----------|--------|
-| **RuleZ Core** | `rulez/` | P1 - Primary | v1.3.0 Shipped |
+| **RuleZ Core** | `rulez/` | P1 - Primary | v1.3.0 Shipped, v1.4 Active |
 | **Mastering Hooks** | `mastering-hooks/` | P2 - Secondary | Complete (skill) |
 | **RuleZ UI** | `rulez-ui/` | P3 - Tertiary | M1 Complete |
 
@@ -80,9 +80,13 @@ RuleZ positions itself as comparable to:
 - ✓ SCRIPT-05: Timeout protection for scripts — v1.3
 - ✓ SCRIPT-06: Config-time script validation — v1.3
 
-### Active
+### Active — v1.4 Stability & Polish
 
-(None — ready for next milestone requirements)
+- [ ] JSON Schema validation for hook event payloads
+- [ ] Debug CLI: simulate UserPromptSubmit events
+- [ ] Debug CLI: improved output and diagnostics
+- [ ] E2E test suite fixes (CI-green across all platforms)
+- [ ] Tauri UI build and CI integration
 
 ### Out of Scope
 
@@ -118,7 +122,7 @@ RuleZ positions itself as comparable to:
 | once_cell for regex caching | Zero-allocation repeat matches | ✓ Good |
 | Dot notation for field paths | User-friendly, RFC 6901 conversion | ✓ Good |
 | validate_expr / inline_script mutual exclusion | Simpler mental model | ✓ Good |
-| Defer script sandboxing to v1.4 | Cross-platform complexity | ⚠️ Revisit |
+| Defer script sandboxing to v1.5+ | Cross-platform complexity, not in v1.4 scope | ⚠️ Revisit |
 | Unbounded regex cache | Short-lived CLI, low risk | ⚠️ Revisit |
 
 ## Quality Gates
@@ -138,6 +142,6 @@ RuleZ positions itself as comparable to:
 
 ---
 
-*Last updated: 2026-02-10 after v1.3 milestone complete*
+*Last updated: 2026-02-10 after v1.4 milestone started*
 *Reorganized as monorepo on 2026-02-06*
 *Renamed from CCH to RuleZ*
