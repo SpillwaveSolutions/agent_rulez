@@ -1,567 +1,453 @@
-# Feature Landscape: v1.3 Policy Engine Features
+# Feature Landscape: v1.4 Stability & Polish
 
-**Domain:** Policy engines, YAML-based configuration, runtime validation
-**Researched:** 2026-02-08
-**Focus:** prompt_match, require_fields, inline scripts
-
----
+**Domain:** Rust CLI Policy Engine - Stability & Developer Experience Features
+**Researched:** 2026-02-10
+**Confidence:** HIGH
 
 ## Executive Summary
 
-This research covers three feature additions for RuleZ v1.3 that extend the rule-matching and validation capabilities:
+v1.4 focuses on **stabilizing and polishing** the existing RuleZ policy engine, NOT adding new user-facing policy features. The milestone addresses four specific gaps identified in v1.3 tech debt:
 
-1. **prompt_match** - Route rules based on user prompt text (intent-based routing)
-2. **require_fields** - Validate tool inputs have required fields before execution
-3. **Inline scripts** - Embed validator scripts directly in YAML without separate files
+1. **JSON Schema validation** for hook event payloads
+2. **Debug CLI improvements** for simulating UserPromptSubmit events
+3. **E2E test stabilization** for cross-platform reliability
+4. **Tauri UI build fixes** for multi-platform CI integration
 
-These features follow established patterns from policy engines (OPA, Kubernetes admission webhooks), API gateways (AWS API Gateway, Kong), and CI/CD systems (GitHub Actions, GitLab CI, Ansible).
-
-**Key Finding:** All three features are table stakes for a comprehensive policy engine in 2026. They're expected features that users will assume exist based on patterns from other policy systems.
+**Key insight:** These are **infrastructure features** that improve developer experience, test reliability, and correctness validation — not end-user features like new rule matchers or actions.
 
 ---
 
 ## Table Stakes Features
 
-Features users expect based on industry patterns. Missing these makes RuleZ feel incomplete compared to modern policy engines.
+Features that v1.4 MUST deliver to be considered complete. These address known gaps and technical debt.
 
-### 1. prompt_match: Regex-Based Prompt Routing
+| Feature | Why Expected | Complexity | Dependencies | Notes |
+|---------|--------------|------------|--------------|-------|
+| **JSON Schema event validation** | Validate incoming hook events match Claude Code's schema before processing | Medium | schemars 1.2 (schema gen), jsonschema 0.41 (validation, already exists) | Draft-07 and 2020-12 support required |
+| **Pre-compiled schema caching** | Performance requirement: schema validation <0.1ms per event | Low | OnceCell or lazy_static (already exists) | Load-time compilation, not per-event |
+| **Fail-open validation mode** | Schema errors shouldn't block valid events (existing fail_open pattern) | Low | None | Log warnings, continue processing |
+| **Debug CLI: UserPromptSubmit simulation** | Close testing gap for prompt_match rules (v1.3 tech debt #3) | Low | None (existing tokio stdin) | Enable `rulez debug prompt --prompt "text"` |
+| **E2E tests: cross-platform paths** | Tests must pass on Linux, macOS, Windows in CI | Medium | fs::canonicalize, PathBuf (stdlib) | Resolve symlinks, platform-agnostic paths |
+| **E2E tests: broken pipe fixes** | Tests failing on Linux due to unread stdio pipes (v1.3 bug) | Low | Command::wait_with_output() (stdlib) | Always drain stdout/stderr or use Stdio::null() |
+| **Tauri 2.0: webkit2gtk-4.1** | Correct Linux dependency for Tauri 2.0 (4.0 removed in Ubuntu 24.04) | Low | System package (apt-get) | CI configuration, not code change |
+| **Tauri 2.0: CI matrix builds** | Multi-platform CI (Linux, macOS, Windows) to catch platform-specific issues | Medium | GitHub Actions, tauri-apps/tauri-action | Prevent "works on my machine" bugs |
 
-| Aspect | Details | Complexity |
-|--------|---------|------------|
-| **What** | Match rules against user prompt text for intent-based routing | Medium |
-| **Why Expected** | AI agent routing, intent classification, and policy engines universally match against user input text. See: [AI Agent Routing Guide](https://botpress.com/blog/ai-agent-routing), [Microsoft Intent-Based Routing](https://learn.microsoft.com/en-us/dynamics365/customer-service/administer/configure-intent-based-routing) | |
-| **Standard Approach** | Regex pattern matching on prompt string field | |
-| **Matchers Field** | `prompt_match: "regex pattern"` | |
-| **Similar To** | Existing `command_match` matcher for Bash commands | |
-| **Example Use Cases** | - Inject security context when user asks about production<br>- Route git operations based on user intent<br>- Warn when prompt mentions sensitive data | |
-| **User Expectation** | If you can match tool commands, you should match user prompts | |
+### Why These Are Table Stakes
 
-**YAML Example:**
-```yaml
-rules:
-  - name: production-awareness
-    matchers:
-      prompt_match: "(production|prod|live).*deploy"
-    actions:
-      inject_inline: |
-        ## Production Deployment Warning
-        You mentioned deploying to production. Extra caution required.
-```
+**Context from v1.3 Milestone Audit:**
+- Debug CLI cannot test prompt_match rules (gap identified in tech debt)
+- E2E tests have broken pipe issues on Linux (CI failures documented)
+- Tauri app builds locally but not in CI (no GitHub Actions workflow)
+- No validation of incoming hook events (assumed Claude Code sends valid JSON)
 
-**Precedent:**
-- [AI routing systems](https://botpress.com/blog/ai-agent-routing) classify intent from user queries using LLMs or regex
-- [Microsoft Dynamics 365](https://learn.microsoft.com/en-us/dynamics365/customer-service/administer/configure-intent-based-routing) routes based on intent extracted from user messages
-- LLM orchestration frameworks use semantic routing to match user prompts to handlers
-
-**Technical Notes:**
-- Prompt text available in `UserPromptSubmit` event type
-- Implementation similar to existing `command_match` regex matching
-- Should support case-insensitive matching option
-- Multi-line prompt support needed
-
----
-
-### 2. require_fields: Required Field Validation
-
-| Aspect | Details | Complexity |
-|--------|---------|------------|
-| **What** | Validate that tool inputs contain required fields before execution | Low |
-| **Why Expected** | Every policy/validation system validates required fields. JSON Schema, Kubernetes admission webhooks, API gateways all provide this. See: [AWS API Gateway Validation](https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-method-request-validation.html), [Kubernetes Admission Webhooks](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/) | |
-| **Standard Approach** | List field names, block if any missing | |
-| **Actions Field** | `require_fields: ["field1", "field2"]` | |
-| **Failure Mode** | Block with error message listing missing fields | |
-| **Example Use Cases** | - Require `file_path` in Write tool calls<br>- Require `command` in Bash tool calls<br>- Require security fields in git operations | |
-| **User Expectation** | Basic schema validation - everyone has this | |
-
-**YAML Example:**
-```yaml
-rules:
-  - name: validate-write-inputs
-    matchers:
-      tools: ["Write"]
-    actions:
-      require_fields: ["file_path", "content"]
-      # Blocks if either field missing
-```
-
-**Precedent:**
-- [AWS API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-method-request-validation.html): Validates required properties in JSON Schema models
-- [Kubernetes admission webhooks](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/): Validate required fields exist before resource creation
-- [JSON Schema](https://json-schema-everywhere.github.io/yaml): Standard `required` property for YAML validation
-- [GitLab CI inputs](https://docs.gitlab.com/ci/inputs/): Type-checked inputs with built-in validation at pipeline creation time
-
-**Technical Notes:**
-- Field presence check only (value can be empty string, null)
-- Check against `tool_input` JSON structure
-- Support nested field paths with dot notation: `metadata.name`
-- Error message format: `"Required fields missing: field1, field2"`
-- Should run BEFORE other actions (early validation)
-
----
-
-### 3. Inline Scripts: Embedded Validator Scripts
-
-| Aspect | Details | Complexity |
-|--------|---------|------------|
-| **What** | Write validator scripts directly in YAML using multiline blocks | Medium |
-| **Why Expected** | CI/CD systems, configuration tools, and policy engines all support inline scripts for single-file configs. See: [GitHub Actions inline scripts](https://docs.github.com/en/actions/creating-actions/metadata-syntax-for-github-actions), [Ansible inline Python](https://toptechtips.github.io/2023-06-10-ansible-python/), [Azure DevOps inline PowerShell](https://adamtheautomator.com/powershell-pipeline/) | |
-| **Standard Approach** | YAML literal block (`|`) containing script code | |
-| **Actions Field** | `run_inline: |` followed by script content | |
-| **Language Support** | Any language supported by shebang line | |
-| **Example Use Cases** | - Single-file hook configuration (no separate files)<br>- Quick validation logic without file management<br>- Shareable config snippets | |
-| **User Expectation** | If `inject_inline` works, `run_inline` should too | |
-
-**YAML Example:**
-```yaml
-rules:
-  - name: validate-git-message
-    matchers:
-      tools: ["Bash"]
-      command_match: "git commit"
-    actions:
-      run_inline: |
-        #!/bin/bash
-        # Check commit message follows conventional commits format
-        commit_msg=$(git log -1 --pretty=%B)
-        if ! [[ $commit_msg =~ ^(feat|fix|docs|chore): ]]; then
-          echo "ERROR: Commit message must start with feat:, fix:, docs:, or chore:"
-          exit 1
-        fi
-```
-
-**Precedent:**
-- [GitHub Actions](https://docs.github.com/en/actions/creating-actions/metadata-syntax-for-github-actions): Inline script validation with `run:` blocks
-- [Azure DevOps](https://adamtheautomator.com/powershell-pipeline/): Inline PowerShell/Bash using pipe (`|`) symbol
-- [Ansible](https://toptechtips.github.io/2023-06-10-ansible-python/): Inline Python scripts via script module
-- [NGINX Lua](https://docs.nginx.com/nginx/admin-guide/dynamic-modules/lua/): Embedded Lua via `content_by_lua_block`
-- [Traefik plugins](https://oneuptime.com/blog/post/2026-01-27-traefik-plugins/view): Inline validation logic in middleware configs
-
-**Technical Notes:**
-- Uses YAML literal block syntax (`|`) for multiline content
-- Script written to temp file, executed like external script
-- Same exit code semantics as existing `run` action
-- Shebang line determines interpreter: `#!/bin/bash`, `#!/usr/bin/env python3`
-- Trust level applies (default: `local`)
-- No escaping complexity (unlike trying to inline in JSON)
+**User expectation:** A "Stability & Polish" milestone means fixing known bugs and closing testing gaps. Missing any of these would leave v1.3 issues unresolved.
 
 ---
 
 ## Differentiators
 
-Features that set RuleZ apart. Not expected, but valuable for advanced use cases.
+Features that set v1.4 apart from a minimal bug-fix release. Not expected, but valuable for long-term maintainability.
 
-### 1. Composite Matching: prompt_match + command_match
+| Feature | Value Proposition | Complexity | Dependencies | Notes |
+|---------|-------------------|------------|--------------|-------|
+| **JSON Schema draft version validation** | Prevent breaking changes when schemas evolve (fail-closed on unsupported drafts) | Low | None | Require explicit `$schema` field, reject draft-04/draft-06 |
+| **Schema performance benchmarks in CI** | Guarantee <10ms processing budget with regression tests | Medium | cargo bench, criterion | Fail CI if p95 latency exceeds 10ms |
+| **LRU regex cache** | Fix unbounded REGEX_CACHE growth (v1.3 tech debt #1) | Low | lru crate | Max 100 compiled regexes, evict least-recently-used |
+| **Debug CLI correlation IDs** | Trace event flow across debug invocations for reproducibility | Low | uuid crate | Log correlation ID with every decision |
+| **Debug CLI `--clean` flag** | Force fresh state (clear caches) for guaranteed test isolation | Low | None | Alternative to default cache reuse |
+| **E2E symlink resolution tests** | Explicitly test macOS /var symlink handling (common CI failure source) | Low | std::os::unix::fs::symlink | Unix-only test, validates fs::canonicalize() works |
+| **Tauri build artifact verification** | CI validates correct binary name before upload (prevent stale cache issues) | Low | which, --version check | Detect renamed binaries in CI cache |
+| **Cross-platform CI matrix for E2E** | Run E2E tests on ubuntu-22.04, ubuntu-24.04, macos-latest, windows-latest | Medium | GitHub Actions matrix | Catch platform-specific bugs before release |
 
-**What:** Rules that match BOTH user prompt AND tool command.
+### Why These Are Differentiators
 
-**Value:** Enables sophisticated "user said X and is doing Y" policies that no other policy engine offers for LLM interactions.
+**Generic stability features** (schema validation, E2E tests, CI) are table stakes.
 
-**Example:**
-```yaml
-rules:
-  - name: detect-forced-push-intent
-    matchers:
-      prompt_match: "(force|overwrite).*push"
-      tools: ["Bash"]
-      command_match: "git push.*--force"
-    actions:
-      inject_inline: |
-        ## WARNING: Force Push Detected
-        Your prompt mentioned forcing a push, and you're running git push --force.
-        This will overwrite remote history. Are you sure?
-```
+**RuleZ-specific quality measures** (draft version enforcement, performance regression tests, cache limits, correlation IDs) go beyond "fix the bugs" to "prevent future bugs."
 
-**Complexity:** Low (composition of existing patterns)
-
-**Why Valuable:** Catches misalignment between user intent and actual command. Unique to LLM-driven workflows.
-
----
-
-### 2. Field Value Validation (Beyond Presence)
-
-**What:** Validate field VALUES match patterns, not just presence.
-
-**Example:**
-```yaml
-actions:
-  require_fields:
-    file_path: "^/src/.*\\.rs$"  # Must be Rust file in /src/
-    content: ".{10,}"             # Must have at least 10 characters
-```
-
-**Value:** More expressive than simple presence checks.
-
-**Complexity:** Medium (requires regex matching on values)
-
-**Decision:** **Defer to v1.4**. Basic presence checks cover 90% of use cases. Value validation is nice-to-have.
-
----
-
-### 3. Multi-Language Inline Scripts
-
-**What:** Support multiple inline scripts in one rule (e.g., Python pre-check + Bash post-check).
-
-**Example:**
-```yaml
-actions:
-  run_inline_python: |
-    # Python validation logic
-  run_inline_bash: |
-    # Bash cleanup logic
-```
-
-**Value:** Flexibility for complex validation flows.
-
-**Complexity:** High (multiple script execution, ordering)
-
-**Decision:** **Defer to v2.0**. Single inline script covers primary use case. Use separate rules if needed.
+**Example:** Most projects add JSON Schema validation. Few enforce draft version compatibility and fail-closed on missing `$schema` fields. Fewer still benchmark validation overhead in CI.
 
 ---
 
 ## Anti-Features
 
-Features to explicitly NOT build. Common mistakes in policy engines.
+Features to explicitly NOT build in v1.4.
 
-### 1. ❌ Complex Expression Language in require_fields
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| **New rule matchers or actions** | v1.4 is stability, not new features. Defer to v1.5 | Document feature requests in `.planning/backlog/` |
+| **Fail-closed schema validation by default** | Would block valid events if schema file missing/outdated | Fail-open with warnings (matches existing `fail_open: true` pattern) |
+| **Custom JSON Schema draft support** | Maintenance burden, compatibility risk | Support only LTS drafts: draft-07 and 2020-12 |
+| **Interactive debug CLI (REPL mode)** | Already exists (`rulez repl`), don't duplicate | Extend existing REPL with UserPromptSubmit support |
+| **Debug CLI persistent state across invocations** | Causes flaky tests, unreproducible bugs | Default to stateless, offer `--clean` flag for explicit cache clearing |
+| **E2E tests with full Tauri app** | Slow, brittle, requires GUI automation | Test web mode with Playwright (Tauri commands have fallbacks) |
+| **Tauri builds on every PR** | Slow CI (5-10 minutes per platform), expensive | Run on release branches only, E2E tests on every PR |
+| **Support for Ubuntu 20.04 / Debian 11** | webkit2gtk-4.1 not available, Tauri 2.0 incompatible | Document minimum OS: Ubuntu 22.04+ / Debian 12+ |
+| **Regex engine switching (fancy-regex vs regex)** | Security vs performance trade-off, not v1.4 scope | Defer to v1.5 if DDoS concerns arise |
+| **Schema migration tools** | Scope creep, users can manually update schemas | Document breaking changes in CHANGELOG, provide examples |
 
-**Temptation:** Support expressions like `require_fields: ["$env.CI == 'true' ? 'docker_image' : null"]`
+### Rationale
 
-**Why Avoid:**
-- Complexity explosion (need full expression parser for field specs)
-- Users will misuse it (hard to debug, unclear errors)
-- `enabled_when` already handles conditional logic at rule level
-- Precedent: AWS API Gateway, JSON Schema all use simple field lists
+**v1.4 purpose:** Fix existing functionality, NOT add new capabilities.
 
-**Instead:** Use multiple rules with `enabled_when` to conditionally require fields:
-```yaml
-# Good: Clear, composable
-- name: require-docker-in-ci
-  enabled_when: 'env_CI == "true"'
-  matchers:
-    tools: ["Bash"]
-  actions:
-    require_fields: ["docker_image"]
-```
+**Examples of scope creep to avoid:**
+- "While fixing debug CLI, let's add interactive mode" → NO (already exists)
+- "While adding schema validation, let's support custom drafts" → NO (maintenance burden)
+- "While fixing E2E tests, let's add full Tauri E2E" → NO (too slow, unnecessary)
 
----
-
-### 2. ❌ Domain-Specific Prompt Classification
-
-**Temptation:** Built-in intent classifiers like "is_security_question", "is_deployment_intent"
-
-**Why Avoid:**
-- Domain assumptions (what's "security" varies by org)
-- Maintenance burden (need to update classifications)
-- Inflexible (users can't customize)
-- Precedent: AI routing systems let users define their own routes/intents
-
-**Instead:** Provide regex matching (`prompt_match`). Users define their own intent patterns:
-```yaml
-# Good: User-defined patterns
-- name: security-questions
-  matchers:
-    prompt_match: "(security|auth|password|secret|credential)"
-```
-
----
-
-### 3. ❌ Inline Script Auto-Detection (No Shebang)
-
-**Temptation:** Detect script language from syntax (e.g., `if __name__ == "__main__":` → Python)
-
-**Why Avoid:**
-- Fragile heuristics (ambiguous syntax across languages)
-- Surprising behavior (user expects bash, gets python)
-- Precedent: Shell scripts, CI/CD systems all require explicit shebang
-- Security risk (wrong interpreter → unexpected execution)
-
-**Instead:** REQUIRE shebang line in inline scripts:
-```yaml
-# Good: Explicit interpreter
-run_inline: |
-  #!/usr/bin/env python3
-  print("I am Python")
-```
-
-If shebang missing, default to `/bin/bash` with warning log.
-
----
-
-### 4. ❌ require_fields with Type Coercion
-
-**Temptation:** Auto-convert types: `require_fields: [{name: "count", type: "integer"}]`
-
-**Why Avoid:**
-- Adds type system complexity (JSON already typed)
-- Coercion surprises (`"123"` becomes `123`?)
-- Validation vs transformation confusion (policy should validate, not mutate)
-- Precedent: Kubernetes admission webhooks separate mutation from validation
-
-**Instead:** Check presence only. Use inline script for type validation if needed:
-```yaml
-# Good: Separation of concerns
-actions:
-  require_fields: ["count"]
-  run_inline: |
-    #!/bin/bash
-    if ! [[ $count =~ ^[0-9]+$ ]]; then
-      echo "count must be integer"
-      exit 1
-    fi
-```
+**Rule of thumb:** If it wasn't in v1.3 tech debt or doesn't fix a known bug, defer to v1.5.
 
 ---
 
 ## Feature Dependencies
 
+Dependencies between v1.4 features (build order implications).
+
 ```
-User Prompt
-    ↓
-[prompt_match matcher]  ← Standalone feature (Phase 4)
-    ↓
-[Tool Input JSON]
-    ↓
-[require_fields action] ← Validates fields exist (Phase 5)
-    ↓
-[run_inline action]     ← Custom validation logic (Phase 6)
-    ↓
-Tool Execution
+Feature Graph:
+
+JSON Schema Validation (Phase 1)
+├── Pre-compiled schema caching (required for performance)
+├── Draft version validation (required for correctness)
+└── Fail-open mode (required for backwards compat)
+
+Debug CLI UserPromptSubmit (Phase 2)
+├── Event struct already has `prompt` field (v1.3) ✅
+├── tokio stdin support (v1.0) ✅
+└── LRU regex cache (optional, fixes v1.3 tech debt)
+
+E2E Test Stabilization (Phase 3)
+├── Cross-platform path handling (required for CI matrix)
+├── Broken pipe fixes (required for Linux CI)
+├── Binary artifact validation (required after v1.3 rename)
+└── Symlink resolution (optional, prevents macOS CI failures)
+
+Tauri CI Integration (Phase 4)
+├── E2E tests passing (Phase 3) — validates build artifacts work
+├── webkit2gtk-4.1 on Linux (required for Tauri 2.0)
+└── GitHub Actions matrix (required for multi-platform)
 ```
 
-**No hard dependencies** - Each feature is independently useful:
-- `prompt_match` works without field validation
-- `require_fields` works without prompt matching
-- `run_inline` works without either
+**Critical path:** Phases 1, 2, 3 are independent (can run in parallel). Phase 4 depends on Phase 3 (E2E tests must pass before Tauri builds are useful).
 
-**Soft synergy:**
-- `prompt_match` + `require_fields`: "When user asks about X, require field Y"
-- `require_fields` + `run_inline`: Basic validation (fields exist) + advanced validation (field values correct)
+**Suggested order:**
+1. Phase 1 + Phase 2 in parallel (schema validation + debug CLI, no dependencies)
+2. Phase 3 (E2E fixes, validates Phases 1-2 work correctly)
+3. Phase 4 (Tauri CI, validates everything works on all platforms)
+
+---
+
+## Feature Complexity Analysis
+
+Breakdown by implementation effort and risk.
+
+### Low Complexity (1-2 days each)
+
+| Feature | Why Low | Risk |
+|---------|---------|------|
+| Fail-open validation mode | Pattern already exists in config.rs | None |
+| Debug CLI `--prompt` flag | Add to clap args, pass to Event struct | None |
+| Broken pipe fixes | Replace `.spawn()` with `.output()` | None |
+| LRU regex cache | Drop-in replacement for HashMap | Low (breaking change in cache semantics) |
+| Tauri webkit dependency | CI config update, not code | None |
+| Binary artifact validation | Shell script in GitHub Actions | None |
+
+### Medium Complexity (3-5 days each)
+
+| Feature | Why Medium | Risk |
+|---------|------------|------|
+| JSON Schema event validation | New validation.rs module, integrate into main.rs | Medium (performance if not cached) |
+| Pre-compiled schema caching | Requires OnceCell in Rule struct, serde skip attribute | Low (well-understood pattern) |
+| Draft version validation | Parse `$schema` field, map to JSONSchema::Draft enum | Low (explicit error messages) |
+| Cross-platform path handling | Refactor all path usage to PathBuf, test on Windows | Medium (symlinks, path separators) |
+| E2E CI matrix | GitHub Actions matrix, 4 platforms × 3 test suites | Low (slow CI, may need caching tuning) |
+| Tauri CI builds | Multi-platform matrix, system deps, artifact uploads | High (platform-specific failures) |
+
+### High Complexity (5+ days)
+
+| Feature | Why High | Risk |
+|---------|----------|------|
+| Schema performance benchmarks | Criterion integration, CI regression tests, p95 tracking | Medium (flaky benchmarks, CI noise) |
+| Cross-platform E2E test suite | Path handling, symlinks, broken pipes, Windows line endings | High (platform-specific edge cases) |
+
+**Total effort estimate:** 15-25 developer-days (3-5 weeks for single developer).
 
 ---
 
 ## MVP Recommendation
 
-**For v1.3 MVP, implement all three features:**
+Minimum viable v1.4 that delivers on "Stability & Polish" promise.
 
-1. **prompt_match** (Phase 4) - Table stakes, users expect this
-2. **require_fields** (Phase 5) - Table stakes, simple implementation
-3. **run_inline** (Phase 6) - Table stakes, follows `inject_inline` pattern
+### Prioritize (Must Have)
 
-**Rationale:**
-- All three are table stakes features users expect
-- Low to medium complexity (similar to existing features)
-- High value (completes the policy engine story)
-- No interdependencies (can ship independently if needed)
+**Phase 1: JSON Schema Validation**
+1. Add schemars 1.2 dependency
+2. Generate schemas for HookEvent and related types
+3. Pre-compile schemas at config load (OnceCell)
+4. Validate events in main.rs before processing (fail-open)
+5. Require `$schema` field, support draft-07 and 2020-12 only
 
-**Defer to post-v1.3:**
-- Field value validation (regex on values) - v1.4
-- Multi-language inline scripts - v2.0
-- Composite matching UI helpers - v2.0
+**Phase 2: Debug CLI UserPromptSubmit**
+1. Add UserPromptSubmit to SimEventType enum
+2. Add `--prompt` flag to debug CLI args
+3. Pass prompt to Event struct in build_event()
+4. Test: `rulez debug prompt --prompt "text"` matches prompt_match rules
+
+**Phase 3: E2E Test Stabilization**
+1. Fix broken pipe: use `.output()` or `.wait_with_output()`
+2. Canonicalize paths with `fs::canonicalize()` before comparison
+3. Use PathBuf for all path operations (not string concatenation)
+4. Add CI matrix: ubuntu-latest, macos-latest, windows-latest
+
+**Phase 4: Tauri CI Integration**
+1. Create `.github/workflows/tauri-build.yml`
+2. Install webkit2gtk-4.1-dev on Linux (Ubuntu 22.04 runner)
+3. Build on macOS, Linux, Windows (matrix strategy)
+4. Validate binary artifacts before upload
+
+**Success criteria:** All v1.3 tech debt items resolved, CI green on all platforms.
+
+### Defer (Nice to Have)
+
+- LRU regex cache (v1.3 tech debt, but not blocking)
+- Debug CLI correlation IDs (useful for tracing, but not critical)
+- Debug CLI `--clean` flag (workaround: restart process)
+- E2E symlink resolution tests (covered by fs::canonicalize)
+- Schema performance benchmarks (validate manually, add to CI later)
+- Cross-platform CI for core (already have CI, extend to more platforms later)
+
+### Rationale
+
+**MVP delivers:**
+- ✅ Schema validation for correctness
+- ✅ Debug CLI feature parity with production events
+- ✅ E2E tests passing on all platforms
+- ✅ Tauri builds in CI
+
+**Deferred features:**
+- Not blocking release (LRU cache, correlation IDs)
+- Can be added incrementally (benchmarks, extended CI)
+- Workarounds exist (`--clean` flag → restart process)
 
 ---
 
-## Feature Comparison Matrix
+## Expected Behavior (Table Stakes Detail)
 
-Comparing RuleZ v1.3 features to established policy engines:
+### JSON Schema Validation
 
-| Feature | RuleZ v1.3 | OPA/Rego | K8s Admission | AWS API Gateway | GitHub Actions |
-|---------|-----------|----------|---------------|-----------------|----------------|
-| **Prompt/Intent Matching** | ✅ prompt_match | ✅ Input queries | ❌ N/A | ❌ N/A | ❌ N/A |
-| **Required Field Validation** | ✅ require_fields | ✅ Field checks | ✅ Schema validation | ✅ JSON Schema required | ✅ inputs.required |
-| **Inline Scripts** | ✅ run_inline | ✅ Rego policies | ✅ Webhook code | ❌ Separate Lambda | ✅ run: blocks |
-| **Regex Matching** | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes |
-| **Multi-line YAML** | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes |
+**User perspective:**
+```bash
+# Hook event from Claude Code
+echo '{"hook_event_name": "PreToolUse", "tool_name": "Bash", ...}' | rulez
 
-**Unique to RuleZ:**
-- Prompt + command composite matching (no other system operates at LLM prompt level)
-- Single YAML file for all policies (simpler than OPA/Rego modules)
-- Directly integrated with Claude Code tool hooks (not external webhook)
-
----
-
-## Expected Behavior Specifications
-
-### prompt_match Behavior
-
-**Input:** User prompt text from `UserPromptSubmit` event
-**Matching:** Case-insensitive regex by default (configurable)
-**Multi-line:** Support prompts spanning multiple lines
-**Performance:** Compile regex once at config load time
-
-**Example event:**
-```json
-{
-  "hook_event_name": "UserPromptSubmit",
-  "tool_input": {
-    "prompt": "Deploy the app to production"
-  }
-}
+# Valid event → processes normally
+# Invalid event → logs warning, processes anyway (fail-open)
 ```
 
-**Matching logic:**
+**Developer perspective:**
 ```rust
-if let Some(prompt_pattern) = &matchers.prompt_match {
-    let regex = Regex::new(prompt_pattern)?;
-    let prompt_text = event.tool_input
-        .get("prompt")
-        .and_then(|p| p.as_str())
-        .unwrap_or("");
-    if !regex.is_match(prompt_text) {
-        return Ok(false); // Rule doesn't match
-    }
+// Automatic schema generation from types
+#[derive(Deserialize, JsonSchema)]
+struct HookEvent {
+    hook_event_name: String,
+    tool_name: Option<String>,
+    // ... fields match schema exactly
+}
+
+// Validation at startup (not per-event)
+let schema = schema_for!(HookEvent);
+let validator = JSONSchema::compile(&schema)?;
+
+// Per-event validation (<0.1ms)
+if let Err(e) = validator.validate(&event_json) {
+    warn!("Schema validation failed: {}", e);  // Log, don't block
 }
 ```
 
----
+**Expected behavior:**
+- Schema compiled once at config load
+- Validation <0.1ms per event
+- Fail-open: invalid events log warnings but process anyway
+- Supported drafts: draft-07, 2020-12 (reject others)
+- Missing `$schema` field → error at config load
 
-### require_fields Behavior
+### Debug CLI UserPromptSubmit
 
-**Input:** Tool input JSON from event
-**Validation:** Check field exists (not null, not undefined)
-**Failure:** Block with descriptive error message
-**Nested fields:** Support dot notation: `metadata.name`
+**User perspective:**
+```bash
+# Before v1.4: Cannot test prompt_match rules
+rulez debug PreToolUse --tool Bash --command "git push"  # Works
+rulez debug UserPromptSubmit --prompt "write a function"  # Error: unsupported
 
-**Example validation:**
+# After v1.4: Can test prompt_match rules
+rulez debug prompt --prompt "write a function to parse JSON"
+# Output: Shows which rules matched, including prompt_match rules
+
+# Short aliases
+rulez debug prompt --prompt "refactor this code"
+rulez debug user-prompt-submit --prompt "delete database"
+```
+
+**Developer perspective:**
+```rust
+// Add to SimEventType enum
+enum SimEventType {
+    PreToolUse,
+    PostToolUse,
+    SessionStart,
+    PermissionRequest,
+    UserPromptSubmit,  // NEW
+}
+
+// Build event with prompt field
+let event = Event {
+    hook_event_name: "UserPromptSubmit",
+    prompt: Some(prompt_text),  // NEW: Set from --prompt flag
+    // ... other fields
+};
+```
+
+**Expected behavior:**
+- `rulez debug prompt --prompt "text"` simulates UserPromptSubmit
+- Event has `prompt` field populated (existing field in Event struct)
+- Rules with `prompt_match` matchers evaluate correctly
+- No state leakage between invocations
+
+### E2E Test Cross-Platform Reliability
+
+**User perspective:**
+```bash
+# Before v1.4: Tests pass locally (macOS), fail in CI (Linux)
+cargo test --test e2e_git_push_block
+# macOS: ✅ 1 test passed
+# Linux CI: ❌ SIGPIPE error
+
+# After v1.4: Tests pass everywhere
+cargo test --test e2e_*
+# macOS: ✅ All tests passed
+# Linux: ✅ All tests passed
+# Windows: ✅ All tests passed
+```
+
+**Developer perspective:**
+```rust
+// Before: Broken pipe on Linux
+let mut child = Command::cargo_bin("rulez")
+    .stdin(Stdio::piped())
+    .stdout(Stdio::piped())  // ❌ Pipe created but never read
+    .spawn()?;
+child.stdin.as_mut().unwrap().write_all(event_json.as_bytes())?;
+let status = child.wait()?;  // ❌ SIGPIPE if rulez writes to stdout
+
+// After: Always drain pipes
+let output = Command::cargo_bin("rulez")
+    .write_stdin(event_json)
+    .output()?;  // ✅ Reads stdout/stderr automatically
+assert_eq!(output.status.code(), Some(0));
+
+// Path handling: Before
+let config_path = format!("{}/.claude/hooks.yaml", cwd);  // ❌ Breaks on Windows
+
+// Path handling: After
+let config_path = PathBuf::from(&cwd).join(".claude").join("hooks.yaml");  // ✅
+```
+
+**Expected behavior:**
+- E2E tests use `Command::output()` or `wait_with_output()` (always drain pipes)
+- All paths use `PathBuf`, not string concatenation
+- Symlinks resolved with `fs::canonicalize()` before comparison
+- Tests pass on Linux, macOS, Windows in CI matrix
+
+### Tauri 2.0 CI Builds
+
+**User perspective (contributor):**
+```bash
+# Before v1.4: Local build works, CI fails
+cd rulez-ui
+bun run build:tauri
+# Local (macOS): ✅ Builds successfully
+# CI (Linux): ❌ Error: libwebkit2gtk-4.0-dev not found
+
+# After v1.4: CI builds on all platforms
+git push origin feature/my-ui-change
+# GitHub Actions:
+#   - ✅ Linux build (ubuntu-22.04, webkit2gtk-4.1)
+#   - ✅ macOS build (macos-latest)
+#   - ✅ Windows build (windows-latest)
+```
+
+**Developer perspective:**
 ```yaml
-actions:
-  require_fields: ["file_path", "content", "metadata.author"]
+# .github/workflows/tauri-build.yml
+jobs:
+  build-tauri:
+    strategy:
+      matrix:
+        platform: [ubuntu-22.04, macos-latest, windows-latest]
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Install Tauri deps (Linux)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get install -y libwebkit2gtk-4.1-dev  # ✅ Correct version
 ```
 
-**Validation logic:**
-```rust
-if let Some(required) = &actions.require_fields {
-    let missing = required.iter()
-        .filter(|field| !field_exists(&event.tool_input, field))
-        .collect::<Vec<_>>();
-
-    if !missing.is_empty() {
-        return Ok(Response::block(format!(
-            "Required fields missing: {}",
-            missing.join(", ")
-        )));
-    }
-}
-```
-
-**Error message format:**
-```json
-{
-  "continue": false,
-  "reason": "Required fields missing: file_path, metadata.author"
-}
-```
-
----
-
-### run_inline Behavior
-
-**Input:** YAML literal block containing script
-**Execution:** Write to temp file, execute with same semantics as `run` action
-**Shebang:** Required (defaults to `/bin/bash` if missing with warning)
-**Exit codes:** Same as external scripts (0=allow, non-zero=block)
-**Trust level:** Defaults to `local` (consistent with external scripts)
-
-**Example:**
-```yaml
-actions:
-  run_inline: |
-    #!/bin/bash
-    if [[ $command =~ --force ]]; then
-      echo "Force flag detected"
-      exit 1
-    fi
-```
-
-**Execution logic:**
-```rust
-if let Some(script_content) = &actions.run_inline {
-    // Write to temp file
-    let temp_file = write_temp_script(script_content)?;
-
-    // Execute like external script
-    let result = execute_script(&temp_file, &event)?;
-
-    // Cleanup temp file
-    std::fs::remove_file(temp_file)?;
-
-    // Check exit code
-    if !result.success() {
-        return Ok(Response::block(result.stderr));
-    }
-}
-```
-
----
-
-## Complexity Assessment
-
-| Feature | Implementation | Testing | Documentation | Total |
-|---------|----------------|---------|---------------|-------|
-| **prompt_match** | Low (regex matcher) | Low (unit tests) | Low (similar to command_match) | **Low** |
-| **require_fields** | Low (JSON field check) | Medium (edge cases) | Low (straightforward) | **Low-Medium** |
-| **run_inline** | Medium (temp file handling) | Medium (multi-language) | Medium (security notes) | **Medium** |
-
-**Overall v1.3 Complexity:** Medium
-
-**Risk Factors:**
-- Inline scripts: Temp file cleanup, shebang parsing
-- require_fields: Nested field path handling
-- prompt_match: Multi-line prompt edge cases
-
-**Mitigation:**
-- Thorough unit tests for edge cases
-- Clear error messages
-- Documentation with examples
+**Expected behavior:**
+- CI builds Tauri app on Linux, macOS, Windows
+- Linux uses webkit2gtk-4.1-dev (NOT 4.0)
+- Builds succeed on ubuntu-22.04 (NOT ubuntu-latest/24.04 where 4.1 may be unstable)
+- Artifacts uploaded only on release branches (not every PR, too slow)
 
 ---
 
 ## Sources
 
-### AI Agent Routing & Intent Classification
-- [AI Agent Routing: Ultimate Guide (2026)](https://botpress.com/blog/ai-agent-routing)
-- [AI Agent Routing Tutorial & Best Practices](https://www.patronus.ai/ai-agent-development/ai-agent-routing)
-- [Microsoft Intent-Based Routing](https://learn.microsoft.com/en-us/dynamics365/customer-service/administer/configure-intent-based-routing)
-- [Intent-Driven Natural Language Interface](https://medium.com/data-science-collective/intent-driven-natural-language-interface-a-hybrid-llm-intent-classification-approach-e1d96ad6f35d)
-- [LLM Orchestration in 2026: Top Frameworks](https://research.aimultiple.com/llm-orchestration/)
+**JSON Schema Validation (HIGH confidence):**
+- [jsonschema Rust crate](https://docs.rs/jsonschema) — Performance: 20-470x faster than alternatives, reusable validators
+- [schemars documentation](https://graham.cool/schemars/) — Automatic schema generation from Rust types
+- [jsonschema GitHub](https://github.com/Stranger6667/jsonschema) — Benchmarks, regex engine configuration
+- [GSoC 2026: JSON Schema Compatibility Checker](https://github.com/json-schema-org/community/issues/984) — Breaking changes between drafts
+- [JSON Schema Validation: Common Mistakes](https://www.countermetrics.org/validation-results/) — 41% of validation failures are missing required fields
+- [JSON Schema Data Types Guide](https://blog.postman.com/json-schema-data-types/) — Draft-07 vs 2020-12 differences
 
-### YAML Schema Validation & Required Fields
-- [Yamale: Schema and Validator for YAML](https://github.com/23andMe/Yamale)
-- [Schema Validation for YAML | JSON Schema Everywhere](https://json-schema-everywhere.github.io/yaml)
-- [YAML Data Validation - Infrastructure as Code](https://infrastructureascode.ch/yaml_validation.html)
-- [How to use YAML Schema to validate your YAML files](https://blog.picnic.nl/how-to-use-yaml-schema-to-validate-your-yaml-files-c82c049c2097)
+**Debug CLI & Event Simulation (MEDIUM confidence):**
+- [AWS EventBridge test-event-pattern](https://docs.aws.amazon.com/cli/latest/reference/events/test-event-pattern.html) — CLI patterns for event testing
+- [Event-Driven Testing: Key Strategies](https://optiblack.com/insights/event-driven-testing-key-strategies) — Event recording, playback, simulation patterns
+- [Stripe CLI webhook testing](https://www.projectschool.dev/blogs/devessentials/How-to-Test-Webhooks-Using-Stripe-CLI) — Simulating events locally
 
-### Inline Script Blocks
-- [YAML Tutorial: Everything You Need to Get Started](https://www.cloudbees.com/blog/yaml-tutorial-everything-you-need-get-started)
-- [Custom PowerShell Pipelines: Integrating with Azure DevOps](https://adamtheautomator.com/powershell-pipeline/)
-- [YAML Syntax — Ansible Community Documentation](https://docs.ansible.com/projects/ansible/latest/reference_appendices/YAMLSyntax.html)
+**E2E Testing (HIGH confidence):**
+- [Testing - Command Line Applications in Rust](https://rust-cli.github.io/book/tutorial/testing.html) — assert_cmd best practices
+- [E2E Testing for Rust CLI Applications](https://www.slingacademy.com/article/approaches-for-end-to-end-testing-in-rust-cli-applications/) — assert_cmd integration tests
+- [E2E Testing Best Practices 2026](https://oneuptime.com/blog/post/2026-01-30-e2e-testing-best-practices/view) — Simulation, automation, CI/CD integration
+- [Rust Stdio pipes documentation](https://doc.rust-lang.org/stable/std/process/struct.Stdio.html) — Deadlock warnings, buffer sizes
+- [os_pipe.rs cross-platform pipes](https://github.com/oconnor663/os_pipe.rs) — Pipe deadlock prevention
 
-### Policy as Code & Validation Engines
-- [Open Policy Agent (OPA) Documentation](https://www.openpolicyagent.org/docs)
-- [Enabling Policy as Code with OPA and Rego](https://snyk.io/blog/opa-rego-usage-for-policy-as-code/)
-- [Top 12 Policy as Code Tools in 2026](https://spacelift.io/blog/policy-as-code-tools)
-- [How to Write Your First Rules in Rego](https://www.styra.com/blog/how-to-write-your-first-rules-in-rego-the-policy-language-for-opa/)
+**Tauri 2.0 CI (HIGH confidence):**
+- [Tauri GitHub Actions Guide](https://v2.tauri.app/distribute/pipelines/github/) — Official CI/CD setup
+- [tauri-apps/tauri-action](https://github.com/tauri-apps/tauri-action) — Multi-platform builds (Windows x64, Linux x64/ARM64, macOS x64/ARM64)
+- [Tauri 2.0 webkit2gtk-4.1 requirement](https://github.com/tauri-apps/tauri/issues/9662) — Ubuntu 24.04 removed webkit2gtk-4.0-dev
+- [Tauri v2 Prerequisites](https://v2.tauri.app/start/prerequisites/) — System dependencies per platform
 
-### Kubernetes Admission Control
-- [Dynamic Admission Control | Kubernetes](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/)
-- [Kubernetes Admission Controllers and Webhooks Deep Dive](https://www.chkk.io/blog/kubernetes-admission-controllers)
-- [How to Implement Kubernetes Admission Webhooks (2026)](https://oneuptime.com/blog/post/2026-01-30-kubernetes-admission-webhooks/view)
-- [Kubernetes Validating Admission Policy: Native Alternative to Webhooks](https://medium.com/@chetanatole99/a-deep-dive-into-kubernetes-validating-admission-policy-the-native-alternative-to-webhooks-b35df05e6a5b)
+**Project Context (HIGH confidence):**
+- `.planning/research/STACK.md` — Existing dependencies, performance requirements
+- `.planning/research/ARCHITECTURE.md` — v1.3 event processing pipeline
+- `.planning/research/PITFALLS.md` — Known issues (broken pipe, schema draft incompatibility, webkit version)
+- `CLAUDE.md` — Pre-Push Checklist, binary rename history, CI failures
+- `MEMORY.md` — Stale binary artifacts, broken pipe on Linux lessons
 
-### API Gateway Validation
-- [Request Validation for REST APIs in API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-method-request-validation.html)
-- [Set up Basic Request Validation in API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-request-validation-set-up.html)
-- [JSON Schema Validation | KrakenD API Gateway](https://www.krakend.io/docs/endpoints/json-schema/)
-- [Request Validation with API Gateway Models](https://www.sls.guru/blog/request-validation-with-api-gateway-models)
+---
 
-### CI/CD Inline Validation
-- [GitHub Actions: Metadata Syntax](https://docs.github.com/en/actions/creating-actions/metadata-syntax-for-github-actions)
-- [GitHub Actions: Smarter Editing, Clearer Debugging (2026)](https://github.blog/changelog/2026-01-29-github-actions-smarter-editing-clearer-debugging-and-a-new-case-function/)
-- [GitLab CI/CD Inputs Documentation](https://docs.gitlab.com/ci/inputs/)
-- [GitLab: CI/CD Inputs Secure Method to Pass Parameters](https://about.gitlab.com/blog/ci-cd-inputs-secure-and-preferred-method-to-pass-parameters-to-a-pipeline/)
-- [Working with Python Scripts in Ansible](https://toptechtips.github.io/2023-06-10-ansible-python/)
+**Researched:** 2026-02-10
+**Valid until:** 2026-05-10 (90 days — stable ecosystem, mature crates)
 
-### NGINX & Middleware Inline Scripts
-- [Lua | NGINX Documentation](https://docs.nginx.com/nginx/admin-guide/dynamic-modules/lua/)
-- [Lua NGINX Module Rocky Linux 10: Scripting Guide (2026)](https://www.getpagespeed.com/server-setup/nginx/lua-nginx-module-rocky-linux-10)
-- [How to Use Traefik Plugins (2026)](https://oneuptime.com/blog/post/2026-01-27-traefik-plugins/view)
-- [Traefik Proxy Middleware Overview](https://doc.traefik.io/traefik/middlewares/overview/)
+**Confidence breakdown:**
+- JSON Schema features: **HIGH** (official docs, benchmarks, draft compatibility research)
+- Debug CLI simulation: **MEDIUM** (patterns from AWS/Stripe CLIs, not Rust-specific)
+- E2E test stabilization: **HIGH** (Rust official docs, assert_cmd best practices, stdio deadlock warnings)
+- Tauri CI integration: **HIGH** (official Tauri docs, GitHub issue confirming webkit2gtk-4.1 requirement)
+
+**Roadmap implications:**
+- v1.4 is **polish milestone**, not feature expansion
+- Phases 1-2 add correctness checks (schema validation, debug parity)
+- Phases 3-4 improve developer experience (reliable tests, working CI)
+- No new user-facing features (defer prompt injection, new matchers to v1.5)

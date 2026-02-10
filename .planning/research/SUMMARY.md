@@ -1,274 +1,297 @@
 # Project Research Summary
 
-**Project:** RuleZ v1.3 Advanced Matching & Validation
-**Domain:** AI policy engine with sub-10ms performance requirements
-**Researched:** 2026-02-08
+**Project:** RuleZ v1.4 Stability & Polish
+**Domain:** Rust CLI Policy Engine - Infrastructure & Developer Experience
+**Researched:** 2026-02-10
 **Confidence:** HIGH
 
 ## Executive Summary
 
-RuleZ v1.3 extends the policy engine with three new capabilities: prompt matching for intent-based routing, field validation for required parameter enforcement, and inline script blocks for single-file configurations. Research shows these are **table stakes features** users expect from policy engines based on patterns from OPA, Kubernetes admission webhooks, CI/CD systems (GitHub Actions, GitLab CI), and API gateways (AWS API Gateway, Kong).
+v1.4 is a **polish and stabilization milestone** focused on closing four specific gaps identified in v1.3 technical debt: JSON Schema validation for hook events, debug CLI parity for UserPromptSubmit events, cross-platform E2E test reliability, and Tauri 2.0 CI integration. Research shows these features are infrastructure improvements that enable better testing, validation, and cross-platform reliability without adding new user-facing policy features.
 
-The recommended approach is **minimalist and performance-focused**: extend existing evalexpr for inline validation (zero new dependencies), reuse regex crate for prompt matching (zero new dependencies), and add jsonschema 0.41 for field validation (single new dependency). This maintains RuleZ's sub-10ms processing budget while adding powerful capabilities. Total overhead: +200KB binary size, +2-3s compile time, <5ms worst-case runtime.
+The recommended approach is **additive integration**: all four features enhance existing components without modifying the core rule evaluation engine. Add ONE new dependency (schemars 1.2.1 for schema generation), pre-compile validators for performance, isolate debug CLI state to prevent cross-invocation leakage, canonicalize paths in E2E tests for cross-platform compatibility, and use explicit Ubuntu 22.04 runners with webkit2gtk-4.1 for Tauri builds.
 
-Critical risks center on **security and performance**: catastrophic regex backtracking can turn 3ms processing into 3000ms DoS, inline scripts without sandboxing pose RCE threats, and nested JSON validation can exceed the 10ms budget. Mitigations are well-documented: validate regex patterns at config load, defer unsandboxed inline scripts to v1.4+, and limit field depth to 5 levels. Build order recommendation: Phase 4 (prompt_match), Phase 5 (require_fields), Phase 6 (inline scripts with sandboxing).
+Key risks center on performance (schema validation must stay under 0.1ms per event), correctness (JSON Schema draft version compatibility), and CI reliability (webkit dependency hell, stale binary caches). All risks have well-documented mitigation strategies: pre-compile schemas at config load, require explicit `$schema` field with draft validation, clear caches in debug mode, use fs::canonicalize for paths, and pin CI runners with explicit webkit versions.
 
 ## Key Findings
 
 ### Recommended Stack
 
-**Stack decision: Add ONE dependency, extend TWO existing.**
+v1.4 adds **ONE new dependency** to the existing validated stack: schemars 1.2.1 for automatic JSON Schema generation from Rust types. All other features reuse existing dependencies (jsonschema 0.41 for validation, tokio async stdin for debug CLI, Playwright for E2E tests, Tauri 2.0 for desktop app).
 
-For v1.3's three capabilities:
-1. **Inline scripting** - Extend evalexpr 13.1 with custom functions (NO new dependency)
-2. **Prompt matching** - Use existing regex crate (NO new dependency)
-3. **Field validation** - Add jsonschema 0.41 for JSON Schema validation (NEW)
+**Core technologies (NEW in v1.4):**
+- **schemars 1.2.1**: JSON Schema generation from Rust structs — auto-generated schemas match serde serialization exactly, eliminates manual schema file maintenance, full serde compatibility via derive macros
+- **jsonschema 0.41** (existing): Runtime schema validation — 20-470x faster than alternatives, supports draft-07 and 2020-12, pre-compiled validators cache for performance
+- **tokio::io::stdin()** (existing): Async stdin for debug CLI — built-in since tokio 1.0, no new dependency needed, reuses existing async runtime
+- **Playwright 1.50** (existing): E2E testing in web mode — tests UI without Tauri build, works with Bun (basic support), fast feedback loop
+- **libwebkit2gtk-4.1-dev**: Tauri 2.0 Linux dependency — CRITICAL: version 4.1 (NOT 4.0), required for Ubuntu 22.04+, breaking change from Tauri 1.x
 
-**Why this approach:**
-- **Performance preserved:** Evalexpr already proven <1ms, regex <100μs, jsonschema 2-52x faster than alternatives
-- **Zero bloat:** No heavyweight scripting engines (Rhai +500KB, mlua unsafe FFI), no NLP libraries (rust-bert 50MB+)
-- **Battle-tested:** jsonschema 0.41 released Feb 2025, evalexpr 13.1 validated in RuleZ v1.2 with 245 tests
-
-**Core technologies:**
-- **evalexpr 13.1** (existing): Custom function API for inline validators - proven <1ms, zero compilation overhead
-- **regex** (existing): Pattern matching for prompts - reuse command_match infrastructure, <100μs per match
-- **jsonschema 0.41** (NEW): JSON Schema validation - 2-52x faster than alternatives, standards-compliant (Draft 7, 2019-09, 2020-12)
-
-**Rejected alternatives:**
-- Rhai 1.24 scripting: +500KB binary, +5-10s compile time, 7 dependencies, violates sub-10ms requirement
-- mlua (Lua): Unsafe FFI, external C library, state management complexity across async boundaries
-- rust-bert NLP: 50MB models, GPU required, 100ms+ latency - completely breaks sub-10ms budget
-- fancy-regex: Backreference support not needed, slower than standard regex
+**Performance budget:** Schema validation adds <0.1ms per event (cached validator), stays within <10ms total processing budget. Binary size increases by ~50 KB (schemars compile-time only).
 
 ### Expected Features
 
-**All three features are table stakes** - users expect these based on established policy engine patterns.
+v1.4 delivers **infrastructure features** that improve correctness and developer experience, NOT new user-facing policy capabilities. These are table stakes for calling the milestone "Stability & Polish."
 
 **Must have (table stakes):**
-- **prompt_match** — Intent-based routing standard in AI agent systems (Botpress, Microsoft Dynamics 365, LLM orchestration frameworks)
-- **require_fields** — Basic schema validation present in AWS API Gateway, Kubernetes admission webhooks, GitLab CI, JSON Schema
-- **Inline scripts** — Single-file configs standard in GitHub Actions, Azure DevOps, Ansible, NGINX Lua, Traefik plugins
+- **JSON Schema event validation**: Validate incoming hook events match Claude Code's schema before processing — fail-open mode for backwards compatibility, pre-compiled schemas for performance, support draft-07 and 2020-12
+- **Debug CLI UserPromptSubmit simulation**: Close testing gap for prompt_match rules — add `rulez debug prompt --prompt "text"` command, reuse existing event processing pipeline, clear state between invocations
+- **E2E test cross-platform reliability**: Tests must pass on Linux, macOS, Windows — canonicalize paths to resolve symlinks, fix broken pipe issues with wait_with_output(), CI matrix on all platforms
+- **Tauri 2.0 CI builds**: Multi-platform desktop app builds in GitHub Actions — webkit2gtk-4.1 on Linux, macOS and Windows native builds, E2E tests run first (fast), Tauri builds only if tests pass (slow)
 
-**Competitive edge (unique to RuleZ):**
-- **Composite matching** — prompt_match + command_match enables "user said X and is doing Y" policies unique to LLM workflows
-- **Single YAML file** — Simpler than OPA/Rego modules, directly integrated with Claude Code (not external webhook)
+**Should have (differentiators from minimal bug fix):**
+- **JSON Schema draft version validation**: Fail-closed on missing `$schema` field, reject unsupported drafts (draft-04/06), prevent breaking changes when schemas evolve
+- **Performance regression tests in CI**: Benchmark schema validation overhead, fail CI if p95 latency exceeds 10ms, guarantee performance budget maintained
+- **LRU regex cache**: Fix unbounded REGEX_CACHE growth from v1.3 tech debt, max 100 compiled regexes, evict least-recently-used
+- **Debug CLI correlation IDs**: Trace event flow for reproducibility, log correlation ID with every decision, support debugging complex event chains
 
-**Defer (v2+):**
-- **Field value validation** (v1.4) — Regex patterns on field values beyond presence checks - nice-to-have, 90% covered by presence
-- **Multi-language inline scripts** (v2.0) — Multiple scripts per rule adds complexity, use separate rules instead
-- **Semantic prompt matching** (v2.0) — Embedding-based intent detection - regex sufficient for v1.3
-
-**Anti-features (explicitly avoid):**
-- Complex expression language in require_fields (use enabled_when for conditionals)
-- Domain-specific prompt classifiers (users define own patterns)
-- Auto-detection of script language without shebang (fragile heuristics, security risk)
-- Type coercion in field validation (separation of concerns - validate, don't mutate)
+**Defer (v2+ scope creep):**
+- **New rule matchers or actions**: v1.4 is stability, NOT feature expansion — defer prompt injection prevention, new matchers to v1.5
+- **Interactive debug REPL mode**: Already exists in `rulez repl` — extend existing REPL with UserPromptSubmit support rather than duplicate
+- **Full Tauri E2E tests**: Too slow and brittle — test web mode with Playwright (Tauri commands have fallbacks), reserve full Tauri tests for manual QA
 
 ### Architecture Approach
 
-**All three features integrate as additive extensions to existing pipeline** - no structural changes required.
-
-v1.3 extends two pipelines:
-1. **Matchers pipeline** (models.rs::Matchers) - Add prompt_match field, follows exact command_match pattern
-2. **Actions pipeline** (models.rs::Actions) - Add require_fields validation (executes first), extend RunAction enum for inline scripts
+All v1.4 features integrate as **additive layers** to existing components without breaking changes. JSON Schema validation adds a pre-processing step in main.rs before rule evaluation. Debug CLI extends the existing SimEventType enum with UserPromptSubmit variant. E2E tests add helper functions for path canonicalization. Tauri CI creates a new workflow file parallel to existing CI.
 
 **Major components:**
-1. **prompt_match matcher** (Phase 4) - Regex evaluation in hooks.rs::matches_rule(), reuses existing regex compilation, <100μs overhead
-2. **require_fields action** (Phase 5) - Field validation before all other actions in execute_rule_actions(), simple HashMap lookup, <0.1ms overhead
-3. **Inline script execution** (Phase 6) - New execute_inline_script() function, temp file management, same semantics as file-based scripts, ~1-5ms temp file overhead
+1. **Event Schema Validator** (NEW in main.rs): Pre-compile JSON Schemas at startup using LazyLock, validate event JSON before deserialization, fail with exit code 1 on invalid events (not blocking code 2), log validation failures to audit trail
+2. **Debug CLI UserPromptSubmit** (EXTEND cli/debug.rs): Add UserPromptSubmit to SimEventType enum, add --prompt flag to CLI args, clear REGEX_CACHE at start of run() for state isolation, reuse existing process_event() pipeline
+3. **Path Canonicalizer** (NEW in tests/common/mod.rs): Helper function using fs::canonicalize() to resolve symlinks and normalize separators, handles macOS /var to /private/var symlink, cross-platform PathBuf operations
+4. **Tauri CI Workflow** (NEW .github/workflows/tauri-build.yml): E2E tests in web mode (fast, runs on every PR), Tauri builds in matrix (slow, multi-platform), explicit ubuntu-22.04 with webkit2gtk-4.1, artifact uploads for releases only
 
-**Architecture patterns validated:**
-- **Matcher extensibility** — Add field to Matchers, extend matches_rule() with AND logic (proven by command_match)
-- **Action extensibility** — Add field to Actions, respect execution order (proven by inject_inline, inject_command v1.2)
-- **RunAction enum extensibility** — Add variant with #[serde(untagged)] (proven by Simple vs Extended variants Phase 2.4)
-- **Event flexibility** — tool_input: Option<serde_json::Value> supports arbitrary fields (no schema enforcement)
-
-**Integration points:**
-- prompt_match: Add prompt: Option<String> to HookEvent, compile regex at config load (same as command_match)
-- require_fields: Validate before block checks (line 484 in execute_rule_actions), fail-closed on missing fields
-- Inline scripts: Detect variant via RunAction::is_inline(), write to temp file with UUID, execute via interpreter from shebang
+**Integration points preserved:**
+- Core rule evaluation engine (hooks.rs) UNCHANGED — no modifications to process_event() logic
+- Config loading (config.rs) UNCHANGED — schemas compiled after config load, not during
+- Event models (models.rs) ADD JsonSchema derive — automatic schema generation, no manual fields
+- Audit logging (logging.rs) UNCHANGED — schema validation failures logged like other events
 
 ### Critical Pitfalls
 
-Research identified 9 pitfalls across 3 severity levels. Top 3 critical:
+Research identified six critical pitfalls specific to v1.4's infrastructure features. All have well-documented prevention strategies.
 
-1. **Catastrophic regex backtracking (Phase 4)** — Nested quantifiers like (a+)+ cause O(2^n) complexity, turning 3ms into 3000ms DoS. **Prevention:** Validate patterns for nested quantifiers at config load, use Rust regex crate (DFA-based, safe by default), add 1ms timeout via RegexBuilder::size_limit(). Document that fancy-regex is forbidden.
-
-2. **Script execution without sandboxing (Phase 6)** — Inline scripts execute with full process permissions, enabling RCE, credential theft, data exfiltration. **Prevention:** DEFER unsandboxed inline scripts to v1.4 OR implement seccomp + Landlock (Linux) or Microsoft LiteBox (2026 release). Strip environment variables, read-only filesystem except /tmp, 1-second CPU limit (not wall-clock). Require shebang validation, hash script content to prevent TOCTOU.
-
-3. **Nested JSON validation overhead (Phase 5)** — Deeply nested fields (100+ levels) cause quadratic parsing and memory exhaustion. 7-level nesting: ~1ms, 100-level: >10ms (exceeds budget). **Prevention:** Limit field paths to 5 levels max, pre-parse paths at config load (cache as Vec<&str>), validate JSON depth on event receipt, benchmark with criterion (target <0.5ms for 5 levels).
-
-**Moderate risks:**
-- **CPU timeout insufficient (Phase 6)** — Wall-clock timeout doesn't stop CPU-bound loops. Add setrlimit(RLIMIT_CPU) for 1 CPU second limit.
-- **Prompt injection bypass (Phase 4)** — Base64, spacing, Unicode tricks bypass pattern matching. Normalize input (lowercase, alphanumeric filter), decode common encodings.
-- **Schema parsing overhead (Phase 5)** — Parsing schema per event scales poorly. Pre-compile validators at config load with OnceCell, use jsonschema validator reuse.
-
-**Minor risks (refactoring opportunities):**
-- Regex compilation in hot path (known issue with clippy suppression in lib.rs:23, config.rs:1) - fix in Phase 4
-- Missing shebang validation for scripts - add whitelist of allowed interpreters
-- Fail-open for typo'd field paths - define fail-closed semantics with strict_validation flag
+1. **JSON Schema draft version incompatibility**: Breaking changes between draft-07, draft-2019-09, and draft-2020-12 cause silent validation failures — PREVENT: Require explicit `$schema` field in all schemas, reject unsupported drafts with clear error messages, pin jsonschema crate version to prevent breaking updates, document only draft-07 and 2020-12 supported
+2. **Schema validation performance in hot path**: Compiling schemas on every event adds 0.5-2ms overhead, exceeds <10ms budget with 100+ rules — PREVENT: Pre-compile schemas at config load using OnceCell or LazyLock, cache compiled validators in Rule struct, fail config load on schema compilation errors, add performance regression tests to CI with criterion benchmarks
+3. **Debug CLI state contamination across invocations**: Global REGEX_CACHE and static memory leak state between rulez debug calls, causes unreproducible bugs — PREVENT: Clear REGEX_CACHE at start of debug run(), implement LRU cache with max 100 entries to fix v1.3 unbounded growth, use correlation IDs for debug tracing, add state isolation test to verify no cross-invocation leakage
+4. **E2E test path resolution across platforms**: macOS /var symlinks, Windows backslash separators, tempfile cleanup races cause CI failures — PREVENT: Use fs::canonicalize() before path comparison, PathBuf for all path operations (not string concatenation), explicit drop(temp_dir) at test end, CI matrix on ubuntu/macos/windows
+5. **Tauri 2.0 webkit version conflict in CI**: Ubuntu 24.04 removed libwebkit2gtk-4.0-dev, Tauri 2.0 requires 4.1 — PREVENT: Use explicit ubuntu-22.04 runner (NOT ubuntu-latest), install libwebkit2gtk-4.1-dev (NOT 4.0), document minimum OS requirements (Ubuntu 22.04+, Debian 12+)
+6. **GitHub Actions cache invalidation on binary rename**: cch to rulez rename left stale binaries in ~/.cargo/bin/, tests execute wrong code — PREVENT: Explicit cache cleanup with versioned keys, always use cargo run --bin rulez in CI (not bare binary name), validate binary with which rulez before tests, add binary artifact validation step
 
 ## Implications for Roadmap
 
-Based on research, suggested phase structure follows **simplest-to-most-complex** build order with **dependency isolation**.
+Based on research, v1.4 should be structured as **four independent phases** that can be developed in parallel (Phases 1-2), then integrated and validated (Phase 3), and finally deployed to CI (Phase 4).
 
-### Phase 4: prompt_match (Matcher)
-
-**Rationale:** Cleanest integration (mirrors command_match exactly), validates Matchers pipeline extensibility, no new execution logic (just matcher evaluation).
+### Phase 1: JSON Schema Validation
+**Rationale:** Core correctness feature with highest complexity — validating event structure before processing prevents downstream bugs. Must be first to establish schema patterns for other phases.
 
 **Delivers:**
-- Intent-based rule routing from UserPromptSubmit events
-- Regex patterns for prompt text matching (case-insensitive by default)
-- Composite matching capability (prompt + command)
+- schemars 1.2.1 dependency added
+- Event struct has JsonSchema derive macro
+- Pre-compiled schema validators cached in LazyLock
+- validate_event_schema() called in main.rs before process_event()
+- Draft version validation (draft-07 and 2020-12 only)
+- Fail-open mode with warnings for invalid events
 
-**Addresses features:**
-- prompt_match (table stakes from FEATURES.md)
-- Composite matching differentiator
+**Addresses (from FEATURES.md):**
+- JSON Schema event validation (table stakes)
+- Pre-compiled schema caching (table stakes)
+- Fail-open validation mode (table stakes)
+- JSON Schema draft version validation (differentiator)
 
-**Avoids pitfalls:**
-- MUST validate regex patterns for catastrophic backtracking (Pitfall 1)
-- MUST add input normalization layer (Pitfall 5)
-- SHOULD pre-compile regexes at config load (Pitfall 7 refactor opportunity)
+**Avoids (from PITFALLS.md):**
+- Pitfall 1: JSON Schema draft version incompatibility (require `$schema` field)
+- Pitfall 2: Schema validation performance (pre-compile at config load)
+- Pitfall 7: allOf misuse with serde flatten (document in guidelines)
 
-**Implementation complexity:** Low (~30-40 LOC + tests)
-**Research needed:** NO (standard pattern, well-documented)
+**Research flag:** Standard patterns (schemars derive macros well-documented, jsonschema crate widely used) — skip research-phase during planning.
 
 ---
 
-### Phase 5: require_fields (Action)
-
-**Rationale:** Extends Actions pipeline (validates extensibility), no external dependencies (pure validation), tests action execution order (must execute before blocks).
+### Phase 2: Debug CLI UserPromptSubmit
+**Rationale:** Independent feature that closes v1.3 testing gap — can be developed in parallel with Phase 1. Low complexity, reuses existing infrastructure.
 
 **Delivers:**
-- Required field validation for tool_input JSON
-- Fail-closed blocking with helpful error messages
-- Support for nested field paths with dot notation (up to 5 levels)
+- UserPromptSubmit added to SimEventType enum
+- --prompt flag added to debug CLI args
+- REGEX_CACHE cleared at start of run() for state isolation
+- LRU cache replaces unbounded HashMap (fixes v1.3 tech debt)
+- rulez debug prompt --prompt "text" command works
 
-**Addresses features:**
-- require_fields (table stakes from FEATURES.md)
+**Uses (from STACK.md):**
+- tokio::io::stdin() for async multiline input (existing dependency)
+- lru crate for bounded regex cache (new dependency, optional)
 
-**Avoids pitfalls:**
-- MUST implement 5-level depth limit (Pitfall 3)
-- MUST pre-compile field paths at config load (Pitfall 6)
-- MUST define fail-closed semantics for missing fields (Pitfall 9)
+**Implements (from ARCHITECTURE.md):**
+- Debug CLI extension pattern (additive enum variant)
+- State isolation pattern (clear caches between invocations)
+- Correlation ID pattern (optional, for tracing)
 
-**Uses stack:**
-- jsonschema 0.41 for JSON Schema validation (add to Cargo.toml)
-- Existing serde_json::Value for field access
+**Avoids (from PITFALLS.md):**
+- Pitfall 3: Debug CLI state contamination (clear REGEX_CACHE)
+- Pitfall 9: Debug CLI flag proliferation (use subcommands, not flags)
 
-**Implementation complexity:** Low (~50-60 LOC + validation + tests)
-**Research needed:** NO (JSON Schema well-documented, jsonschema crate battle-tested)
+**Research flag:** Standard patterns (tokio stdin well-documented, CLI testing with assert_cmd established) — skip research-phase during planning.
 
 ---
 
-### Phase 6: Inline Script Blocks (Action)
-
-**Rationale:** Most complex (temp file management, interpreter detection, sandboxing), builds on existing script execution infrastructure, validates enum extensibility.
+### Phase 3: E2E Test Stabilization
+**Rationale:** Must come after Phases 1-2 to validate schema validation and debug CLI work correctly. Blocks Phase 4 (Tauri CI depends on E2E tests passing).
 
 **Delivers:**
-- Inline script syntax in YAML using literal blocks (|)
-- Shebang-based interpreter detection (Python, Bash, Node)
-- Same exit code semantics as file-based scripts
+- canonicalize_path() helper in tests/common/mod.rs
+- All E2E tests use canonical paths in setup
+- Broken pipe fixes (use wait_with_output() instead of spawn() + wait())
+- CI matrix includes ubuntu-latest, macos-latest, windows-latest
+- Binary artifact validation (check which rulez before tests)
+- Symlink resolution tests (Unix-only, validates fs::canonicalize)
 
-**Addresses features:**
-- Inline scripts (table stakes from FEATURES.md)
+**Addresses (from FEATURES.md):**
+- E2E test cross-platform paths (table stakes)
+- E2E test broken pipe fixes (table stakes)
+- Binary artifact validation (table stakes, prevents stale cache issues)
+- Cross-platform CI matrix (differentiator)
 
-**Avoids pitfalls:**
-- **CRITICAL DECISION POINT:** Defer to v1.4 OR implement sandboxing first
-- If shipped in v1.3:
-  - MUST implement seccomp + Landlock sandboxing (Linux only)
-  - MUST add CPU time limits via setrlimit(RLIMIT_CPU) (Pitfall 4)
-  - MUST validate shebangs and whitelist interpreters (Pitfall 8)
-  - MUST strip environment variables from script context (Pitfall 2)
-  - MUST ensure temp file cleanup even on error
+**Avoids (from PITFALLS.md):**
+- Pitfall 4: E2E test tempfile path resolution (fs::canonicalize)
+- Pitfall 6: GitHub Actions cache staleness (validate binary name)
+- Pitfall 8: Broken pipe on Linux (use wait_with_output)
 
-**Uses stack:**
-- Extend evalexpr 13.1 with custom functions (alternative to full script execution)
-- Existing tokio::fs for temp file I/O
-- Existing uuid crate for temp file naming
+**Research flag:** Standard patterns (assert_cmd well-documented, cross-platform testing established) — skip research-phase during planning.
 
-**Implementation complexity:** Medium-High (~150-200 LOC + extensive tests + security validation)
-**Research needed:** YES - Script sandboxing approaches for macOS (LiteBox is Linux-only)
+---
 
-**Alternative approach (RECOMMENDED):**
-- Ship external script files only in v1.3 (safer, easier to audit)
-- Defer inline scripts to v1.4 with proper cross-platform sandboxing
-- OR: Ship inline validation via evalexpr custom functions (no separate script execution)
+### Phase 4: Tauri CI Integration
+**Rationale:** Final phase, depends on Phase 3 (E2E tests must pass to validate build artifacts). Slowest phase (5-10 min CI builds), only run on release branches.
+
+**Delivers:**
+- .github/workflows/tauri-build.yml (new workflow file)
+- E2E test job runs first in web mode (fast, uses Playwright)
+- Tauri build job only runs if E2E tests pass (slow, multi-platform matrix)
+- Linux uses ubuntu-22.04 with libwebkit2gtk-4.1-dev
+- macOS and Windows native builds
+- Artifacts uploaded for .dmg, .msi, .AppImage
+
+**Addresses (from FEATURES.md):**
+- Tauri 2.0 webkit dependency (table stakes)
+- Tauri 2.0 CI matrix builds (table stakes)
+- E2E tests run before builds (differentiator, fail-fast pattern)
+
+**Avoids (from PITFALLS.md):**
+- Pitfall 5: Tauri webkit version conflict (use webkit2gtk-4.1, explicit ubuntu-22.04)
+- Pitfall 6: Stale cache artifacts (validate binary before upload)
+
+**Research flag:** Standard patterns (Tauri GitHub Actions official, webkit2gtk-4.1 requirement documented) — skip research-phase during planning.
 
 ---
 
 ### Phase Ordering Rationale
 
-**Why this order:**
-1. **Dependency isolation** - Each phase is independently useful, no hard dependencies between features
-2. **Complexity progression** - Start with simplest (prompt_match: ~40 LOC) to validate integration patterns, end with most complex (inline scripts: ~200 LOC + security)
-3. **Risk management** - Address performance risks (Phases 4-5) before security risks (Phase 6)
-4. **Incremental value** - Ship prompt_match + require_fields without inline scripts if sandboxing proves complex
+**Parallel development (Phases 1-2):**
+- JSON Schema integration and debug CLI have no dependencies
+- Can be developed simultaneously by different developers
+- Both enhance validation/testing infrastructure
 
-**Soft synergies (not dependencies):**
-- prompt_match + require_fields: "When user asks about X, require field Y"
-- require_fields + inline scripts: Basic validation (presence) + advanced validation (value correctness)
+**Sequential validation (Phase 3):**
+- E2E tests validate Phases 1-2 work correctly on all platforms
+- Must pass before Tauri builds are useful (Phase 4)
+- Blocks deployment to CI
+
+**Final integration (Phase 4):**
+- Tauri builds only after E2E tests pass (fail-fast)
+- Slowest phase, runs only on release branches
+- Validates entire stack works on all platforms
+
+**Critical path:** Phase 1 OR Phase 2 → Phase 3 → Phase 4 (total: 6-10 days estimated)
 
 ### Research Flags
 
-**Phases needing deeper research during planning:**
-- **Phase 6 (Inline Scripts):** REQUIRES additional research on cross-platform sandboxing (LiteBox Linux-only, macOS App Sandbox limited). Alternatives: defer to v1.4, use evalexpr custom functions instead of full script execution, or Linux-only release.
-
 **Phases with standard patterns (skip research-phase):**
-- **Phase 4 (prompt_match):** Well-documented regex patterns, existing RuleZ command_match precedent
-- **Phase 5 (require_fields):** JSON Schema industry standard, jsonschema crate documentation comprehensive
+- **Phase 1 (JSON Schema)**: schemars and jsonschema crates have extensive official documentation, derive macros well-established pattern
+- **Phase 2 (Debug CLI)**: tokio stdin built-in feature, CLI testing with assert_cmd widely documented
+- **Phase 3 (E2E Tests)**: Cross-platform testing patterns well-established, fs::canonicalize standard library
+- **Phase 4 (Tauri CI)**: Official Tauri GitHub Actions, webkit2gtk-4.1 requirement explicitly documented
+
+**No phases need deeper research during planning.** All features use well-documented patterns with HIGH confidence sources.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Evalexpr proven in v1.2 (245 tests), jsonschema 0.41 released Feb 2025 with benchmarks, regex already in use |
-| Features | HIGH | Table stakes validated across OPA, Kubernetes, GitHub Actions, AWS API Gateway - multiple independent sources |
-| Architecture | HIGH | Integration patterns proven by recent v1.2 additions (inject_inline, inject_command, priority sorting) |
-| Pitfalls | HIGH | Catastrophic backtracking documented in regex literature, sandboxing validated by 2026 LiteBox release, nested JSON validated by jsonschema benchmarks |
+| Stack | HIGH | schemars and jsonschema official docs verified, tokio stdin built-in, Tauri 2.0 docs explicit about webkit2gtk-4.1 |
+| Features | HIGH | v1.3 tech debt items well-documented, feature scope clearly defined as stability (not expansion) |
+| Architecture | HIGH | Integration points identified via code inspection, additive patterns preserve existing engine |
+| Pitfalls | HIGH | All six critical pitfalls have documented real-world evidence (GitHub issues, official migration guides) |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-**During implementation:**
-- **Performance validation required:** Benchmark all three features together to confirm <10ms requirement (criterion suite)
-- **macOS sandboxing:** Research macOS-specific sandboxing options if inline scripts must ship in v1.3 (App Sandbox entitlements, defer to Linux-only, or use evalexpr custom functions)
-- **Fail-closed semantics:** Define strict_validation config flag for field path typos (security vs UX tradeoff)
+**Performance validation required:**
+- Benchmark schema validation overhead with 100+ rules (target: <0.1ms per event)
+- Verify total processing latency stays under 10ms with criterion regression tests
+- Validate binary size stays under 5 MB (currently 2.2 MB + 50 KB schemars = 2.25 MB)
 
-**During testing:**
-- **Fuzz testing:** Malicious regex patterns, deeply nested JSON, prompt injection attempts
-- **Edge cases:** Multi-line prompts, Unicode in field paths, temp file cleanup on panic/timeout
-- **Integration:** Priority + mode combinations (warn mode, audit mode, multiple rules with prompt_match)
+**Cross-platform testing required:**
+- Run E2E tests on Windows in CI (currently only tested on macOS and Linux locally)
+- Validate Tauri builds succeed on all platforms in matrix (ubuntu-22.04, macos-latest, windows-latest)
+- Test symlink resolution explicitly on macOS (/var → /private/var)
 
-**Post-v1.3 (defer to v1.4+):**
-- Semantic prompt matching (embedding-based, requires ML model integration)
-- Field value validation beyond presence checks (regex on values)
-- serde_json_path integration for complex JSONPath queries
+**CI cache behavior:**
+- Verify stale binary detection works (which rulez validation step)
+- Test cache invalidation after binary rename (versioned cache keys)
+- Validate webkit2gtk-4.1 installation on ubuntu-22.04 and ubuntu-24.04
+
+**All gaps are validation tasks during implementation, NOT research gaps.** The approach is clear, execution needs verification.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- [evalexpr 13.1 documentation](https://docs.rs/evalexpr) — Custom function API, performance
-- [Rust regex documentation](https://docs.rs/regex/latest/regex/) — Pattern matching capabilities, safety guarantees
-- [jsonschema-rs GitHub](https://github.com/Stranger6667/jsonschema) — Performance benchmarks (2-52x faster), 0.41 release notes
-- [Catastrophic Backtracking - Regular-Expressions.info](https://www.regular-expressions.info/catastrophic.html) — Regex complexity analysis
-- [Microsoft LiteBox - Rust Sandboxing (2026)](https://securityboulevard.com/2026/02/microsoft-unveils-litebox-a-rust-based-approach-to-secure-sandboxing/) — Script sandboxing approach
-- [Rust Sandboxing with seccomp and Landlock (2026)](https://oneuptime.com/blog/post/2026-01-07-rust-sandboxing-seccomp-landlock/view) — Linux sandboxing implementation
+
+**JSON Schema:**
+- [schemars docs.rs 1.2.1](https://docs.rs/schemars) — API documentation, derive macro usage
+- [schemars official docs](https://graham.cool/schemars/) — Serde integration patterns
+- [jsonschema docs.rs 0.41](https://docs.rs/jsonschema) — Validator performance, pre-compilation
+- [JSON Schema draft specifications](https://json-schema.org/specification) — Draft-07 and 2020-12 differences
+- [GSoC 2026: JSON Schema Compatibility Checker](https://github.com/json-schema-org/community/issues/984) — Breaking changes between drafts
+
+**Tauri 2.0:**
+- [Tauri 2.0 Prerequisites](https://v2.tauri.app/start/prerequisites/) — System dependencies per platform
+- [Tauri 2.0 webkit migration guide](https://v2.tauri.app/blog/tauri-2-0-0-alpha-3/) — webkit2gtk-4.1 requirement
+- [Tauri GitHub Issue 9662](https://github.com/tauri-apps/tauri/issues/9662) — Ubuntu 24.04 removed webkit2gtk-4.0
+- [tauri-apps/tauri-action](https://github.com/tauri-apps/tauri-action) — Official GitHub Action for multi-platform builds
+
+**Rust CLI Testing:**
+- [Testing - Command Line Applications in Rust](https://rust-cli.github.io/book/tutorial/testing.html) — assert_cmd best practices
+- [tokio stdin docs](https://docs.rs/tokio/latest/tokio/io/struct.Stdin.html) — Async stdin built-in feature
+- [assert_cmd docs](https://docs.rs/assert_cmd) — CLI testing patterns, stdin/stdout handling
+
+**Project Context:**
+- RuleZ CLAUDE.md — Pre-push checklist, binary rename history, CI requirements
+- RuleZ MEMORY.md — Stale binary artifacts lesson, broken pipe on Linux fix
+- RuleZ codebase inspection — main.rs, hooks.rs, cli/debug.rs, tests/e2e_*.rs
 
 ### Secondary (MEDIUM confidence)
-- [AI Agent Routing: Ultimate Guide (2026)](https://botpress.com/blog/ai-agent-routing) — Intent-based routing patterns
-- [AWS API Gateway Request Validation](https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-method-request-validation.html) — Required field validation precedent
-- [Kubernetes Admission Control](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/) — Policy validation patterns
-- [GitHub Actions Metadata Syntax](https://docs.github.com/en/actions/creating-actions/metadata-syntax-for-github-actions) — Inline script precedent
-- [JSON Interoperability Vulnerabilities - Bishop Fox](https://bishopfox.com/blog/json-interoperability-vulnerabilities) — Nested JSON risks
-- [Perplexity BrowseSafe Prompt Injection](https://bdtechtalks.com/2026/01/19/perplexity-browsesafe-prompt-injection/) — Prompt matching bypass techniques
 
-### Tertiary (LOW confidence - not relied upon)
-- Various blog posts on Rust scripting (LogRocket, medium.com) — Ecosystem overviews
-- WebSearch results on NLP libraries — Discovery only, not used for decisions
+**Event-Driven Testing:**
+- [AWS EventBridge test-event-pattern](https://docs.aws.amazon.com/cli/latest/reference/events/test-event-pattern.html) — CLI patterns for event simulation
+- [Stripe CLI webhook testing](https://www.projectschool.dev/blogs/devessentials/How-to-Test-Webhooks-Using-Stripe-CLI) — Simulating events locally
+
+**GitHub Actions:**
+- [Swatinem/rust-cache docs](https://github.com/Swatinem/rust-cache) — Cache behavior, invalidation patterns
+- [GitHub Actions matrix builds guide](https://oneuptime.com/blog/post/2026-01-25-github-actions-matrix-builds/view) — Multi-platform testing
+
+### Tertiary (LOW confidence)
+
+**Playwright/Bun:**
+- [BrowserStack: Bun for Playwright](https://www.browserstack.com/guide/bun-playwright) — Compatibility notes (works for basic use, not officially supported)
+- [GitHub Issue 27139](https://github.com/microsoft/playwright/issues/27139) — Community discussion on Bun compatibility
 
 ---
-*Research completed: 2026-02-08*
-*Ready for roadmap: yes*
-*Critical decision: Phase 6 inline scripts - defer to v1.4 or implement sandboxing first*
+
+**Research completed:** 2026-02-10
+**Ready for roadmap:** Yes
+
+**Total files synthesized:** 4 (STACK.md, FEATURES.md, ARCHITECTURE.md, PITFALLS.md)
+**Research confidence:** HIGH across all domains
+**Estimated implementation time:** 6-10 developer-days (4-6 days with parallel development)
+**Performance budget maintained:** Yes (<10ms total processing, <0.1ms schema validation)
+**Breaking changes:** None (all features are additive)
