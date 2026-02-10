@@ -29,7 +29,7 @@ All decisions logged in PROJECT.md Key Decisions table.
 
 ### Pending Todos
 
-1 pending — `/gsd:check-todos` to review
+0 pending — all todos resolved
 
 ### Blockers/Concerns
 

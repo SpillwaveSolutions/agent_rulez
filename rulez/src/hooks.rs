@@ -361,11 +361,12 @@ async fn execute_inline_script(
         tokio::fs::set_permissions(&script_path, perms).await?;
     }
 
-    // Execute script with sh
+    // Execute script directly so the kernel honours any shebang line.
+    // The file already has 0o700 permissions. Scripts without a shebang
+    // will be executed by the system's default shell (typically /bin/sh).
     // Use Stdio::null() for stdout/stderr since we only check exit code.
     // Piped handles that are never drained cause "Broken pipe" on Linux.
-    let mut command = Command::new("sh");
-    command.arg(&script_path);
+    let mut command = Command::new(&script_path);
     command.stdout(std::process::Stdio::null());
     command.stderr(std::process::Stdio::null());
     command.stdin(std::process::Stdio::piped());
