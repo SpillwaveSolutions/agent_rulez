@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 ## Current Position
 
 Phase: 6 of 6 (Inline Script Blocks)
-Plan: 3 of 3
-Status: Phase 6 in progress
-Last activity: 2026-02-10 - Completed 06-02-PLAN.md (validate_expr & inline_script Execution)
+Plan: 3 of 3 (COMPLETE)
+Status: Phase 6 COMPLETE - v1.3 Advanced Matching & Validation COMPLETE
+Last activity: 2026-02-10 - Completed 06-03-PLAN.md (Integration Tests & Verification)
 
-Progress: ████████████████████████ 97% (5 phases complete + 2/3 of phase 6)
+Progress: █████████████████████████ 100% (6 phases complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 15 (6 v1.2 + 9 v1.3)
+- Total plans completed: 16 (6 v1.2 + 10 v1.3)
 - Average duration: ~6min (Phases 4-6)
-- Total execution time: 90min (Phase 4: 61min, Phase 5: 21min, Phase 6: 8min so far)
+- Total execution time: 100min (Phase 4: 61min, Phase 5: 21min, Phase 6: 18min)
 
 **By Phase:**
 
@@ -32,13 +32,13 @@ Progress: ███████████████████████�
 | 3. Conditional Rule Activation | 3 | - | - |
 | 4. Prompt Matching | 4/4 | 61min | 15min |
 | 5. Field Validation | 3/3 | 21min | 7min |
-| 6. Inline Script Blocks | 2/3 | 8min | 4min |
+| 6. Inline Script Blocks | 3/3 | 18min | 6min |
 
 **Recent Trend:**
-- v1.3 Phase 5 Plan 2 complete (5 min)
 - v1.3 Phase 5 Plan 3 complete (8 min)
 - v1.3 Phase 6 Plan 1 complete (5 min)
 - v1.3 Phase 6 Plan 2 complete (3 min)
+- v1.3 Phase 6 Plan 3 complete (10 min) - PHASE 6 COMPLETE
 
 ## Accumulated Context
 
@@ -75,6 +75,8 @@ Recent decisions affecting v1.3 work:
 - [v1.3-06-02]: Empty string for missing/null fields in get_field() (consistent fallback)
 - [v1.3-06-02]: tokio::time::timeout for script timeout (avoids child ownership issues)
 - [v1.3-06-02]: Validation runs BEFORE all other actions (fail-closed gate pattern)
+- [v1.3-06-03]: Exit code 2 for validation failures (aligns with validation error exit code)
+- [v1.3-06-03]: Float comparison for number tests (evalexpr converts JSON numbers to Float)
 
 ### v1.3 Research Findings
 
@@ -110,7 +112,7 @@ Decision needed before Phase 6 planning.
 
 ## Test Coverage Summary
 
-Phase 4 added 70+ tests, Phase 5 added 54 tests (11 in P01, 12 in P02, 31 in P03) + 15 integration tests:
+Phase 4 added 26 tests, Phase 5 added 54 tests + 15 integration, Phase 6 added 31 tests + 15 integration:
 
 | Requirement | Description | Covered By |
 |-------------|-------------|------------|
@@ -123,16 +125,23 @@ Phase 4 added 70+ tests, Phase 5 added 54 tests (11 in P01, 12 in P02, 31 in P03
 | FIELD-02 | Fail-closed blocking | Unit (7 tests) + Integration (2 tests) |
 | FIELD-03 | Nested field paths (dot notation) | Unit (11 tests) + Integration (3 tests) |
 | FIELD-04 | Field type validation | Unit (20 tests) + Integration (4 tests) |
+| SCRIPT-01 | validate_expr in YAML | Unit (11 tests) + Integration (3 tests) |
+| SCRIPT-02 | get_field/has_field functions | Unit (10 tests) + Integration (2 tests) |
+| SCRIPT-03 | Boolean semantics | Unit (5 tests) + Integration (2 tests) |
+| SCRIPT-04 | Inline shell scripts | Integration (3 tests) |
+| SCRIPT-05 | Timeout protection | Integration (1 test) |
+| SCRIPT-06 | Config validation | Unit (11 tests) + Integration (2 tests) |
 
-Total tests: 247 (232 unit tests + 15 integration tests)
+Total tests: 262 (247 unit tests + 15 integration tests)
 - Baseline: 191 unit tests
 - Phase 4: +26 unit tests (217 total)
-- Phase 5: +54 unit tests (217 + 31 new = 232 total) + 15 integration tests
+- Phase 5: +54 unit tests + 15 integration tests (232 unit + 15 integration)
+- Phase 6: +31 unit tests + 15 integration tests (247 unit + 15 integration = 262 total)
 
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Completed 06-02-PLAN.md (validate_expr & inline_script Execution) - Phase 6 Plan 2 COMPLETE
+Stopped at: Completed 06-03-PLAN.md (Integration Tests & Verification) - PHASE 6 COMPLETE, v1.3 COMPLETE
 Resume file: None
 
-Next action: Continue Phase 6 with Plan 03 (Integration Tests & Documentation) - FINAL PLAN of Phase 6.
+Next action: v1.3 Advanced Matching & Validation is COMPLETE. All 6 phases (Prompt Matching, Field Validation, Inline Script Blocks) implemented and tested. Ready for v1.4 planning or other development work.
