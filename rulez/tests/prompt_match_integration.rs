@@ -17,7 +17,7 @@ use std::fs;
 
 #[path = "common/mod.rs"]
 mod common;
-use common::{evidence_dir, TestEvidence, Timer};
+use common::{TestEvidence, Timer, evidence_dir};
 
 // =============================================================================
 // YAML Round-Trip Tests
@@ -56,7 +56,10 @@ rules:
     // Output says "Configuration syntax is valid" with checkmarks
     result.stdout(predicate::str::contains("syntax is valid"));
 
-    evidence.pass("Simple array syntax parses and validates correctly", timer.elapsed_ms());
+    evidence.pass(
+        "Simple array syntax parses and validates correctly",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }
 
@@ -96,7 +99,10 @@ rules:
     // Output says "Configuration syntax is valid" with checkmarks
     result.stdout(predicate::str::contains("syntax is valid"));
 
-    evidence.pass("Complex object syntax parses and validates correctly", timer.elapsed_ms());
+    evidence.pass(
+        "Complex object syntax parses and validates correctly",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }
 
@@ -245,7 +251,10 @@ rules:
         "Case-insensitive match should block"
     );
 
-    evidence.pass("Case-insensitive matching works correctly", timer.elapsed_ms());
+    evidence.pass(
+        "Case-insensitive matching works correctly",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }
 
@@ -311,7 +320,10 @@ rules:
         "Both keywords should block in ALL mode"
     );
 
-    evidence.pass("ALL mode correctly requires all patterns", timer.elapsed_ms());
+    evidence.pass(
+        "ALL mode correctly requires all patterns",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }
 
@@ -511,7 +523,10 @@ rules:
             .or(predicate::str::contains(r#""continue": true"#)),
     );
 
-    evidence.pass("contains_word shorthand works correctly", timer.elapsed_ms());
+    evidence.pass(
+        "contains_word shorthand works correctly",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }
 
@@ -556,7 +571,10 @@ rules:
             .or(predicate::str::contains(r#""continue": true"#)),
     );
 
-    evidence.pass("Missing prompt correctly does not match", timer.elapsed_ms());
+    evidence.pass(
+        "Missing prompt correctly does not match",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }
 
@@ -603,7 +621,10 @@ rules:
         "Rule should block when prompt exists and matches"
     );
 
-    evidence.pass("prompt variable accessible in enabled_when context", timer.elapsed_ms());
+    evidence.pass(
+        "prompt variable accessible in enabled_when context",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }
 
@@ -719,7 +740,10 @@ rules:
         combined
     );
 
-    evidence.pass("Validation correctly rejects invalid regex", timer.elapsed_ms());
+    evidence.pass(
+        "Validation correctly rejects invalid regex",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }
 
@@ -757,6 +781,9 @@ rules:
         "Validation should fail for empty patterns"
     );
 
-    evidence.pass("Validation correctly rejects empty patterns", timer.elapsed_ms());
+    evidence.pass(
+        "Validation correctly rejects empty patterns",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }

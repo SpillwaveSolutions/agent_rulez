@@ -17,7 +17,7 @@ use std::fs;
 
 #[path = "common/mod.rs"]
 mod common;
-use common::{evidence_dir, TestEvidence, Timer};
+use common::{TestEvidence, Timer, evidence_dir};
 
 // =============================================================================
 // FIELD-01: Require specific fields exist
@@ -77,7 +77,10 @@ rules:
         stdout
     );
 
-    evidence.pass("Required field present allows operation", timer.elapsed_ms());
+    evidence.pass(
+        "Required field present allows operation",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }
 
@@ -136,7 +139,10 @@ rules:
         stdout
     );
 
-    evidence.pass("Missing required field causes rule not to match (fail-closed)", timer.elapsed_ms());
+    evidence.pass(
+        "Missing required field causes rule not to match (fail-closed)",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }
 
@@ -190,7 +196,10 @@ rules:
         stdout
     );
 
-    evidence.pass("Missing tool_input causes rule not to match (fail-closed)", timer.elapsed_ms());
+    evidence.pass(
+        "Missing tool_input causes rule not to match (fail-closed)",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }
 
@@ -241,7 +250,10 @@ rules:
         stdout
     );
 
-    evidence.pass("Null value treated as missing (rule doesn't match)", timer.elapsed_ms());
+    evidence.pass(
+        "Null value treated as missing (rule doesn't match)",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }
 
@@ -301,7 +313,10 @@ rules:
         stdout
     );
 
-    evidence.pass("Nested field (user.name) resolves correctly", timer.elapsed_ms());
+    evidence.pass(
+        "Nested field (user.name) resolves correctly",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }
 
@@ -356,7 +371,10 @@ rules:
         stdout
     );
 
-    evidence.pass("Missing nested field causes rule not to match", timer.elapsed_ms());
+    evidence.pass(
+        "Missing nested field causes rule not to match",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }
 
@@ -473,7 +491,10 @@ rules:
         stdout
     );
 
-    evidence.pass("Correct field type (number) allows operation", timer.elapsed_ms());
+    evidence.pass(
+        "Correct field type (number) allows operation",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }
 
@@ -586,7 +607,10 @@ rules:
         stdout
     );
 
-    evidence.pass("Multiple field types validated correctly", timer.elapsed_ms());
+    evidence.pass(
+        "Multiple field types validated correctly",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }
 
@@ -701,7 +725,10 @@ rules:
         stdout
     );
 
-    evidence.pass("Combined require_fields and field_types work together", timer.elapsed_ms());
+    evidence.pass(
+        "Combined require_fields and field_types work together",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }
 
@@ -741,7 +768,10 @@ rules:
         .output()
         .expect("command should run");
 
-    assert!(output.status.success(), "Should pass when tool and field match");
+    assert!(
+        output.status.success(),
+        "Should pass when tool and field match"
+    );
 
     // Test 2: Wrong tool - should not match rule
     let event_wrong_tool = r#"{
@@ -758,7 +788,10 @@ rules:
         .output()
         .expect("command should run");
 
-    assert!(output.status.success(), "Should pass when tool doesn't match");
+    assert!(
+        output.status.success(),
+        "Should pass when tool doesn't match"
+    );
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
@@ -766,7 +799,10 @@ rules:
         "Should NOT inject when tool doesn't match"
     );
 
-    evidence.pass("Field validation works with tool matcher", timer.elapsed_ms());
+    evidence.pass(
+        "Field validation works with tool matcher",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }
 
@@ -817,7 +853,10 @@ rules:
         combined
     );
 
-    evidence.pass("Invalid field path rejected at config load", timer.elapsed_ms());
+    evidence.pass(
+        "Invalid field path rejected at config load",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }
 
@@ -865,6 +904,9 @@ rules:
         combined
     );
 
-    evidence.pass("Invalid type specifier rejected at config load", timer.elapsed_ms());
+    evidence.pass(
+        "Invalid type specifier rejected at config load",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }

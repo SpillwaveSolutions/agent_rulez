@@ -17,7 +17,7 @@ use std::fs;
 
 #[path = "common/mod.rs"]
 mod common;
-use common::{evidence_dir, TestEvidence, Timer};
+use common::{TestEvidence, Timer, evidence_dir};
 
 /// Test that a rule with enabled_when: 'true' is active and blocks
 #[test]

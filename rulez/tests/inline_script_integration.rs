@@ -19,7 +19,7 @@ use std::fs;
 
 #[path = "common/mod.rs"]
 mod common;
-use common::{evidence_dir, TestEvidence, Timer};
+use common::{TestEvidence, Timer, evidence_dir};
 
 // =============================================================================
 // SCRIPT-01: validate_expr in YAML
@@ -79,7 +79,10 @@ rules:
         stdout
     );
 
-    evidence.pass("validate_expr with has_field passes and allows operation", timer.elapsed_ms());
+    evidence.pass(
+        "validate_expr with has_field passes and allows operation",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }
 
@@ -120,9 +123,16 @@ rules:
         .expect("command should run");
 
     // Validation failure exits with code 2 (validation error) and writes to stderr
-    assert!(!output.status.success(), "Should exit non-zero when validation fails");
+    assert!(
+        !output.status.success(),
+        "Should exit non-zero when validation fails"
+    );
     let exit_code = output.status.code().unwrap_or(-1);
-    assert_eq!(exit_code, 2, "Should exit with code 2 (validation error), got {}", exit_code);
+    assert_eq!(
+        exit_code, 2,
+        "Should exit with code 2 (validation error), got {}",
+        exit_code
+    );
 
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
@@ -131,7 +141,10 @@ rules:
         stderr
     );
 
-    evidence.pass("validate_expr returning false blocks operation", timer.elapsed_ms());
+    evidence.pass(
+        "validate_expr returning false blocks operation",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }
 
@@ -189,7 +202,10 @@ rules:
         stdout
     );
 
-    evidence.pass("validate_expr with get_field comparison works correctly", timer.elapsed_ms());
+    evidence.pass(
+        "validate_expr with get_field comparison works correctly",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }
 
@@ -246,7 +262,10 @@ rules:
         stdout
     );
 
-    evidence.pass("get_field works with nested field paths (dot notation)", timer.elapsed_ms());
+    evidence.pass(
+        "get_field works with nested field paths (dot notation)",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }
 
@@ -287,7 +306,10 @@ rules:
         .expect("command should run");
 
     // Validation failure exits with code 2
-    assert!(!output.status.success(), "Should exit non-zero when validation fails");
+    assert!(
+        !output.status.success(),
+        "Should exit non-zero when validation fails"
+    );
     let exit_code = output.status.code().unwrap_or(-1);
     assert_eq!(exit_code, 2, "Should exit with code 2, got {}", exit_code);
 
@@ -298,7 +320,10 @@ rules:
         stderr
     );
 
-    evidence.pass("has_field returns false for null values (null = missing)", timer.elapsed_ms());
+    evidence.pass(
+        "has_field returns false for null values (null = missing)",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }
 
@@ -355,7 +380,10 @@ rules:
         stdout
     );
 
-    evidence.pass("Complex boolean expressions with && work correctly", timer.elapsed_ms());
+    evidence.pass(
+        "Complex boolean expressions with && work correctly",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }
 
@@ -395,7 +423,10 @@ rules:
         .expect("command should run");
 
     // Validation failure exits with code 2
-    assert!(!output.status.success(), "Should exit non-zero when validation fails");
+    assert!(
+        !output.status.success(),
+        "Should exit non-zero when validation fails"
+    );
     let exit_code = output.status.code().unwrap_or(-1);
     assert_eq!(exit_code, 2, "Should exit with code 2, got {}", exit_code);
 
@@ -406,7 +437,10 @@ rules:
         stderr
     );
 
-    evidence.pass("Expression always returning false blocks operation", timer.elapsed_ms());
+    evidence.pass(
+        "Expression always returning false blocks operation",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }
 
@@ -469,7 +503,10 @@ rules:
         stdout
     );
 
-    evidence.pass("inline_script with exit 0 allows operation", timer.elapsed_ms());
+    evidence.pass(
+        "inline_script with exit 0 allows operation",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }
 
@@ -511,7 +548,10 @@ rules:
         .expect("command should run");
 
     // Script failure exits with code 2
-    assert!(!output.status.success(), "Should exit non-zero when script fails");
+    assert!(
+        !output.status.success(),
+        "Should exit non-zero when script fails"
+    );
     let exit_code = output.status.code().unwrap_or(-1);
     assert_eq!(exit_code, 2, "Should exit with code 2, got {}", exit_code);
 
@@ -522,7 +562,10 @@ rules:
         stderr
     );
 
-    evidence.pass("inline_script with exit 1 blocks operation", timer.elapsed_ms());
+    evidence.pass(
+        "inline_script with exit 1 blocks operation",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }
 
@@ -584,7 +627,10 @@ rules:
         stdout
     );
 
-    evidence.pass("inline_script receives event JSON on stdin", timer.elapsed_ms());
+    evidence.pass(
+        "inline_script receives event JSON on stdin",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }
 
@@ -652,7 +698,10 @@ rules:
         duration
     );
 
-    evidence.pass("inline_script timeout protection works (fail-closed)", duration);
+    evidence.pass(
+        "inline_script timeout protection works (fail-closed)",
+        duration,
+    );
     let _ = evidence.save(&evidence_dir());
 }
 
@@ -704,12 +753,17 @@ rules:
 
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("Invalid validate_expr") || stderr.contains("invalid-expr") || stderr.contains("Failed to parse"),
+        stderr.contains("Invalid validate_expr")
+            || stderr.contains("invalid-expr")
+            || stderr.contains("Failed to parse"),
         "Should mention validation error: {}",
         stderr
     );
 
-    evidence.pass("Invalid validate_expr rejected at config load", timer.elapsed_ms());
+    evidence.pass(
+        "Invalid validate_expr rejected at config load",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }
 
@@ -765,7 +819,10 @@ rules:
         stderr
     );
 
-    evidence.pass("Mutual exclusion between validate_expr and inline_script enforced", timer.elapsed_ms());
+    evidence.pass(
+        "Mutual exclusion between validate_expr and inline_script enforced",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }
 
@@ -837,7 +894,10 @@ rules:
         .expect("command should run");
 
     // Validation failure exits with code 2
-    assert!(!output2.status.success(), "Should exit non-zero when validation fails");
+    assert!(
+        !output2.status.success(),
+        "Should exit non-zero when validation fails"
+    );
     let exit_code2 = output2.status.code().unwrap_or(-1);
     assert_eq!(exit_code2, 2, "Should exit with code 2, got {}", exit_code2);
 
@@ -848,7 +908,10 @@ rules:
         stderr2
     );
 
-    evidence.pass("validate_expr works correctly with tool matchers", timer.elapsed_ms());
+    evidence.pass(
+        "validate_expr works correctly with tool matchers",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }
 
@@ -907,6 +970,9 @@ rules:
         stdout
     );
 
-    evidence.pass("inline_script passes then inject_inline content appears", timer.elapsed_ms());
+    evidence.pass(
+        "inline_script passes then inject_inline content appears",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 }

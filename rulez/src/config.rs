@@ -2,14 +2,14 @@
 #![allow(clippy::unnecessary_map_or)]
 
 use anyhow::{Context, Result};
-use evalexpr::{build_operator_tree, DefaultNumericTypes};
+use evalexpr::{DefaultNumericTypes, build_operator_tree};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 
 use crate::models::{PromptMatch, Rule};
 
-/// Global CCH settings
+/// Global RuleZ settings
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Settings {
     /// Logging verbosity level
@@ -53,7 +53,7 @@ fn default_debug_logs() -> bool {
     false
 }
 
-/// Complete CCH configuration
+/// Complete RuleZ configuration
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Config {
     /// Configuration format version
@@ -62,7 +62,7 @@ pub struct Config {
     /// Array of policy rules to enforce
     pub rules: Vec<Rule>,
 
-    /// Global CCH settings
+    /// Global RuleZ settings
     #[serde(default)]
     pub settings: Settings,
 }
@@ -180,7 +180,10 @@ impl Config {
                     if let Err(e) = regex::Regex::new(&anchored) {
                         return Err(anyhow::anyhow!(
                             "Invalid regex pattern '{}' (expanded to '{}') in prompt_match for rule '{}': {}",
-                            pattern, anchored, rule.name, e
+                            pattern,
+                            anchored,
+                            rule.name,
+                            e
                         ));
                     }
                 }
@@ -213,7 +216,9 @@ impl Config {
                     if !valid_types.contains(&type_specifier.as_str()) {
                         return Err(anyhow::anyhow!(
                             "Invalid type '{}' for field '{}' in field_types for rule '{}': must be one of string, number, boolean, array, object, any",
-                            type_specifier, field_path, rule.name
+                            type_specifier,
+                            field_path,
+                            rule.name
                         ));
                     }
                 }
@@ -251,7 +256,8 @@ impl Config {
                 if script.len() > 10_000 {
                     tracing::warn!(
                         "inline_script in rule '{}' is very large ({} bytes) - consider external file",
-                        rule.name, script.len()
+                        rule.name,
+                        script.len()
                     );
                 }
             }
@@ -274,7 +280,8 @@ impl Config {
         if field_path.is_empty() {
             return Err(anyhow::anyhow!(
                 "Invalid field path '' in {} for rule '{}': cannot be empty",
-                field_name, rule_name
+                field_name,
+                rule_name
             ));
         }
 
@@ -282,7 +289,9 @@ impl Config {
         if field_path.starts_with('.') {
             return Err(anyhow::anyhow!(
                 "Invalid field path '{}' in {} for rule '{}': cannot start with '.'",
-                field_path, field_name, rule_name
+                field_path,
+                field_name,
+                rule_name
             ));
         }
 
@@ -290,7 +299,9 @@ impl Config {
         if field_path.ends_with('.') {
             return Err(anyhow::anyhow!(
                 "Invalid field path '{}' in {} for rule '{}': cannot end with '.'",
-                field_path, field_name, rule_name
+                field_path,
+                field_name,
+                rule_name
             ));
         }
 
@@ -298,7 +309,9 @@ impl Config {
         if field_path.contains("..") {
             return Err(anyhow::anyhow!(
                 "Invalid field path '{}' in {} for rule '{}': cannot contain consecutive dots",
-                field_path, field_name, rule_name
+                field_path,
+                field_name,
+                rule_name
             ));
         }
 
@@ -1013,7 +1026,12 @@ mod tests {
 
         let result = config.validate();
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Empty require_fields"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Empty require_fields")
+        );
     }
 
     #[test]
@@ -1031,7 +1049,7 @@ mod tests {
                     operations: None,
                     command_match: None,
                     prompt_match: None,
-                    require_fields: Some(vec!["".to_string()]),
+                    require_fields: Some(vec![String::new()]),
                     field_types: None,
                 },
                 actions: crate::models::Actions {
@@ -1095,10 +1113,12 @@ mod tests {
 
         let result = config.validate();
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("cannot start with '.'"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("cannot start with '.'")
+        );
     }
 
     #[test]
@@ -1139,10 +1159,12 @@ mod tests {
 
         let result = config.validate();
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("cannot end with '.'"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("cannot end with '.'")
+        );
     }
 
     #[test]
@@ -1183,10 +1205,12 @@ mod tests {
 
         let result = config.validate();
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("cannot contain consecutive dots"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("cannot contain consecutive dots")
+        );
     }
 
     #[test]
@@ -1275,7 +1299,12 @@ mod tests {
 
         let result = config.validate();
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Invalid type 'integer'"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Invalid type 'integer'")
+        );
     }
 
     #[test]
@@ -1320,10 +1349,12 @@ mod tests {
 
         let result = config.validate();
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("cannot start with '.'"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("cannot start with '.'")
+        );
     }
 
     #[test]
@@ -1392,7 +1423,9 @@ mod tests {
                     field_types: None,
                 },
                 actions: crate::models::Actions {
-                    validate_expr: Some(r#"has_field("file_path") && get_field("content") != """#.to_string()),
+                    validate_expr: Some(
+                        r#"has_field("file_path") && get_field("content") != """#.to_string(),
+                    ),
                     inject_inline: Some("Validated".to_string()),
                     inject: None,
                     inject_command: None,
@@ -1410,7 +1443,11 @@ mod tests {
         };
 
         let result = config.validate();
-        assert!(result.is_ok(), "Valid validate_expr syntax should pass: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "Valid validate_expr syntax should pass: {:?}",
+            result
+        );
     }
 
     #[test]
@@ -1432,7 +1469,7 @@ mod tests {
                     field_types: None,
                 },
                 actions: crate::models::Actions {
-                    validate_expr: Some(r#"((("#.to_string()), // Unclosed parentheses
+                    validate_expr: Some(r"(((".to_string()), // Unclosed parentheses
                     inject_inline: Some("Should not load".to_string()),
                     inject: None,
                     inject_command: None,
@@ -1452,7 +1489,11 @@ mod tests {
         let result = config.validate();
         assert!(result.is_err(), "Invalid validate_expr syntax should fail");
         let err = result.unwrap_err().to_string();
-        assert!(err.contains("Invalid validate_expr") || err.contains("invalid-expr"), "Error should mention invalid validate_expr: {}", err);
+        assert!(
+            err.contains("Invalid validate_expr") || err.contains("invalid-expr"),
+            "Error should mention invalid validate_expr: {}",
+            err
+        );
     }
 
     #[test]
@@ -1492,7 +1533,11 @@ mod tests {
         };
 
         let result = config.validate();
-        assert!(result.is_ok(), "Valid inline_script should pass: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "Valid inline_script should pass: {:?}",
+            result
+        );
     }
 
     #[test]
@@ -1532,9 +1577,16 @@ mod tests {
         };
 
         let result = config.validate();
-        assert!(result.is_err(), "Empty/whitespace inline_script should fail");
+        assert!(
+            result.is_err(),
+            "Empty/whitespace inline_script should fail"
+        );
         let err = result.unwrap_err().to_string();
-        assert!(err.contains("inline_script cannot be empty") || err.contains("empty-script"), "Error should mention empty inline_script: {}", err);
+        assert!(
+            err.contains("inline_script cannot be empty") || err.contains("empty-script"),
+            "Error should mention empty inline_script: {}",
+            err
+        );
     }
 
     #[test]
@@ -1574,9 +1626,16 @@ mod tests {
         };
 
         let result = config.validate();
-        assert!(result.is_err(), "Both validate_expr and inline_script should fail");
+        assert!(
+            result.is_err(),
+            "Both validate_expr and inline_script should fail"
+        );
         let err = result.unwrap_err().to_string();
-        assert!(err.contains("mutually exclusive") || err.contains("both-present"), "Error should mention mutual exclusion: {}", err);
+        assert!(
+            err.contains("mutually exclusive") || err.contains("both-present"),
+            "Error should mention mutual exclusion: {}",
+            err
+        );
     }
 
     #[test]
@@ -1616,7 +1675,11 @@ mod tests {
         };
 
         let result = config.validate();
-        assert!(result.is_ok(), "validate_expr only should pass: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "validate_expr only should pass: {:?}",
+            result
+        );
     }
 
     #[test]
@@ -1656,6 +1719,10 @@ mod tests {
         };
 
         let result = config.validate();
-        assert!(result.is_ok(), "inline_script only should pass: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "inline_script only should pass: {:?}",
+            result
+        );
     }
 }

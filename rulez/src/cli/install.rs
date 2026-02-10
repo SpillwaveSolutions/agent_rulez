@@ -1,6 +1,6 @@
-//! CCH Install Command - Register CCH with Claude Code
+//! RuleZ Install Command - Register RuleZ with Claude Code
 //!
-//! Adds CCH hook configuration to Claude Code settings.
+//! Adds RuleZ hook configuration to Claude Code settings.
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
@@ -24,7 +24,7 @@ struct ClaudeSettings {
 /// {
 ///   "hooks": {
 ///     "PreToolUse": [
-///       { "matcher": "*", "hooks": [{ "type": "command", "command": "/path/to/cch", "timeout": 5 }] }
+///       { "matcher": "*", "hooks": [{ "type": "command", "command": "/path/to/rulez", "timeout": 5 }] }
 ///     ]
 ///   }
 /// }
@@ -73,11 +73,11 @@ pub enum Scope {
 
 /// Run the install command
 pub async fn run(scope: Scope, binary_path: Option<String>) -> Result<()> {
-    let cch_path = resolve_binary_path(binary_path)?;
+    let rulez_path = resolve_binary_path(binary_path)?;
     let settings_path = get_settings_path(scope)?;
 
-    println!("Installing CCH hook...\n");
-    println!("  Binary: {}", cch_path.display());
+    println!("Installing RuleZ hook...\n");
+    println!("  Binary: {}", rulez_path.display());
     println!("  Settings: {}", settings_path.display());
     println!("  Scope: {}", scope_name(scope));
     println!();
@@ -86,7 +86,7 @@ pub async fn run(scope: Scope, binary_path: Option<String>) -> Result<()> {
     if matches!(scope, Scope::Project) {
         let hooks_yaml = Path::new(".claude/hooks.yaml");
         if !hooks_yaml.exists() {
-            println!("⚠️  No hooks.yaml found. Run 'cch init' first.");
+            println!("⚠️  No hooks.yaml found. Run 'rulez init' first.");
             println!("   Creating default configuration...\n");
             super::init::run(false, false).await?;
             println!();
@@ -97,7 +97,7 @@ pub async fn run(scope: Scope, binary_path: Option<String>) -> Result<()> {
     let mut settings = load_settings(&settings_path)?;
 
     // Build hook command
-    let hook_command = format!("{}", cch_path.display());
+    let hook_command = format!("{}", rulez_path.display());
 
     // Create the matcher entry with nested hook command
     let matcher_entry = MatcherEntry {
@@ -113,18 +113,19 @@ pub async fn run(scope: Scope, binary_path: Option<String>) -> Result<()> {
     let hooks = settings.hooks.get_or_insert_with(HooksConfig::default);
 
     // Check if already installed (look inside nested hooks[].command)
-    let already_installed = hooks
-        .pre_tool_use
-        .iter()
-        .any(|m| m.hooks.iter().any(|h| h.command.contains("cch")));
+    let already_installed = hooks.pre_tool_use.iter().any(|m| {
+        m.hooks
+            .iter()
+            .any(|h| h.command.contains("rulez") || h.command.contains("cch"))
+    });
 
     if already_installed {
-        println!("✓ CCH is already installed");
-        println!("  To reinstall, first run 'cch uninstall'");
+        println!("✓ RuleZ is already installed");
+        println!("  To reinstall, first run 'rulez uninstall'");
         return Ok(());
     }
 
-    // Add CCH to all hook events
+    // Add RuleZ to all hook events
     hooks.pre_tool_use.push(matcher_entry.clone());
     hooks.post_tool_use.push(matcher_entry.clone());
     hooks.stop.push(matcher_entry.clone());
@@ -133,7 +134,7 @@ pub async fn run(scope: Scope, binary_path: Option<String>) -> Result<()> {
     // Save settings
     save_settings(&settings_path, &settings)?;
 
-    println!("✓ CCH installed successfully!\n");
+    println!("✓ RuleZ installed successfully!\n");
     println!("Hook registered for events:");
     println!("  • PreToolUse");
     println!("  • PostToolUse");
@@ -141,15 +142,15 @@ pub async fn run(scope: Scope, binary_path: Option<String>) -> Result<()> {
     println!("  • SessionStart");
     println!();
     println!("To verify installation:");
-    println!("  cch validate");
+    println!("  rulez validate");
     println!();
     println!("To uninstall:");
-    println!("  cch uninstall");
+    println!("  rulez uninstall");
 
     Ok(())
 }
 
-/// Resolve the CCH binary path
+/// Resolve the RuleZ binary path
 fn resolve_binary_path(explicit_path: Option<String>) -> Result<PathBuf> {
     if let Some(path) = explicit_path {
         let p = PathBuf::from(&path);
@@ -159,8 +160,8 @@ fn resolve_binary_path(explicit_path: Option<String>) -> Result<PathBuf> {
         anyhow::bail!("Specified binary not found: {}", path);
     }
 
-    // Try to find cch in PATH
-    if let Ok(output) = std::process::Command::new("which").arg("cch").output() {
+    // Try to find rulez in PATH
+    if let Ok(output) = std::process::Command::new("which").arg("rulez").output() {
         if output.status.success() {
             let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
             if !path.is_empty() {
@@ -170,22 +171,22 @@ fn resolve_binary_path(explicit_path: Option<String>) -> Result<PathBuf> {
     }
 
     // Try current directory
-    let local = PathBuf::from("./target/release/cch");
+    let local = PathBuf::from("./target/release/rulez");
     if local.exists() {
         return Ok(local.canonicalize()?);
     }
 
     // Try debug build
-    let debug = PathBuf::from("./target/debug/cch");
+    let debug = PathBuf::from("./target/debug/rulez");
     if debug.exists() {
         return Ok(debug.canonicalize()?);
     }
 
     anyhow::bail!(
-        "Could not find CCH binary. Either:\n  \
+        "Could not find RuleZ binary. Either:\n  \
         1. Install globally: cargo install --path .\n  \
         2. Build locally: cargo build --release\n  \
-        3. Specify path: cch install --binary /path/to/cch"
+        3. Specify path: rulez install --binary /path/to/rulez"
     );
 }
 
@@ -235,11 +236,11 @@ fn save_settings(path: &Path, settings: &ClaudeSettings) -> Result<()> {
     Ok(())
 }
 
-/// Uninstall CCH from Claude Code settings
+/// Uninstall RuleZ from Claude Code settings
 pub async fn uninstall(scope: Scope) -> Result<()> {
     let settings_path = get_settings_path(scope)?;
 
-    println!("Uninstalling CCH...\n");
+    println!("Uninstalling RuleZ...\n");
 
     if !settings_path.exists() {
         println!("No settings file found at: {}", settings_path.display());
@@ -248,24 +249,23 @@ pub async fn uninstall(scope: Scope) -> Result<()> {
 
     let mut settings = load_settings(&settings_path)?;
 
+    // Helper: detect both old "cch" and new "rulez" hook commands
+    let is_rulez_hook = |m: &MatcherEntry| {
+        m.hooks
+            .iter()
+            .any(|h| h.command.contains("rulez") || h.command.contains("cch"))
+    };
+
     if let Some(hooks) = &mut settings.hooks {
         let before = hooks.pre_tool_use.len()
             + hooks.post_tool_use.len()
             + hooks.stop.len()
             + hooks.session_start.len();
 
-        hooks
-            .pre_tool_use
-            .retain(|m| !m.hooks.iter().any(|h| h.command.contains("cch")));
-        hooks
-            .post_tool_use
-            .retain(|m| !m.hooks.iter().any(|h| h.command.contains("cch")));
-        hooks
-            .stop
-            .retain(|m| !m.hooks.iter().any(|h| h.command.contains("cch")));
-        hooks
-            .session_start
-            .retain(|m| !m.hooks.iter().any(|h| h.command.contains("cch")));
+        hooks.pre_tool_use.retain(|m| !is_rulez_hook(m));
+        hooks.post_tool_use.retain(|m| !is_rulez_hook(m));
+        hooks.stop.retain(|m| !is_rulez_hook(m));
+        hooks.session_start.retain(|m| !is_rulez_hook(m));
 
         let after = hooks.pre_tool_use.len()
             + hooks.post_tool_use.len()
@@ -273,7 +273,7 @@ pub async fn uninstall(scope: Scope) -> Result<()> {
             + hooks.session_start.len();
 
         if before == after {
-            println!("CCH was not installed");
+            println!("RuleZ was not installed");
             return Ok(());
         }
 
@@ -286,12 +286,12 @@ pub async fn uninstall(scope: Scope) -> Result<()> {
             settings.hooks = None;
         }
     } else {
-        println!("CCH was not installed");
+        println!("RuleZ was not installed");
         return Ok(());
     }
 
     save_settings(&settings_path, &settings)?;
-    println!("✓ CCH uninstalled successfully");
+    println!("✓ RuleZ uninstalled successfully");
 
     Ok(())
 }

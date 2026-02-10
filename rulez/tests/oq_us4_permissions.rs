@@ -46,7 +46,7 @@ fn test_us4_permission_request_injection() {
     let event = read_fixture("events/permission-request-event.json");
 
     // Run CCH with the event
-    let result = Command::cargo_bin("cch")
+    let result = Command::cargo_bin("rulez")
         .expect("binary exists")
         .current_dir(temp_dir.path())
         .write_stdin(event)
@@ -104,7 +104,7 @@ fn test_us4_permission_event_type_filter() {
     }"#;
 
     // Run CCH with the event
-    let output = Command::cargo_bin("cch")
+    let output = Command::cargo_bin("rulez")
         .expect("binary exists")
         .current_dir(temp_dir.path())
         .write_stdin(event)
@@ -162,7 +162,7 @@ fn test_us4_file_operation_explanation() {
     }"#;
 
     // Run CCH with the event
-    let result = Command::cargo_bin("cch")
+    let result = Command::cargo_bin("rulez")
         .expect("binary exists")
         .current_dir(temp_dir.path())
         .write_stdin(event)

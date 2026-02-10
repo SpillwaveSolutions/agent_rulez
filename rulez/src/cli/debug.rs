@@ -1,4 +1,4 @@
-//! CCH Debug Command - Simulate and debug hook events
+//! RuleZ Debug Command - Simulate and debug hook events
 //!
 //! Allows testing rules without invoking Claude Code.
 
@@ -54,7 +54,7 @@ pub async fn run(
         event_type
     ))?;
 
-    println!("CCH Debug Mode");
+    println!("RuleZ Debug Mode");
     println!("{}", "=".repeat(60));
     println!();
 
@@ -190,7 +190,7 @@ fn uuid_simple() -> String {
 
 /// Interactive debug mode
 pub async fn interactive() -> Result<()> {
-    println!("CCH Interactive Debug Mode");
+    println!("RuleZ Interactive Debug Mode");
     println!("{}", "=".repeat(60));
     println!("Enter events as JSON or use shortcuts:");
     println!("  bash <command>    - Simulate Bash tool");
@@ -203,7 +203,7 @@ pub async fn interactive() -> Result<()> {
     let mut stdout = std::io::stdout();
 
     loop {
-        print!("cch> ");
+        print!("rulez> ");
         stdout.flush()?;
 
         let mut input = String::new();

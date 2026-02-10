@@ -93,6 +93,23 @@ rulez repl              # Interactive debug mode
 - Project config: `.claude/hooks.yaml`
 - Logs: `~/.claude/logs/rulez.log`
 
+## Pre-Push Checklist
+
+**CRITICAL: Always run the full CI pipeline locally before pushing or creating PRs.**
+
+```bash
+# 1. Format check
+cargo fmt --all --check
+
+# 2. Clippy (CI uses -D warnings — all warnings are errors)
+cargo clippy --all-targets --all-features --workspace -- -D warnings
+
+# 3. Full test suite (remove stale binaries first if binary was renamed)
+cargo test --tests --all-features --workspace
+```
+
+**Why this matters:** Tests may pass locally due to stale build artifacts (e.g., old binary names in `target/`) that don't exist on CI. Always verify with a clean state.
+
 ## Exit Codes
 
 | Code | Meaning |

@@ -60,7 +60,7 @@ fn test_e2e_git_push_blocked_exit_code_2() {
 
     let (temp_dir, event_json) = setup_claude_code_event("block-all-push.yaml", "git push");
 
-    let output = Command::cargo_bin("cch")
+    let output = Command::cargo_bin("rulez")
         .expect("binary exists")
         .current_dir(temp_dir.path())
         .write_stdin(event_json)
@@ -113,7 +113,7 @@ fn test_e2e_cwd_based_config_loading_exit_code_2() {
     let wrong_dir = tempfile::tempdir().expect("create wrong dir");
 
     // Run CCH from the WRONG directory, but with cwd pointing to the project
-    let output = Command::cargo_bin("cch")
+    let output = Command::cargo_bin("rulez")
         .expect("binary exists")
         .current_dir(wrong_dir.path()) // <-- WRONG dir, no hooks.yaml here
         .write_stdin(event_json)
@@ -157,7 +157,7 @@ fn test_e2e_git_status_allowed_exit_code_0() {
 
     let (temp_dir, event_json) = setup_claude_code_event("block-all-push.yaml", "git status");
 
-    let output = Command::cargo_bin("cch")
+    let output = Command::cargo_bin("rulez")
         .expect("binary exists")
         .current_dir(temp_dir.path())
         .write_stdin(event_json)
@@ -205,7 +205,7 @@ fn test_e2e_git_push_variants_exit_code_2() {
     for cmd in &push_commands {
         let (temp_dir, event_json) = setup_claude_code_event("block-all-push.yaml", cmd);
 
-        let output = Command::cargo_bin("cch")
+        let output = Command::cargo_bin("rulez")
             .expect("binary exists")
             .current_dir(temp_dir.path())
             .write_stdin(event_json)
@@ -251,7 +251,7 @@ fn test_e2e_non_push_git_commands_exit_code_0() {
     for cmd in &safe_commands {
         let (temp_dir, event_json) = setup_claude_code_event("block-all-push.yaml", cmd);
 
-        let output = Command::cargo_bin("cch")
+        let output = Command::cargo_bin("rulez")
             .expect("binary exists")
             .current_dir(temp_dir.path())
             .write_stdin(event_json)
@@ -289,7 +289,7 @@ fn test_e2e_output_format_claude_code_protocol() {
     // === Blocked response ===
     let (temp_dir, event_json) = setup_claude_code_event("block-all-push.yaml", "git push");
 
-    let blocked_output = Command::cargo_bin("cch")
+    let blocked_output = Command::cargo_bin("rulez")
         .expect("binary exists")
         .current_dir(temp_dir.path())
         .write_stdin(event_json)
@@ -308,7 +308,7 @@ fn test_e2e_output_format_claude_code_protocol() {
     // === Allowed response ===
     let (temp_dir2, event_json2) = setup_claude_code_event("block-all-push.yaml", "git status");
 
-    let allowed_output = Command::cargo_bin("cch")
+    let allowed_output = Command::cargo_bin("rulez")
         .expect("binary exists")
         .current_dir(temp_dir2.path())
         .write_stdin(event_json2)
@@ -359,7 +359,7 @@ fn test_e2e_no_config_allows_all() {
         "cwd": cwd
     });
 
-    let output = Command::cargo_bin("cch")
+    let output = Command::cargo_bin("rulez")
         .expect("binary exists")
         .current_dir(empty_dir.path())
         .write_stdin(serde_json::to_string(&event).unwrap())
@@ -401,7 +401,7 @@ fn test_e2e_cwd_git_push_variants_from_wrong_dir() {
     for cmd in &push_commands {
         let (_temp_dir, event_json) = setup_claude_code_event("block-all-push.yaml", cmd);
 
-        let output = Command::cargo_bin("cch")
+        let output = Command::cargo_bin("rulez")
             .expect("binary exists")
             .current_dir(wrong_dir.path())
             .write_stdin(event_json)

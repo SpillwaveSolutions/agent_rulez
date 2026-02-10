@@ -10,8 +10,8 @@ mod logging;
 mod models;
 
 #[derive(Parser)]
-#[command(name = "cch")]
-#[command(about = "Claude Code Hooks - High-performance policy engine")]
+#[command(name = "rulez")]
+#[command(about = "RuleZ - High-performance AI policy engine")]
 #[command(version = env!("CARGO_PKG_VERSION"))]
 struct Cli {
     /// Enable debug logging with full event and rule details
@@ -24,7 +24,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Initialize CCH configuration in current project
+    /// Initialize RuleZ configuration in current project
     Init {
         /// Overwrite existing configuration
         #[arg(short, long)]
@@ -33,16 +33,16 @@ enum Commands {
         #[arg(long)]
         with_examples: bool,
     },
-    /// Install CCH hook into Claude Code settings
+    /// Install RuleZ hook into Claude Code settings
     Install {
         /// Install globally instead of project-local
         #[arg(short, long)]
         global: bool,
-        /// Path to CCH binary (auto-detected if not specified)
+        /// Path to RuleZ binary (auto-detected if not specified)
         #[arg(short, long)]
         binary: Option<String>,
     },
-    /// Uninstall CCH hook from Claude Code settings
+    /// Uninstall RuleZ hook from Claude Code settings
     Uninstall {
         /// Uninstall from global settings instead of project-local
         #[arg(short, long)]
@@ -88,7 +88,7 @@ enum Commands {
         #[arg(long)]
         decision: Option<String>,
     },
-    /// Explain rules or events (use 'cch explain --help' for subcommands)
+    /// Explain rules or events (use 'rulez explain --help' for subcommands)
     Explain {
         #[command(subcommand)]
         subcommand: Option<ExplainSubcommand>,
@@ -206,12 +206,12 @@ async fn main() -> Result<()> {
                     if let Some(id) = event_id {
                         cli::explain::run(id).await?;
                     } else {
-                        println!("Usage: cch explain <event_id>");
-                        println!("       cch explain rule <rule_name>");
-                        println!("       cch explain rules");
-                        println!("       cch explain event <event_id>");
+                        println!("Usage: rulez explain <event_id>");
+                        println!("       rulez explain rule <rule_name>");
+                        println!("       rulez explain rules");
+                        println!("       rulez explain event <event_id>");
                         println!();
-                        println!("Use 'cch explain --help' for more information.");
+                        println!("Use 'rulez explain --help' for more information.");
                     }
                 }
             }
@@ -258,7 +258,7 @@ async fn process_hook_event(cli: &Cli, _config: &config::Config) -> Result<()> {
         let reason = response
             .reason
             .as_deref()
-            .unwrap_or("Blocked by CCH policy");
+            .unwrap_or("Blocked by RuleZ policy");
         eprintln!("{}", reason);
         std::process::exit(2);
     }

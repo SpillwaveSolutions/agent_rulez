@@ -230,7 +230,9 @@ impl PromptMatch {
     pub fn case_insensitive(&self) -> bool {
         match self {
             PromptMatch::Simple(_) => false,
-            PromptMatch::Complex { case_insensitive, .. } => *case_insensitive,
+            PromptMatch::Complex {
+                case_insensitive, ..
+            } => *case_insensitive,
         }
     }
 
@@ -282,9 +284,7 @@ impl PromptMatch {
 pub fn dot_to_pointer(field_path: &str) -> String {
     let escaped_segments: Vec<String> = field_path
         .split('.')
-        .map(|segment| {
-            segment.replace('~', "~0").replace('/', "~1")
-        })
+        .map(|segment| segment.replace('~', "~0").replace('/', "~1"))
         .collect();
     format!("/{}", escaped_segments.join("/"))
 }
@@ -1406,7 +1406,10 @@ priority: 50
 "#;
         let rule: Rule = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(rule.name, "dev-helper");
-        assert_eq!(rule.description, Some("Only for local development".to_string()));
+        assert_eq!(
+            rule.description,
+            Some("Only for local development".to_string())
+        );
         assert_eq!(rule.enabled_when, Some(r#"env_CI != "true""#.to_string()));
         assert_eq!(rule.effective_mode(), PolicyMode::Warn);
         assert_eq!(rule.effective_priority(), 50);
@@ -1415,10 +1418,14 @@ priority: 50
     #[test]
     fn test_evalexpr_basic_expression() {
         // Tests that evalexpr can parse and evaluate basic expressions
-        use evalexpr::{eval_boolean_with_context, ContextWithMutableVariables, DefaultNumericTypes, HashMapContext, Value};
+        use evalexpr::{
+            ContextWithMutableVariables, DefaultNumericTypes, HashMapContext, Value,
+            eval_boolean_with_context,
+        };
 
         let mut ctx: HashMapContext<DefaultNumericTypes> = HashMapContext::new();
-        ctx.set_value("env_CI".into(), Value::String("true".to_string())).unwrap();
+        ctx.set_value("env_CI".into(), Value::String("true".to_string()))
+            .unwrap();
 
         let result = eval_boolean_with_context(r#"env_CI == "true""#, &ctx).unwrap();
         assert!(result);
@@ -1491,7 +1498,10 @@ prompt_match:
         let matchers: Matchers = serde_yaml::from_str(yaml).unwrap();
         assert!(matchers.prompt_match.is_some());
         let pm = matchers.prompt_match.as_ref().unwrap();
-        assert_eq!(pm.patterns(), &["secret".to_string(), "password".to_string()]);
+        assert_eq!(
+            pm.patterns(),
+            &["secret".to_string(), "password".to_string()]
+        );
         assert_eq!(pm.mode(), MatchMode::All);
         assert!(pm.case_insensitive());
         assert_eq!(pm.anchor(), Some(Anchor::Start));
@@ -1600,7 +1610,12 @@ anchor: start
         let pm: PromptMatch = serde_yaml::from_str(yaml).unwrap();
 
         match pm {
-            PromptMatch::Complex { patterns, mode, case_insensitive, anchor } => {
+            PromptMatch::Complex {
+                patterns,
+                mode,
+                case_insensitive,
+                anchor,
+            } => {
                 assert_eq!(patterns, vec!["secret".to_string(), "password".to_string()]);
                 assert_eq!(mode, MatchMode::All);
                 assert!(case_insensitive);
@@ -1619,7 +1634,12 @@ patterns: ["test"]
         let pm: PromptMatch = serde_yaml::from_str(yaml).unwrap();
 
         match pm {
-            PromptMatch::Complex { patterns, mode, case_insensitive, anchor } => {
+            PromptMatch::Complex {
+                patterns,
+                mode,
+                case_insensitive,
+                anchor,
+            } => {
                 assert_eq!(patterns, vec!["test".to_string()]);
                 assert_eq!(mode, MatchMode::Any); // default
                 assert!(!case_insensitive); // default false
@@ -1818,7 +1838,10 @@ patterns: ["test"]
     fn test_anchor_serialize() {
         assert_eq!(serde_json::to_string(&Anchor::Start).unwrap(), r#""start""#);
         assert_eq!(serde_json::to_string(&Anchor::End).unwrap(), r#""end""#);
-        assert_eq!(serde_json::to_string(&Anchor::Contains).unwrap(), r#""contains""#);
+        assert_eq!(
+            serde_json::to_string(&Anchor::Contains).unwrap(),
+            r#""contains""#
+        );
     }
 
     #[test]
@@ -2858,7 +2881,7 @@ actions:
     #[test]
     fn test_matchers_field_types_deserialization() {
         // YAML with field_types
-        let yaml = r#"
+        let yaml = r"
 name: test-types
 matchers:
   field_types:
@@ -2867,7 +2890,7 @@ matchers:
     enabled: boolean
 actions:
   block: true
-"#;
+";
         let rule: Rule = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(rule.name, "test-types");
         assert!(rule.matchers.field_types.is_some());

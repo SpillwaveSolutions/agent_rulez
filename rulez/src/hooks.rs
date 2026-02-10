@@ -1,5 +1,8 @@
 use anyhow::{Context, Result};
-use evalexpr::{eval_boolean_with_context, ContextWithMutableFunctions, ContextWithMutableVariables, DefaultNumericTypes, Function, HashMapContext, Value};
+use evalexpr::{
+    ContextWithMutableFunctions, ContextWithMutableVariables, DefaultNumericTypes, Function,
+    HashMapContext, Value, eval_boolean_with_context,
+};
 use regex::{Regex, RegexBuilder};
 use std::collections::HashMap;
 use std::path::Path;
@@ -52,8 +55,7 @@ fn get_or_compile_regex(pattern: &str, case_insensitive: bool) -> Result<Regex> 
             .build()
             .with_context(|| format!("Invalid regex pattern: {}", pattern))?
     } else {
-        Regex::new(pattern)
-            .with_context(|| format!("Invalid regex pattern: {}", pattern))?
+        Regex::new(pattern).with_context(|| format!("Invalid regex pattern: {}", pattern))?
     };
 
     let mut cache = REGEX_CACHE.lock().unwrap();
@@ -110,7 +112,8 @@ fn matches_prompt(prompt: &str, prompt_match: &PromptMatch) -> bool {
                 // Log warning and treat as non-match (fail-closed)
                 tracing::warn!(
                     "Invalid prompt_match pattern '{}': {} - treating as non-match",
-                    pattern, e
+                    pattern,
+                    e
                 );
                 results.push(false);
             }
@@ -150,24 +153,21 @@ fn validate_required_fields(rule: &Rule, event: &Event) -> bool {
     }
 
     // Get tool_input from event - fail-closed if missing
-    let tool_input = match &event.tool_input {
-        Some(input) => {
-            if !input.is_object() {
-                tracing::warn!(
-                    "Field validation failed for rule '{}': tool_input is not an object",
-                    rule.name
-                );
-                return false;
-            }
-            input
-        }
-        None => {
+    let tool_input = if let Some(input) = &event.tool_input {
+        if !input.is_object() {
             tracing::warn!(
-                "Field validation failed for rule '{}': tool_input is missing (fail-closed)",
+                "Field validation failed for rule '{}': tool_input is not an object",
                 rule.name
             );
             return false;
         }
+        input
+    } else {
+        tracing::warn!(
+            "Field validation failed for rule '{}': tool_input is missing (fail-closed)",
+            rule.name
+        );
+        return false;
     };
 
     // Build combined field set: require_fields + field_types keys
@@ -199,7 +199,10 @@ fn validate_required_fields(rule: &Rule, event: &Event) -> bool {
                 errors.push(format!("field '{}' is missing", field_path));
             }
             Some(serde_json::Value::Null) => {
-                errors.push(format!("field '{}' is null (treated as missing)", field_path));
+                errors.push(format!(
+                    "field '{}' is null (treated as missing)",
+                    field_path
+                ));
             }
             Some(value) => {
                 // Field exists and is not null - check type if specified
@@ -215,14 +218,15 @@ fn validate_required_fields(rule: &Rule, event: &Event) -> bool {
                         };
 
                         // "any" type accepts any non-null value
-                        let type_matches = expected_type == "any" || match expected_type.as_str() {
-                            "string" => value.is_string(),
-                            "number" => value.is_number(),
-                            "boolean" => value.is_boolean(),
-                            "array" => value.is_array(),
-                            "object" => value.is_object(),
-                            _ => false, // Config validation should prevent this
-                        };
+                        let type_matches = expected_type == "any"
+                            || match expected_type.as_str() {
+                                "string" => value.is_string(),
+                                "number" => value.is_number(),
+                                "boolean" => value.is_boolean(),
+                                "array" => value.is_array(),
+                                "object" => value.is_object(),
+                                _ => false, // Config validation should prevent this
+                            };
 
                         if !type_matches {
                             errors.push(format!(
@@ -276,11 +280,12 @@ fn build_eval_context_with_custom_functions(event: &Event) -> HashMapContext<Def
             None => Ok(Value::String(String::new())),
             Some(input) => {
                 match input.pointer(&pointer) {
-                    None | Some(serde_json::Value::Null) => Ok(Value::String(String::new())),
                     Some(serde_json::Value::String(s)) => Ok(Value::String(s.clone())),
-                    Some(serde_json::Value::Number(n)) => Ok(Value::Float(n.as_f64().unwrap_or(0.0))),
+                    Some(serde_json::Value::Number(n)) => {
+                        Ok(Value::Float(n.as_f64().unwrap_or(0.0)))
+                    }
                     Some(serde_json::Value::Bool(b)) => Ok(Value::Boolean(*b)),
-                    Some(_) => Ok(Value::String(String::new())), // Arrays/Objects -> empty string
+                    None | Some(_) => Ok(Value::String(String::new())), // Null/Arrays/Objects/missing -> empty string
                 }
             }
         }
@@ -293,12 +298,10 @@ fn build_eval_context_with_custom_functions(event: &Event) -> HashMapContext<Def
 
         match &tool_input_for_has {
             None => Ok(Value::Boolean(false)),
-            Some(input) => {
-                match input.pointer(&pointer) {
-                    None | Some(serde_json::Value::Null) => Ok(Value::Boolean(false)),
-                    Some(_) => Ok(Value::Boolean(true)),
-                }
-            }
+            Some(input) => match input.pointer(&pointer) {
+                None | Some(serde_json::Value::Null) => Ok(Value::Boolean(false)),
+                Some(_) => Ok(Value::Boolean(true)),
+            },
         }
     });
 
@@ -365,7 +368,9 @@ async fn execute_inline_script(
     command.stderr(std::process::Stdio::piped());
     command.stdin(std::process::Stdio::piped());
 
-    let mut child = command.spawn().context("Failed to spawn inline script process")?;
+    let mut child = command
+        .spawn()
+        .context("Failed to spawn inline script process")?;
 
     // Serialize event to JSON and write to stdin
     let event_json = serde_json::to_string(event)?;
@@ -380,12 +385,9 @@ async fn execute_inline_script(
     }
 
     // Wait for script with timeout using tokio::time::timeout
-    let wait_result = timeout(
-        Duration::from_secs(timeout_secs as u64),
-        child.wait()
-    ).await;
+    let wait_result = timeout(Duration::from_secs(timeout_secs as u64), child.wait()).await;
 
-    let result = match wait_result {
+    match wait_result {
         Ok(Ok(status)) => {
             // Script completed - check exit status
             let success = status.success();
@@ -425,9 +427,7 @@ async fn execute_inline_script(
 
             Ok(false) // Timeout = fail-closed
         }
-    };
-
-    result
+    }
 }
 
 /// Process a hook event and return the appropriate response
@@ -549,17 +549,20 @@ fn build_eval_context(event: &Event) -> HashMapContext<DefaultNumericTypes> {
 
     // Add tool name (empty string if none)
     let tool_name = event.tool_name.as_deref().unwrap_or("").to_string();
-    ctx.set_value("tool_name".into(), Value::String(tool_name)).ok();
+    ctx.set_value("tool_name".into(), Value::String(tool_name))
+        .ok();
 
     // Add event type
     ctx.set_value(
         "event_type".into(),
-        Value::String(event.hook_event_name.to_string())
-    ).ok();
+        Value::String(event.hook_event_name.to_string()),
+    )
+    .ok();
 
     // Add prompt text (if available - primarily for UserPromptSubmit events)
     if let Some(ref prompt) = event.prompt {
-        ctx.set_value("prompt".into(), Value::String(prompt.clone())).ok();
+        ctx.set_value("prompt".into(), Value::String(prompt.clone()))
+            .ok();
     }
 
     ctx
@@ -584,7 +587,8 @@ fn is_rule_enabled(rule: &Rule, event: &Event) -> bool {
                 Err(e) => {
                     tracing::warn!(
                         "enabled_when expression failed for rule '{}': {} - treating as disabled",
-                        rule.name, e
+                        rule.name,
+                        e
                     );
                     false // Fail-closed: invalid expression disables rule
                 }
@@ -733,10 +737,10 @@ fn matches_rule(event: &Event, rule: &Rule) -> bool {
     }
 
     // Check field validation (require_fields / field_types)
-    if rule.matchers.require_fields.is_some() || rule.matchers.field_types.is_some() {
-        if !validate_required_fields(rule, event) {
-            return false;
-        }
+    if (rule.matchers.require_fields.is_some() || rule.matchers.field_types.is_some())
+        && !validate_required_fields(rule, event)
+    {
+        return false;
     }
 
     true
@@ -841,13 +845,11 @@ fn matches_rule_with_debug(event: &Event, rule: &Rule) -> (bool, Option<MatcherR
 
     // Check prompt patterns
     if let Some(ref prompt_match) = matchers.prompt_match {
-        matcher_results.prompt_match_matched = Some(
-            if let Some(ref prompt_text) = event.prompt {
-                matches_prompt(prompt_text, prompt_match)
-            } else {
-                false
-            }
-        );
+        matcher_results.prompt_match_matched = Some(if let Some(ref prompt_text) = event.prompt {
+            matches_prompt(prompt_text, prompt_match)
+        } else {
+            false
+        });
         if !matcher_results.prompt_match_matched.unwrap() {
             overall_match = false;
         }
@@ -871,11 +873,7 @@ fn matches_rule_with_debug(event: &Event, rule: &Rule) -> (bool, Option<MatcherR
 /// - No stdin input needed
 /// - Raw text output (not JSON)
 /// - Fail-open: command failures log warning but don't block
-async fn execute_inject_command(
-    command_str: &str,
-    rule: &Rule,
-    config: &Config,
-) -> Option<String> {
+async fn execute_inject_command(command_str: &str, rule: &Rule, config: &Config) -> Option<String> {
     let timeout_secs = rule
         .metadata
         .as_ref()
@@ -895,7 +893,9 @@ async fn execute_inject_command(
         Err(e) => {
             tracing::warn!(
                 "Failed to spawn inject_command '{}' for rule '{}': {}",
-                command_str, rule.name, e
+                command_str,
+                rule.name,
+                e
             );
             return None;
         }
@@ -904,19 +904,25 @@ async fn execute_inject_command(
     let output = match timeout(
         Duration::from_secs(timeout_secs as u64),
         child.wait_with_output(),
-    ).await {
+    )
+    .await
+    {
         Ok(Ok(output)) => output,
         Ok(Err(e)) => {
             tracing::warn!(
                 "inject_command '{}' for rule '{}' failed: {}",
-                command_str, rule.name, e
+                command_str,
+                rule.name,
+                e
             );
             return None;
         }
         Err(_) => {
             tracing::warn!(
                 "inject_command '{}' for rule '{}' timed out after {}s",
-                command_str, rule.name, timeout_secs
+                command_str,
+                rule.name,
+                timeout_secs
             );
             return None;
         }
@@ -963,7 +969,8 @@ async fn execute_rule_actions(event: &Event, rule: &Rule, config: &Config) -> Re
                 // Expression error = fail-closed
                 tracing::warn!(
                     "validate_expr error for rule '{}': {} - blocking (fail-closed)",
-                    rule.name, e
+                    rule.name,
+                    e
                 );
                 return Ok(Response::block(format!(
                     "Validation error for rule '{}': {}",
@@ -985,7 +992,8 @@ async fn execute_rule_actions(event: &Event, rule: &Rule, config: &Config) -> Re
             Err(e) => {
                 tracing::warn!(
                     "inline_script error for rule '{}': {} - blocking (fail-closed)",
-                    rule.name, e
+                    rule.name,
+                    e
                 );
                 return Ok(Response::block(format!(
                     "Inline script error for rule '{}': {}",
@@ -3359,7 +3367,7 @@ mod tests {
                 operations: None,
                 command_match: None,
                 prompt_match: None,
-                require_fields: None, // NOT in require_fields
+                require_fields: None,           // NOT in require_fields
                 field_types: Some(field_types), // Only in field_types
             },
             actions: Actions {
@@ -4537,10 +4545,11 @@ mod tests {
         };
 
         let ctx = build_eval_context_with_custom_functions(&event);
-        let result = eval_boolean_with_context(r#"get_field("file_path") == "/test/file.txt""#, &ctx);
+        let result =
+            eval_boolean_with_context(r#"get_field("file_path") == "/test/file.txt""#, &ctx);
 
         assert!(result.is_ok(), "Should evaluate expression: {:?}", result);
-        assert_eq!(result.unwrap(), true, "Should return correct string value");
+        assert!(result.unwrap(), "Should return correct string value");
     }
 
     #[test]
@@ -4566,7 +4575,7 @@ mod tests {
         let result = eval_boolean_with_context(r#"get_field("count") == 42.0"#, &ctx);
 
         assert!(result.is_ok(), "Should evaluate expression: {:?}", result);
-        assert_eq!(result.unwrap(), true, "Should return correct number value");
+        assert!(result.unwrap(), "Should return correct number value");
     }
 
     #[test]
@@ -4592,7 +4601,7 @@ mod tests {
         let result = eval_boolean_with_context(r#"get_field("enabled") == true"#, &ctx);
 
         assert!(result.is_ok(), "Should evaluate expression: {:?}", result);
-        assert_eq!(result.unwrap(), true, "Should return correct boolean value");
+        assert!(result.unwrap(), "Should return correct boolean value");
     }
 
     #[test]
@@ -4617,7 +4626,10 @@ mod tests {
         let result = eval_boolean_with_context(r#"get_field("nonexistent") == """#, &ctx);
 
         assert!(result.is_ok(), "Should evaluate expression: {:?}", result);
-        assert_eq!(result.unwrap(), true, "Should return empty string for missing field");
+        assert!(
+            result.unwrap(),
+            "Should return empty string for missing field"
+        );
     }
 
     #[test]
@@ -4642,7 +4654,7 @@ mod tests {
         let result = eval_boolean_with_context(r#"get_field("nullable") == """#, &ctx);
 
         assert!(result.is_ok(), "Should evaluate expression: {:?}", result);
-        assert_eq!(result.unwrap(), true, "Should return empty string for null field");
+        assert!(result.unwrap(), "Should return empty string for null field");
     }
 
     #[test]
@@ -4672,11 +4684,18 @@ mod tests {
         let result = eval_boolean_with_context(r#"get_field("user.name") == "Alice""#, &ctx);
 
         assert!(result.is_ok(), "Should evaluate expression: {:?}", result);
-        assert_eq!(result.unwrap(), true, "Should return nested field value");
+        assert!(result.unwrap(), "Should return nested field value");
 
-        let result2 = eval_boolean_with_context(r#"get_field("user.profile.email") == "alice@example.com""#, &ctx);
-        assert!(result2.is_ok(), "Should evaluate nested expression: {:?}", result2);
-        assert_eq!(result2.unwrap(), true, "Should return deeply nested field value");
+        let result2 = eval_boolean_with_context(
+            r#"get_field("user.profile.email") == "alice@example.com""#,
+            &ctx,
+        );
+        assert!(
+            result2.is_ok(),
+            "Should evaluate nested expression: {:?}",
+            result2
+        );
+        assert!(result2.unwrap(), "Should return deeply nested field value");
     }
 
     #[test]
@@ -4701,7 +4720,7 @@ mod tests {
         let result = eval_boolean_with_context(r#"has_field("file_path")"#, &ctx);
 
         assert!(result.is_ok(), "Should evaluate expression: {:?}", result);
-        assert_eq!(result.unwrap(), true, "Should return true for present field");
+        assert!(result.unwrap(), "Should return true for present field");
     }
 
     #[test]
@@ -4726,7 +4745,7 @@ mod tests {
         let result = eval_boolean_with_context(r#"has_field("nonexistent")"#, &ctx);
 
         assert!(result.is_ok(), "Should evaluate expression: {:?}", result);
-        assert_eq!(result.unwrap(), false, "Should return false for missing field");
+        assert!(!result.unwrap(), "Should return false for missing field");
     }
 
     #[test]
@@ -4751,7 +4770,7 @@ mod tests {
         let result = eval_boolean_with_context(r#"has_field("nullable")"#, &ctx);
 
         assert!(result.is_ok(), "Should evaluate expression: {:?}", result);
-        assert_eq!(result.unwrap(), false, "Should return false for null field");
+        assert!(!result.unwrap(), "Should return false for null field");
     }
 
     #[test]
@@ -4778,7 +4797,7 @@ mod tests {
         let result = eval_boolean_with_context(r#"has_field("user.name")"#, &ctx);
 
         assert!(result.is_ok(), "Should evaluate expression: {:?}", result);
-        assert_eq!(result.unwrap(), true, "Should return true for nested field");
+        assert!(result.unwrap(), "Should return true for nested field");
     }
 
     // =========================================================================
@@ -4807,7 +4826,7 @@ mod tests {
         let result = eval_boolean_with_context(r#"has_field("file_path")"#, &ctx);
 
         assert!(result.is_ok(), "Expression should evaluate: {:?}", result);
-        assert_eq!(result.unwrap(), true, "Expression returning true should allow");
+        assert!(result.unwrap(), "Expression returning true should allow");
     }
 
     #[test]
@@ -4832,7 +4851,7 @@ mod tests {
         let result = eval_boolean_with_context(r#"has_field("missing")"#, &ctx);
 
         assert!(result.is_ok(), "Expression should evaluate: {:?}", result);
-        assert_eq!(result.unwrap(), false, "Expression returning false should block");
+        assert!(!result.unwrap(), "Expression returning false should block");
     }
 
     #[test]
@@ -4857,7 +4876,7 @@ mod tests {
         let result = eval_boolean_with_context(r#"get_field("count") > 0"#, &ctx);
 
         assert!(result.is_ok(), "Expression should evaluate: {:?}", result);
-        assert_eq!(result.unwrap(), true, "Comparison should return correct result");
+        assert!(result.unwrap(), "Comparison should return correct result");
     }
 
     #[test]
@@ -4882,11 +4901,18 @@ mod tests {
         let ctx = build_eval_context_with_custom_functions(&event);
         let result = eval_boolean_with_context(
             r#"has_field("file_path") && get_field("content") != """#,
-            &ctx
+            &ctx,
         );
 
-        assert!(result.is_ok(), "Complex expression should evaluate: {:?}", result);
-        assert_eq!(result.unwrap(), true, "Complex expression should return correct result");
+        assert!(
+            result.is_ok(),
+            "Complex expression should evaluate: {:?}",
+            result
+        );
+        assert!(
+            result.unwrap(),
+            "Complex expression should return correct result"
+        );
     }
 
     #[test]
@@ -4911,7 +4937,10 @@ mod tests {
         // Invalid syntax: unclosed parenthesis
         let result = eval_boolean_with_context(r#"has_field("file_path""#, &ctx);
 
-        assert!(result.is_err(), "Invalid syntax should return error (fail-closed)");
+        assert!(
+            result.is_err(),
+            "Invalid syntax should return error (fail-closed)"
+        );
     }
 
     // =========================================================================
@@ -4974,8 +5003,14 @@ mod tests {
 
         let response = execute_rule_actions(&event, &rule, &config).await.unwrap();
 
-        assert!(!response.continue_, "validate_expr returning false should block");
-        assert!(response.context.is_none(), "Should not inject when validation fails");
+        assert!(
+            !response.continue_,
+            "validate_expr returning false should block"
+        );
+        assert!(
+            response.context.is_none(),
+            "Should not inject when validation fails"
+        );
     }
 
     #[tokio::test]
@@ -5034,8 +5069,14 @@ mod tests {
 
         let response = execute_rule_actions(&event, &rule, &config).await.unwrap();
 
-        assert!(response.continue_, "validate_expr returning true should allow");
-        assert!(response.context.is_some(), "Should inject when validation passes");
+        assert!(
+            response.continue_,
+            "validate_expr returning true should allow"
+        );
+        assert!(
+            response.context.is_some(),
+            "Should inject when validation passes"
+        );
         assert!(response.context.unwrap().contains("Validation passed"));
     }
 
@@ -5060,12 +5101,18 @@ mod tests {
         // get_field should return empty string when tool_input is None
         let result = eval_boolean_with_context(r#"get_field("any_field") == """#, &ctx);
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), true, "get_field should return empty string when tool_input is None");
+        assert!(
+            result.unwrap(),
+            "get_field should return empty string when tool_input is None"
+        );
 
         // has_field should return false when tool_input is None
         let result2 = eval_boolean_with_context(r#"has_field("any_field")"#, &ctx);
         assert!(result2.is_ok());
-        assert_eq!(result2.unwrap(), false, "has_field should return false when tool_input is None");
+        assert!(
+            !result2.unwrap(),
+            "has_field should return false when tool_input is None"
+        );
     }
 
     #[tokio::test]
@@ -5091,12 +5138,16 @@ mod tests {
         let ctx = build_eval_context_with_custom_functions(&event);
 
         // Should be able to use both custom functions and env vars (PATH always exists)
-        let result = eval_boolean_with_context(
-            r#"has_field("file_path") && env_PATH != """#,
-            &ctx
-        );
+        let result = eval_boolean_with_context(r#"has_field("file_path") && env_PATH != """#, &ctx);
 
-        assert!(result.is_ok(), "Should evaluate expression with both custom functions and env vars: {:?}", result);
-        assert_eq!(result.unwrap(), true, "Should work with both custom functions and env vars");
+        assert!(
+            result.is_ok(),
+            "Should evaluate expression with both custom functions and env vars: {:?}",
+            result
+        );
+        assert!(
+            result.unwrap(),
+            "Should work with both custom functions and env vars"
+        );
     }
 }
