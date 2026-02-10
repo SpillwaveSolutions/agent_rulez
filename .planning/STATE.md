@@ -27,6 +27,10 @@ Progress: ███████████████████████�
 
 All decisions logged in PROJECT.md Key Decisions table.
 
+### Pending Todos
+
+1 pending — `/gsd:check-todos` to review
+
 ### Blockers/Concerns
 
 None active. Tech debt from v1.3 tracked in MILESTONES.md.
