@@ -95,6 +95,12 @@ See [v1.3-ROADMAP.md](milestones/v1.3-ROADMAP.md) for full details.
 - Reuse process_event() pipeline (no special debug logic in hooks.rs)
 - Add state isolation tests to verify no cross-invocation leakage
 
+**Plans:** 2 plans
+
+Plans:
+- [ ] 08-01-PLAN.md — Add UserPromptSubmit to debug CLI, --prompt flag, REGEX_CACHE clearing, enhanced output
+- [ ] 08-02-PLAN.md — Replace REGEX_CACHE HashMap with LRU cache, state isolation tests (TDD)
+
 ### Phase 9: E2E Test Stabilization
 
 **Goal:** Make E2E tests pass reliably on Linux, macOS, and Windows in CI (currently fail on Ubuntu).
@@ -154,7 +160,7 @@ See [v1.3-ROADMAP.md](milestones/v1.3-ROADMAP.md) for full details.
 | 5. Field Validation | v1.3 | 3/3 | ✅ Complete | 2026-02-09 |
 | 6. Inline Script Blocks | v1.3 | 3/3 | ✅ Complete | 2026-02-09 |
 | 7. JSON Schema Validation | v1.4 | 0/? | 🔄 Planning | — |
-| 8. Debug CLI Enhancements | v1.4 | 0/? | 🔄 Planning | — |
+| 8. Debug CLI Enhancements | v1.4 | 0/2 | 🔄 Planned | — |
 | 9. E2E Test Stabilization | v1.4 | 0/? | 🔄 Planning | — |
 | 10. Tauri CI Integration | v1.4 | 0/? | 🔄 Planning | — |
 
