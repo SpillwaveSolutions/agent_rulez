@@ -72,6 +72,12 @@ See [v1.3-ROADMAP.md](milestones/v1.3-ROADMAP.md) for full details.
 - Fail-open mode: log warnings for invalid events, continue processing
 - Performance regression tests in CI (criterion benchmarks)
 
+**Plans:** 2 plans
+
+Plans:
+- [ ] 07-01-PLAN.md -- Add dependencies, derive JsonSchema, create schema module, integrate into event pipeline
+- [ ] 07-02-PLAN.md -- Unit tests for schema validation and integration tests for CLI behavior
+
 ### Phase 8: Debug CLI Enhancements
 
 **Goal:** Close testing gap for UserPromptSubmit events and improve debug CLI output quality.
@@ -159,7 +165,7 @@ Plans:
 | 4. Prompt Matching | v1.3 | 4/4 | ✅ Complete | 2026-02-09 |
 | 5. Field Validation | v1.3 | 3/3 | ✅ Complete | 2026-02-09 |
 | 6. Inline Script Blocks | v1.3 | 3/3 | ✅ Complete | 2026-02-09 |
-| 7. JSON Schema Validation | v1.4 | 0/? | 🔄 Planning | — |
+| 7. JSON Schema Validation | v1.4 | 0/2 | 🔄 Planned | — |
 | 8. Debug CLI Enhancements | v1.4 | 0/2 | 🔄 Planned | — |
 | 9. E2E Test Stabilization | v1.4 | 0/? | 🔄 Planning | — |
 | 10. Tauri CI Integration | v1.4 | 0/? | 🔄 Planning | — |
