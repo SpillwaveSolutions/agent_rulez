@@ -491,6 +491,36 @@ pub struct Actions {
     /// Regex pattern for conditional blocking
     #[serde(skip_serializing_if = "Option::is_none")]
     pub block_if_match: Option<String>,
+
+    /// Evalexpr expression for validation (returns boolean)
+    ///
+    /// When present, the expression is evaluated at hook processing time.
+    /// - True = validation passes (allow operation)
+    /// - False = validation fails (block operation)
+    ///
+    /// Example YAML usage:
+    /// ```yaml
+    /// actions:
+    ///   validate_expr: 'has_field("name") && len(prompt) > 10'
+    /// ```
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub validate_expr: Option<String>,
+
+    /// Inline shell script for validation
+    ///
+    /// When present, the script is executed with event JSON on stdin.
+    /// - Exit code 0 = validation passes (allow operation)
+    /// - Non-zero exit code = validation fails (block operation)
+    ///
+    /// Example YAML usage:
+    /// ```yaml
+    /// actions:
+    ///   inline_script: |
+    ///     #!/bin/bash
+    ///     jq -e '.tool == "Write"' > /dev/null
+    /// ```
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub inline_script: Option<String>,
 }
 
 impl Actions {
@@ -834,6 +864,8 @@ reason: Code quality
                 run: None,
                 block: None,
                 block_if_match: None,
+                validate_expr: None,
+                inline_script: None,
             },
             mode: None,
             priority: None,
@@ -866,6 +898,8 @@ reason: Code quality
                 run: None,
                 block: None,
                 block_if_match: None,
+                validate_expr: None,
+                inline_script: None,
             },
             mode: Some(PolicyMode::Audit),
             priority: None,
@@ -898,6 +932,8 @@ reason: Code quality
                 run: None,
                 block: None,
                 block_if_match: None,
+                validate_expr: None,
+                inline_script: None,
             },
             mode: None,
             priority: None,
@@ -930,6 +966,8 @@ reason: Code quality
                 run: None,
                 block: None,
                 block_if_match: None,
+                validate_expr: None,
+                inline_script: None,
             },
             mode: None,
             priority: Some(100),
@@ -962,6 +1000,8 @@ reason: Code quality
                 run: None,
                 block: None,
                 block_if_match: None,
+                validate_expr: None,
+                inline_script: None,
             },
             mode: None,
             priority: None,
@@ -998,6 +1038,8 @@ reason: Code quality
                 run: None,
                 block: None,
                 block_if_match: None,
+                validate_expr: None,
+                inline_script: None,
             },
             mode: None,
             priority: Some(100), // New field takes precedence
@@ -1088,6 +1130,8 @@ reason: Code quality
                 run: None,
                 block: None,
                 block_if_match: None,
+                validate_expr: None,
+                inline_script: None,
             },
             mode: None,
             priority: Some(priority),
