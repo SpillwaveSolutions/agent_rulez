@@ -74,7 +74,7 @@ Plans:
 - [x] 05-02-PLAN.md — Matching logic (validate_required_fields, hooks.rs integration)
 - [x] 05-03-PLAN.md — Comprehensive unit and integration tests
 
-### Phase 6: Inline Script Blocks
+### Phase 6: Inline Script Blocks ✅
 
 **Goal:** Users can write validation logic directly in YAML using evalexpr expressions and shell scripts, eliminating need for external script files.
 
@@ -83,18 +83,18 @@ Plans:
 **Requirements:** SCRIPT-01, SCRIPT-02, SCRIPT-03, SCRIPT-04, SCRIPT-05, SCRIPT-06
 
 **Success Criteria** (what must be TRUE):
-1. User can write evalexpr expressions directly in YAML for inline validation
-2. evalexpr expressions have access to custom functions (get_field, has_field) for field inspection
-3. User can write inline shell scripts using YAML literal block syntax
-4. Shell scripts execute with timeout protection, failing closed on timeout
-5. System validates script syntax at configuration load time, rejecting invalid configs
+1. ✅ User can write evalexpr expressions directly in YAML for inline validation
+2. ✅ evalexpr expressions have access to custom functions (get_field, has_field) for field inspection
+3. ✅ User can write inline shell scripts using YAML literal block syntax
+4. ✅ Shell scripts execute with timeout protection, failing closed on timeout
+5. ✅ System validates script syntax at configuration load time, rejecting invalid configs
 
-**Plans:** 3 plans in 3 waves
+**Plans:** 3 plans in 3 waves — COMPLETE
 
 Plans:
-- [ ] 06-01-PLAN.md — Types and config validation (validate_expr, inline_script fields, syntax validation)
-- [ ] 06-02-PLAN.md — Execution logic (custom functions get_field/has_field, inline script execution, pipeline integration)
-- [ ] 06-03-PLAN.md — Comprehensive unit and integration tests (SCRIPT-01 through SCRIPT-06)
+- [x] 06-01-PLAN.md — Types and config validation (validate_expr, inline_script fields, syntax validation)
+- [x] 06-02-PLAN.md — Execution logic (custom functions get_field/has_field, inline script execution, pipeline integration)
+- [x] 06-03-PLAN.md — Comprehensive unit and integration tests (SCRIPT-01 through SCRIPT-06)
 
 ---
 
@@ -110,8 +110,8 @@ Phases execute in numeric order: 4 → 5 → 6
 | 3. Conditional Rule Activation | v1.2 | 3/3 | ✅ Complete | 2026-02-07 |
 | 4. Prompt Matching | v1.3 | 4/4 | ✅ Complete | 2026-02-09 |
 | 5. Field Validation | v1.3 | 3/3 | ✅ Complete | 2026-02-09 |
-| 6. Inline Script Blocks | v1.3 | 0/3 | Planned | - |
+| 6. Inline Script Blocks | v1.3 | 3/3 | ✅ Complete | 2026-02-09 |
 
 ---
 
-*Created 2026-02-06 - Updated 2026-02-09 Phase 5 complete*
+*Created 2026-02-06 - Updated 2026-02-09 Phase 6 complete — v1.3 MILESTONE COMPLETE*
