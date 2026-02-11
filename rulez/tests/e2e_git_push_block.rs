@@ -22,7 +22,9 @@ use std::fs;
 
 #[path = "common/mod.rs"]
 mod common;
-use common::{CchResponse, TestEvidence, Timer, canonicalize_path, evidence_dir, fixture_path, setup_test_env};
+use common::{
+    CchResponse, TestEvidence, Timer, canonicalize_path, evidence_dir, fixture_path, setup_test_env,
+};
 
 /// Helper: create a test environment and return (temp_dir, event_json)
 /// The event JSON uses `hook_event_name` and has `cwd` set to the temp dir path.
@@ -350,7 +352,9 @@ fn test_e2e_no_config_allows_all() {
     let mut evidence = TestEvidence::new("e2e_no_config_allows", "E2E");
 
     let empty_dir = tempfile::tempdir().expect("create empty dir");
-    let cwd = canonicalize_path(empty_dir.path()).to_string_lossy().to_string();
+    let cwd = canonicalize_path(empty_dir.path())
+        .to_string_lossy()
+        .to_string();
 
     let event = serde_json::json!({
         "hook_event_name": "PreToolUse",
