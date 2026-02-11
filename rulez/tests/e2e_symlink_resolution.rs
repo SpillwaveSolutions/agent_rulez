@@ -51,7 +51,10 @@ fn test_symlink_cwd_resolution() {
         String::from_utf8_lossy(&output.stderr)
     );
 
-    evidence.pass("Symlink cwd resolution works — git push blocked via symlink", timer.elapsed_ms());
+    evidence.pass(
+        "Symlink cwd resolution works — git push blocked via symlink",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 
     drop(temp_dir);
@@ -104,10 +107,21 @@ fn test_symlink_vs_canonical_consistency() {
         .output()
         .expect("command should run");
 
-    assert_eq!(output_canonical.status.code(), Some(2), "Canonical path should block git push");
-    assert_eq!(output_symlink.status.code(), Some(2), "Symlink path should also block git push");
+    assert_eq!(
+        output_canonical.status.code(),
+        Some(2),
+        "Canonical path should block git push"
+    );
+    assert_eq!(
+        output_symlink.status.code(),
+        Some(2),
+        "Symlink path should also block git push"
+    );
 
-    evidence.pass("Both canonical and symlink paths produce same result (exit code 2)", timer.elapsed_ms());
+    evidence.pass(
+        "Both canonical and symlink paths produce same result (exit code 2)",
+        timer.elapsed_ms(),
+    );
     let _ = evidence.save(&evidence_dir());
 
     drop(temp_dir);
@@ -145,7 +159,10 @@ fn test_symlink_cwd_allows_safe_commands() {
         .output()
         .expect("command should run");
 
-    assert!(output.status.success(), "Safe commands should be allowed via symlink cwd (exit 0)");
+    assert!(
+        output.status.success(),
+        "Safe commands should be allowed via symlink cwd (exit 0)"
+    );
 
     evidence.pass("Safe command allowed via symlink cwd", timer.elapsed_ms());
     let _ = evidence.save(&evidence_dir());
