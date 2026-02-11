@@ -449,6 +449,7 @@ rules:
 // =============================================================================
 
 #[test]
+#[cfg(unix)] // Inline scripts use #!/bin/bash shebangs — not available on Windows
 fn test_e2e_inline_script_exit_zero_allows() {
     let timer = Timer::start();
     let mut evidence = TestEvidence::new("e2e_inline_script_exit_zero", "OQ-SCRIPT");
@@ -511,6 +512,7 @@ rules:
 }
 
 #[test]
+#[cfg(unix)] // Inline scripts use #!/bin/bash shebangs — not available on Windows
 fn test_e2e_inline_script_exit_nonzero_blocks() {
     let timer = Timer::start();
     let mut evidence = TestEvidence::new("e2e_inline_script_exit_nonzero", "OQ-SCRIPT");
@@ -570,6 +572,7 @@ rules:
 }
 
 #[test]
+#[cfg(unix)] // Inline scripts use #!/bin/bash shebangs — not available on Windows
 fn test_e2e_inline_script_reads_stdin() {
     let timer = Timer::start();
     let mut evidence = TestEvidence::new("e2e_inline_script_stdin", "OQ-SCRIPT");
@@ -639,6 +642,7 @@ rules:
 // =============================================================================
 
 #[test]
+#[cfg(unix)] // Inline scripts use #!/bin/bash shebangs — not available on Windows
 fn test_e2e_inline_script_timeout_blocks() {
     let timer = Timer::start();
     let mut evidence = TestEvidence::new("e2e_inline_script_timeout", "OQ-SCRIPT");
@@ -916,6 +920,7 @@ rules:
 }
 
 #[test]
+#[cfg(unix)] // Inline scripts use #!/bin/bash shebangs — not available on Windows
 fn test_e2e_inline_script_with_inject_inline() {
     let timer = Timer::start();
     let mut evidence = TestEvidence::new("e2e_inline_script_with_inject", "OQ-SCRIPT");
