@@ -22,7 +22,7 @@ fn test_binary_exists_and_runs() {
     let timer = Timer::start();
     let mut evidence = TestEvidence::new("binary_exists_and_runs", "IQ");
 
-    let result = Command::cargo_bin("cch")
+    let result = Command::cargo_bin("rulez")
         .expect("binary exists")
         .arg("--help")
         .assert()
@@ -43,7 +43,7 @@ fn test_version_output() {
     let timer = Timer::start();
     let mut evidence = TestEvidence::new("version_output", "IQ");
 
-    let result = Command::cargo_bin("cch")
+    let result = Command::cargo_bin("rulez")
         .expect("binary exists")
         .arg("--version")
         .assert()
@@ -67,7 +67,7 @@ fn test_help_output() {
     let timer = Timer::start();
     let mut evidence = TestEvidence::new("help_output", "IQ");
 
-    let result = Command::cargo_bin("cch")
+    let result = Command::cargo_bin("rulez")
         .expect("binary exists")
         .arg("--help")
         .assert()
@@ -93,7 +93,7 @@ fn test_validate_help() {
     let timer = Timer::start();
     let mut evidence = TestEvidence::new("validate_help", "IQ");
 
-    let result = Command::cargo_bin("cch")
+    let result = Command::cargo_bin("rulez")
         .expect("binary exists")
         .args(["validate", "--help"])
         .assert()
@@ -114,7 +114,7 @@ fn test_logs_help() {
     let timer = Timer::start();
     let mut evidence = TestEvidence::new("logs_help", "IQ");
 
-    let result = Command::cargo_bin("cch")
+    let result = Command::cargo_bin("rulez")
         .expect("binary exists")
         .args(["logs", "--help"])
         .assert()
@@ -135,7 +135,7 @@ fn test_explain_help() {
     let timer = Timer::start();
     let mut evidence = TestEvidence::new("explain_help", "IQ");
 
-    let result = Command::cargo_bin("cch")
+    let result = Command::cargo_bin("rulez")
         .expect("binary exists")
         .args(["explain", "--help"])
         .assert()
@@ -157,7 +157,7 @@ fn test_empty_stdin_error() {
     let mut evidence = TestEvidence::new("empty_stdin_error", "IQ");
 
     // When no subcommand is provided and stdin is empty, should exit with error
-    let result = Command::cargo_bin("cch")
+    let result = Command::cargo_bin("rulez")
         .expect("binary exists")
         .write_stdin("")
         .assert()

@@ -23,7 +23,7 @@ fn test_us5_logs_command_works() {
     let mut evidence = TestEvidence::new("logs_command_works", "OQ-US5");
 
     // Run logs command
-    let result = Command::cargo_bin("cch")
+    let result = Command::cargo_bin("rulez")
         .expect("binary exists")
         .args(["logs", "--limit", "5"])
         .assert()
@@ -47,7 +47,7 @@ fn test_us5_explain_command_works() {
     let mut evidence = TestEvidence::new("explain_command_works", "OQ-US5");
 
     // Run explain command with a fake session ID
-    let result = Command::cargo_bin("cch")
+    let result = Command::cargo_bin("rulez")
         .expect("binary exists")
         .args(["explain", "test-session-123"])
         .assert()
@@ -74,7 +74,7 @@ fn test_us5_validate_creates_default() {
     let temp_dir = tempfile::tempdir().expect("create temp dir");
 
     // Run validate command
-    let result = Command::cargo_bin("cch")
+    let result = Command::cargo_bin("rulez")
         .expect("binary exists")
         .current_dir(temp_dir.path())
         .args(["validate"])
@@ -113,7 +113,7 @@ fn test_us5_validate_existing_config() {
     fs::copy(&config_src, claude_dir.join("hooks.yaml")).expect("copy config");
 
     // Run validate command
-    let result = Command::cargo_bin("cch")
+    let result = Command::cargo_bin("rulez")
         .expect("binary exists")
         .current_dir(temp_dir.path())
         .args(["validate"])
@@ -149,7 +149,7 @@ fn test_us5_validate_invalid_config() {
     .expect("write invalid config");
 
     // Run validate command - should fail
-    Command::cargo_bin("cch")
+    Command::cargo_bin("rulez")
         .expect("binary exists")
         .current_dir(temp_dir.path())
         .args(["validate"])
@@ -188,7 +188,7 @@ fn test_us5_logs_show_timing() {
     }"#;
 
     // Run event processing
-    let output = Command::cargo_bin("cch")
+    let output = Command::cargo_bin("rulez")
         .expect("binary exists")
         .current_dir(temp_dir.path())
         .write_stdin(event)

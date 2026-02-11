@@ -65,7 +65,7 @@ fn test_pq_cold_start_version() {
     for _ in 0..BENCHMARK_ITERATIONS {
         let start = Instant::now();
 
-        let output = Command::cargo_bin("cch")
+        let output = Command::cargo_bin("rulez")
             .expect("binary exists")
             .arg("--version")
             .output()
@@ -124,7 +124,7 @@ fn test_pq_cold_start_help() {
     for _ in 0..BENCHMARK_ITERATIONS {
         let start = Instant::now();
 
-        let output = Command::cargo_bin("cch")
+        let output = Command::cargo_bin("rulez")
             .expect("binary exists")
             .arg("--help")
             .output()
@@ -193,7 +193,7 @@ fn test_pq_event_processing_time() {
     for _ in 0..BENCHMARK_ITERATIONS {
         let start = Instant::now();
 
-        let output = Command::cargo_bin("cch")
+        let output = Command::cargo_bin("rulez")
             .expect("binary exists")
             .current_dir(temp_dir.path())
             .write_stdin(event)
@@ -263,7 +263,7 @@ fn test_pq_timing_in_response() {
         "timestamp": "2025-01-22T12:00:00Z"
     }"#;
 
-    let output = Command::cargo_bin("cch")
+    let output = Command::cargo_bin("rulez")
         .expect("binary exists")
         .current_dir(temp_dir.path())
         .write_stdin(event)
@@ -354,7 +354,7 @@ fn test_pq_throughput_with_rules() {
     for _ in 0..BENCHMARK_ITERATIONS {
         let start = Instant::now();
 
-        let output = Command::cargo_bin("cch")
+        let output = Command::cargo_bin("rulez")
             .expect("binary exists")
             .current_dir(temp_dir.path())
             .write_stdin(event)

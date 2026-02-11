@@ -8,7 +8,7 @@ use std::fs;
 use tempfile::TempDir;
 
 fn cch_cmd() -> Command {
-    Command::cargo_bin("cch").unwrap()
+    Command::cargo_bin("rulez").unwrap()
 }
 
 // =============================================================================
@@ -253,7 +253,7 @@ fn test_install_creates_settings_json() {
         .success();
 
     // Get the binary path
-    let binary = assert_cmd::cargo::cargo_bin("cch");
+    let binary = assert_cmd::cargo::cargo_bin("rulez");
 
     // Install with explicit binary path
     cch_cmd()
@@ -302,7 +302,7 @@ fn test_uninstall_removes_hooks() {
         .success();
 
     // Get the binary path
-    let binary = assert_cmd::cargo::cargo_bin("cch");
+    let binary = assert_cmd::cargo::cargo_bin("rulez");
 
     // Install
     cch_cmd()
