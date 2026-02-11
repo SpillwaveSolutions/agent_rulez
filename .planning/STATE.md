@@ -10,19 +10,19 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Milestone: v1.4 Stability & Polish
-Phase: 09 — E2E Test Stabilization (1/3 plans complete)
-Current Plan: 09-02 (next)
-Status: Phase 09 Plan 01 complete
-Last activity: 2026-02-10 — Completed Phase 09 Plan 01 (E2E Path Canonicalization)
+Phase: 09 — E2E Test Stabilization (3/3 plans complete)
+Current Plan: Phase 09 complete
+Status: Phase 09 complete — ready for Phase 10
+Last activity: 2026-02-10 — Completed Phase 09 Plan 03 (Symlink Resolution & Tempdir Cleanup)
 
-Progress: ████████████░░░░░░░░ 52%
+Progress: ██████████████░░░░░░ 58%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 23 (6 v1.2 + 10 v1.3 + 7 v1.4)
+- Total plans completed: 25 (6 v1.2 + 10 v1.3 + 9 v1.4)
 - Average duration: ~6min (Phases 4-9)
-- Total execution time: 123min (Phase 4: 61min, Phase 5: 21min, Phase 6: 18min, Phase 7: 7min, Phase 8: 12min, Phase 9: 4min)
+- Total execution time: 135min (Phase 4: 61min, Phase 5: 21min, Phase 6: 18min, Phase 7: 7min, Phase 8: 12min, Phase 9: 16min)
 
 **Phase 7 Progress:**
 | Plan | Duration | Tasks | Files | Status |
@@ -40,6 +40,8 @@ Progress: ████████████░░░░░░░░ 52%
 | Plan | Duration | Tasks | Files | Status |
 |------|----------|-------|-------|--------|
 | 09-01 | 4min | 2 | 2 | Complete |
+| 09-02 | 6min | 2 | 1 | Complete |
+| 09-03 | 6min | 2 | 2 (1 new) | Complete |
 
 ## Verification Results
 
@@ -51,6 +53,16 @@ Progress: ████████████░░░░░░░░ 52%
 ## Accumulated Context
 
 ### Decisions
+
+**Phase 9 - E2E Test Stabilization (09-03):**
+- Import std::os::unix::fs::symlink inside #[cfg(unix)] test function body (not at module level) to avoid compilation errors on non-Unix platforms
+- Use explicit drop() for single temp_dirs, rely on loop scope drop for loop-created temp_dirs
+- Symlink tests validate both blocking and allowing behavior to ensure config resolution works correctly
+
+**Phase 9 - E2E Test Stabilization (09-02):**
+- Run E2E tests on both ubuntu-latest and macos-latest in GitHub Actions
+- Symlink tests (#[cfg(unix)]) automatically skipped on Windows
+- Matrix strategy enables parallel cross-platform validation
 
 **Phase 9 - E2E Test Stabilization (09-01):**
 - Use canonicalize_path() wrapper with fallback instead of raw fs::canonicalize()
@@ -92,7 +104,7 @@ None active.
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Completed Phase 09 Plan 01 (E2E Path Canonicalization)
+Stopped at: Completed Phase 09 Plan 03 (Symlink Resolution & Tempdir Cleanup)
 Resume file: None
 
-Next action: `/gsd:execute-phase 09` to continue with 09-02 (E2E Cross-Platform Matrix)
+Next action: Phase 09 complete — proceed to Phase 10 (Tauri CI Integration)
