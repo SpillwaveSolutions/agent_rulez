@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 // =============================================================================
@@ -2264,7 +2265,7 @@ fn default_enabled() -> bool {
 /// Claude Code sends events with `hook_event_name` as the field name.
 /// The `alias = "event_type"` preserves backward compatibility with
 /// debug commands and tests that use the old field name.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub struct Event {
     /// Hook event type (Claude Code sends as `hook_event_name`)
     #[serde(alias = "event_type")]
@@ -2283,6 +2284,7 @@ pub struct Event {
 
     /// ISO 8601 timestamp (Claude Code may not send this, so default to now)
     #[serde(default = "chrono::Utc::now")]
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
 
     /// User identifier if available
@@ -2313,7 +2315,7 @@ pub struct Event {
 /// Supported hook event types
 ///
 /// Includes all event types that Claude Code can send to hooks.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 #[serde(rename_all = "PascalCase")]
 pub enum EventType {
     PreToolUse,
