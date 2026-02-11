@@ -1,5 +1,8 @@
 use anyhow::Result;
-use evalexpr::{eval_boolean_with_context, ContextWithMutableVariables, DefaultNumericTypes, HashMapContext, Value};
+use evalexpr::{
+    ContextWithMutableVariables, DefaultNumericTypes, HashMapContext, Value,
+    eval_boolean_with_context,
+};
 use regex::Regex;
 
 use std::path::Path;
@@ -134,13 +137,15 @@ fn build_eval_context(event: &Event) -> HashMapContext<DefaultNumericTypes> {
 
     // Add tool name (empty string if none)
     let tool_name = event.tool_name.as_deref().unwrap_or("").to_string();
-    ctx.set_value("tool_name".into(), Value::String(tool_name)).ok();
+    ctx.set_value("tool_name".into(), Value::String(tool_name))
+        .ok();
 
     // Add event type
     ctx.set_value(
         "event_type".into(),
-        Value::String(event.hook_event_name.to_string())
-    ).ok();
+        Value::String(event.hook_event_name.to_string()),
+    )
+    .ok();
 
     ctx
 }
@@ -164,7 +169,8 @@ fn is_rule_enabled(rule: &Rule, event: &Event) -> bool {
                 Err(e) => {
                     tracing::warn!(
                         "enabled_when expression failed for rule '{}': {} - treating as disabled",
-                        rule.name, e
+                        rule.name,
+                        e
                     );
                     false // Fail-closed: invalid expression disables rule
                 }
@@ -408,21 +414,25 @@ fn matches_rule_with_debug(event: &Event, rule: &Rule) -> (bool, Option<MatcherR
 /// - No stdin input needed
 /// - Raw text output (not JSON)
 /// - Fail-open: command failures log warning but don't block
-async fn execute_inject_command(
-    command_str: &str,
-    rule: &Rule,
-    config: &Config,
-) -> Option<String> {
+async fn execute_inject_command(command_str: &str, rule: &Rule, config: &Config) -> Option<String> {
     let timeout_secs = rule
         .metadata
         .as_ref()
         .map(|m| m.timeout)
         .unwrap_or(config.settings.script_timeout);
 
-    // Use shell to execute (enables pipes, redirects, etc.)
-    let mut command = Command::new("sh");
-    command.arg("-c");
-    command.arg(command_str);
+    // Use platform-specific shell to execute (enables pipes, redirects, etc.)
+    let mut command = if cfg!(target_os = "windows") {
+        let mut cmd = Command::new("cmd");
+        cmd.arg("/C");
+        cmd.arg(command_str);
+        cmd
+    } else {
+        let mut cmd = Command::new("sh");
+        cmd.arg("-c");
+        cmd.arg(command_str);
+        cmd
+    };
     command.stdout(std::process::Stdio::piped());
     command.stderr(std::process::Stdio::piped());
     // No stdin - don't pipe it (causes hangs)
@@ -432,7 +442,9 @@ async fn execute_inject_command(
         Err(e) => {
             tracing::warn!(
                 "Failed to spawn inject_command '{}' for rule '{}': {}",
-                command_str, rule.name, e
+                command_str,
+                rule.name,
+                e
             );
             return None;
         }
@@ -441,19 +453,25 @@ async fn execute_inject_command(
     let output = match timeout(
         Duration::from_secs(timeout_secs as u64),
         child.wait_with_output(),
-    ).await {
+    )
+    .await
+    {
         Ok(Ok(output)) => output,
         Ok(Err(e)) => {
             tracing::warn!(
                 "inject_command '{}' for rule '{}' failed: {}",
-                command_str, rule.name, e
+                command_str,
+                rule.name,
+                e
             );
             return None;
         }
         Err(_) => {
             tracing::warn!(
                 "inject_command '{}' for rule '{}' timed out after {}s",
-                command_str, rule.name, timeout_secs
+                command_str,
+                rule.name,
+                timeout_secs
             );
             return None;
         }

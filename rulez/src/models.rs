@@ -1162,7 +1162,10 @@ priority: 50
 "#;
         let rule: Rule = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(rule.name, "dev-helper");
-        assert_eq!(rule.description, Some("Only for local development".to_string()));
+        assert_eq!(
+            rule.description,
+            Some("Only for local development".to_string())
+        );
         assert_eq!(rule.enabled_when, Some(r#"env_CI != "true""#.to_string()));
         assert_eq!(rule.effective_mode(), PolicyMode::Warn);
         assert_eq!(rule.effective_priority(), 50);
@@ -1171,10 +1174,14 @@ priority: 50
     #[test]
     fn test_evalexpr_basic_expression() {
         // Tests that evalexpr can parse and evaluate basic expressions
-        use evalexpr::{eval_boolean_with_context, ContextWithMutableVariables, DefaultNumericTypes, HashMapContext, Value};
+        use evalexpr::{
+            ContextWithMutableVariables, DefaultNumericTypes, HashMapContext, Value,
+            eval_boolean_with_context,
+        };
 
         let mut ctx: HashMapContext<DefaultNumericTypes> = HashMapContext::new();
-        ctx.set_value("env_CI".into(), Value::String("true".to_string())).unwrap();
+        ctx.set_value("env_CI".into(), Value::String("true".to_string()))
+            .unwrap();
 
         let result = eval_boolean_with_context(r#"env_CI == "true""#, &ctx).unwrap();
         assert!(result);

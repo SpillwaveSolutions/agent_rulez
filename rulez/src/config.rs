@@ -2,7 +2,7 @@
 #![allow(clippy::unnecessary_map_or)]
 
 use anyhow::{Context, Result};
-use evalexpr::{build_operator_tree, DefaultNumericTypes};
+use evalexpr::{DefaultNumericTypes, build_operator_tree};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
