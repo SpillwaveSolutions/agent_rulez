@@ -96,6 +96,8 @@ fn test_e2e_git_push_blocked_exit_code_2() {
         timer.elapsed_ms(),
     );
     let _ = evidence.save(&evidence_dir());
+
+    drop(temp_dir);
 }
 
 // ==========================================================================
@@ -146,6 +148,9 @@ fn test_e2e_cwd_based_config_loading_exit_code_2() {
         timer.elapsed_ms(),
     );
     let _ = evidence.save(&evidence_dir());
+
+    drop(temp_dir);
+    drop(wrong_dir);
 }
 
 // ==========================================================================
@@ -183,6 +188,8 @@ fn test_e2e_git_status_allowed_exit_code_0() {
         timer.elapsed_ms(),
     );
     let _ = evidence.save(&evidence_dir());
+
+    drop(temp_dir);
 }
 
 // ==========================================================================
@@ -340,6 +347,9 @@ fn test_e2e_output_format_claude_code_protocol() {
         timer.elapsed_ms(),
     );
     let _ = evidence.save(&evidence_dir());
+
+    drop(temp_dir);
+    drop(temp_dir2);
 }
 
 // ==========================================================================
@@ -384,6 +394,8 @@ fn test_e2e_no_config_allows_all() {
 
     evidence.pass("No config = exit 0, all allowed", timer.elapsed_ms());
     let _ = evidence.save(&evidence_dir());
+
+    drop(empty_dir);
 }
 
 // ==========================================================================
@@ -428,4 +440,6 @@ fn test_e2e_cwd_git_push_variants_from_wrong_dir() {
         timer.elapsed_ms(),
     );
     let _ = evidence.save(&evidence_dir());
+
+    drop(wrong_dir);
 }
