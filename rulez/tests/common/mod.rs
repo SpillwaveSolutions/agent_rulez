@@ -105,6 +105,19 @@ pub fn setup_test_env(config_name: &str) -> tempfile::TempDir {
     temp_dir
 }
 
+/// Canonicalize a path to resolve symlinks (e.g., macOS /var -> /private/var).
+///
+/// On macOS, `tempfile::tempdir()` returns paths like `/var/folders/...`
+/// but `/var` is a symlink to `/private/var`. This helper ensures paths
+/// used in event JSON match what the binary sees after resolution.
+///
+/// Falls back to the original path if canonicalization fails (e.g., path
+/// does not exist yet).
+pub fn canonicalize_path<P: AsRef<Path>>(path: P) -> PathBuf {
+    fs::canonicalize(path.as_ref())
+        .unwrap_or_else(|_| path.as_ref().to_path_buf())
+}
+
 /// Timer for measuring test duration
 pub struct Timer {
     start: Instant,
