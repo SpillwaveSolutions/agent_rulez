@@ -389,9 +389,14 @@ async fn execute_inline_script(
     let event_json = serde_json::to_string(event)?;
     if let Some(mut stdin) = child.stdin.take() {
         if let Err(e) = stdin.write_all(event_json.as_bytes()).await {
-            // Clean up temp file before returning error
-            tokio::fs::remove_file(&script_path).await.ok();
-            return Err(e.into());
+            // Ignore BrokenPipe — the script may have exited before reading
+            // all input (e.g., `exit 0` without consuming stdin). On Linux
+            // this surfaces as EPIPE; on macOS it's typically silent.
+            if e.kind() != std::io::ErrorKind::BrokenPipe {
+                // Clean up temp file before returning error
+                tokio::fs::remove_file(&script_path).await.ok();
+                return Err(e.into());
+            }
         }
         // Close stdin to signal EOF
         drop(stdin);
