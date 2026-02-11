@@ -22,10 +22,8 @@ use crate::models::Event;
 /// Uses LazyLock for thread-safe, one-time initialization.
 static EVENT_VALIDATOR: LazyLock<jsonschema::Validator> = LazyLock::new(|| {
     let schema = schema_for!(Event);
-    let schema_value =
-        serde_json::to_value(&schema).expect("Failed to serialize Event schema");
-    jsonschema::validator_for(&schema_value)
-        .expect("Failed to compile Event schema validator")
+    let schema_value = serde_json::to_value(&schema).expect("Failed to serialize Event schema");
+    jsonschema::validator_for(&schema_value).expect("Failed to compile Event schema validator")
 });
 
 /// Validate an event JSON value against the Event schema.

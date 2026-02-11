@@ -38,7 +38,9 @@ impl SimEventType {
             "posttooluse" | "post" | "post-tool-use" => Some(SimEventType::PostToolUse),
             "sessionstart" | "session" | "start" => Some(SimEventType::SessionStart),
             "permissionrequest" | "permission" | "perm" => Some(SimEventType::PermissionRequest),
-            "userpromptsubmit" | "prompt" | "user-prompt" | "user-prompt-submit" => Some(SimEventType::UserPromptSubmit),
+            "userpromptsubmit" | "prompt" | "user-prompt" | "user-prompt-submit" => {
+                Some(SimEventType::UserPromptSubmit)
+            }
             _ => None,
         }
     }
@@ -74,7 +76,13 @@ pub async fn run(
     println!();
 
     // Build simulated event
-    let event = build_event(event_type, tool.clone(), command.clone(), path.clone(), prompt.clone());
+    let event = build_event(
+        event_type,
+        tool.clone(),
+        command.clone(),
+        path.clone(),
+        prompt.clone(),
+    );
     let event_json = serde_json::to_string_pretty(&event)?;
 
     println!("Simulated Event:");
@@ -97,10 +105,16 @@ pub async fn run(
     // Show performance metrics
     println!("Performance:");
     println!("{}", "-".repeat(40));
-    let rule_count = response.timing.as_ref()
+    let rule_count = response
+        .timing
+        .as_ref()
         .map(|t| t.rules_evaluated)
         .unwrap_or(0);
-    println!("Processed in {}ms ({} rules evaluated)", elapsed.as_millis(), rule_count);
+    println!(
+        "Processed in {}ms ({} rules evaluated)",
+        elapsed.as_millis(),
+        rule_count
+    );
     println!();
 
     // Show rule evaluation summary
