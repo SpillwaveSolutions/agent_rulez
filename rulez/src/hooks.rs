@@ -1720,8 +1720,12 @@ mod tests {
 
     #[test]
     fn test_is_rule_enabled_true_condition() {
-        // Use existing PATH env var (always exists on all systems)
-        // Check that it's not empty (which is always true)
+        // Windows stores PATH as "Path" so env var names differ by platform.
+        #[cfg(windows)]
+        let enabled_expr = r#"env_Path != """#.to_string();
+        #[cfg(not(windows))]
+        let enabled_expr = r#"env_PATH != """#.to_string();
+
         let event = Event {
             hook_event_name: EventType::PreToolUse,
             tool_name: Some("Bash".to_string()),
@@ -1739,8 +1743,7 @@ mod tests {
         let rule = Rule {
             name: "true-condition".to_string(),
             description: None,
-            // PATH exists and is not empty on all systems
-            enabled_when: Some(r#"env_PATH != """#.to_string()),
+            enabled_when: Some(enabled_expr),
             matchers: Matchers {
                 tools: None,
                 extensions: None,
@@ -5132,8 +5135,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_expr_with_env_vars() {
-        // Test that custom functions work alongside existing env vars
-        // Use PATH which always exists on all systems
+        // Windows stores PATH as "Path" so env var names differ by platform.
+        #[cfg(windows)]
+        let expr = r#"has_field("file_path") && env_Path != """#;
+        #[cfg(not(windows))]
+        let expr = r#"has_field("file_path") && env_PATH != """#;
+
         let event = Event {
             hook_event_name: EventType::PreToolUse,
             tool_name: Some("Write".to_string()),
@@ -5152,8 +5159,8 @@ mod tests {
 
         let ctx = build_eval_context_with_custom_functions(&event);
 
-        // Should be able to use both custom functions and env vars (PATH always exists)
-        let result = eval_boolean_with_context(r#"has_field("file_path") && env_PATH != """#, &ctx);
+        // Should be able to use both custom functions and env vars
+        let result = eval_boolean_with_context(expr, &ctx);
 
         assert!(
             result.is_ok(),
