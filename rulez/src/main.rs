@@ -8,6 +8,7 @@ mod config;
 mod hooks;
 mod logging;
 mod models;
+mod schema;
 
 #[derive(Parser)]
 #[command(name = "rulez")]
@@ -50,7 +51,7 @@ enum Commands {
     },
     /// Simulate an event to test rules
     Debug {
-        /// Event type: PreToolUse, PostToolUse, SessionStart, PermissionRequest
+        /// Event type: PreToolUse, PostToolUse, SessionStart, PermissionRequest, UserPromptSubmit
         event_type: String,
         /// Tool name (e.g., Bash, Write, Read)
         #[arg(short, long)]
@@ -61,6 +62,9 @@ enum Commands {
         /// File path (for Write/Edit/Read)
         #[arg(short, long)]
         path: Option<String>,
+        /// User prompt text (for UserPromptSubmit events)
+        #[arg(long)]
+        prompt: Option<String>,
         /// Show verbose rule evaluation
         #[arg(short, long)]
         verbose: bool,
@@ -165,9 +169,10 @@ async fn main() -> Result<()> {
             tool,
             command,
             path,
+            prompt,
             verbose,
         }) => {
-            cli::debug::run(event_type, tool, command, path, verbose).await?;
+            cli::debug::run(event_type, tool, command, path, prompt, verbose).await?;
         }
         Some(Commands::Repl) => {
             cli::debug::interactive().await?;
@@ -234,8 +239,25 @@ async fn process_hook_event(cli: &Cli, _config: &config::Config) -> Result<()> {
         std::process::exit(1);
     }
 
-    let event: models::Event = serde_json::from_str(&buffer).map_err(|e| {
-        error!("Failed to parse hook event: {}", e);
+    // Step 1: Parse as raw JSON Value first (REQ-SCHEMA-05)
+    // Malformed JSON (syntax errors) -> exit code 1 (config error)
+    let event_value: serde_json::Value = serde_json::from_str(&buffer).map_err(|e| {
+        error!("Failed to parse hook event JSON: {}", e);
+        std::process::exit(1);
+    })?;
+
+    // Step 2: Validate against Event schema (REQ-SCHEMA-04: fail-open)
+    // Schema deviations (extra fields, wrong optional types) log a warning
+    // but continue processing. This does NOT catch missing required fields --
+    // that is handled by serde deserialization below.
+    schema::validate_event_schema(&event_value);
+
+    // Step 3: Deserialize to strongly-typed Event struct (fail-closed)
+    // Missing required fields (hook_event_name, session_id) are fatal because
+    // the Event struct cannot be constructed without them. This is intentional:
+    // fail-open applies to schema validation, not to type construction.
+    let event: models::Event = serde_json::from_value(event_value).map_err(|e| {
+        error!("Failed to deserialize hook event: {}", e);
         e
     })?;
 
