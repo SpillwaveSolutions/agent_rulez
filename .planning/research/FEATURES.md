@@ -1,453 +1,266 @@
-# Feature Landscape: v1.4 Stability & Polish
+# Feature Research: RuleZ UI Desktop App
 
-**Domain:** Rust CLI Policy Engine - Stability & Developer Experience Features
+**Domain:** Desktop configuration editor and policy management tool for AI workflows
 **Researched:** 2026-02-10
-**Confidence:** HIGH
+**Confidence:** MEDIUM (WebSearch verified with established patterns)
 
-## Executive Summary
+## Feature Landscape
 
-v1.4 focuses on **stabilizing and polishing** the existing RuleZ policy engine, NOT adding new user-facing policy features. The milestone addresses four specific gaps identified in v1.3 tech debt:
+### Table Stakes (Users Expect These)
 
-1. **JSON Schema validation** for hook event payloads
-2. **Debug CLI improvements** for simulating UserPromptSubmit events
-3. **E2E test stabilization** for cross-platform reliability
-4. **Tauri UI build fixes** for multi-platform CI integration
+Features users assume exist. Missing these = product feels incomplete.
 
-**Key insight:** These are **infrastructure features** that improve developer experience, test reliability, and correctness validation — not end-user features like new rule matchers or actions.
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| **YAML autocomplete for RuleZ fields** | Standard in modern code editors (VS Code, Monaco, IntelliJ all provide schema-driven completions) | MEDIUM | Monaco Editor supports `registerCompletionItemProvider` for custom language support. Can use existing hooks.json schema. |
+| **Inline validation with error tooltips** | Users expect validation feedback as they type (VS Code, all modern IDEs) | LOW | Already have schema validation; need to wire schema errors to Monaco's `setModelMarkers` API. |
+| **Audit log viewer with filtering** | Policy management tools require audit trails (Microsoft Purview, Oracle Audit, AWS CloudTrail all have log viewers) | MEDIUM-HIGH | JSONL parsing, date range filtering, rule correlation. Display ~1K-10K events efficiently. |
+| **Import/export configurations** | All config management tools support this (VS Code settings, Visual Studio .vsconfig, Windows Group Policy) | LOW | Export to .yaml, import with merge options. Simple file operations via Tauri commands. |
+| **Binary path configuration** | Desktop apps that call CLI tools must let users configure paths (Git GUIspindle, Docker Desktop, etc.) | LOW | Settings panel with file picker. Store in app config (Tauri store API or localStorage). |
+| **Error recovery for missing binary** | Users expect graceful degradation when dependencies missing (VS Code extensions, Docker Desktop) | MEDIUM | Detect binary not found, show actionable error with install instructions, offer manual path selection. |
+| **Search within files** | All code editors provide this (Ctrl+F / Cmd+F universal pattern) | LOW | Monaco Editor has built-in find widget. Already included in Monaco integration. |
+| **File save indicators** | Users expect to know when files have unsaved changes (VS Code dot on tab, asterisk in title) | LOW | Already implemented in M1 (file tab management, unsaved indicators). |
+| **Theme persistence** | Users expect theme selection to persist across sessions | LOW | Already have theme toggle; need to persist in localStorage or Tauri store. |
 
----
+### Differentiators (Competitive Advantage)
 
-## Table Stakes Features
+Features that set the product apart. Not required, but valuable.
 
-Features that v1.4 MUST deliver to be considered complete. These address known gaps and technical debt.
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| **Rule correlation in audit viewer** | Click audit log entry -> see which rule fired -> jump to rule definition | MEDIUM | Correlate log entries (rule_id) with YAML AST positions. Requires YAML parser to track line numbers. |
+| **Inline documentation on hover** | Hover over `action:` field -> see available actions and examples | MEDIUM | Monaco Editor `registerHoverProvider` API. Fetch docs from inline schema descriptions or embedded markdown. |
+| **Template gallery with preview** | Pre-built rule templates (block dangerous ops, inject context, validate inputs) with live preview | MEDIUM | JSON/YAML templates in assets/, preview shows before/after. 10-15 templates covering common use cases. |
+| **Config diff view** | Compare global vs project config side-by-side with color-coded changes | MEDIUM-HIGH | Monaco Editor has built-in diff editor (`monaco.editor.createDiffEditor`). Color-code added (green), removed (red), modified (blue). |
+| **First-run wizard** | Guided setup for new users (detect/configure binary path, create first rule, test with simulator) | MEDIUM | Multi-step onboarding flow. Skip button for power users. Show once, persist completion state. |
+| **Rule evaluation timeline** | Visual timeline showing which rules fired for a given event, with timing | MEDIUM-HIGH | Parse `rulez debug` output for rule evaluation trace. Timeline component with swimlanes. Requires CLI to expose timing data. |
+| **Snippet insertion** | Type `trigger` snippet keyword -> insert pre-filled trigger block with placeholders | LOW-MEDIUM | Monaco Editor snippet API. Define snippets for `trigger`, `action`, `condition`, `validation`. |
+| **Workspace rule count dashboard** | Show stats: total rules, active vs inactive, rules by type, last modified | LOW | Parse YAML, count rules, display in sidebar or header. Refresh on file change. |
+| **Validation error explanations** | Click validation error -> see why it failed and how to fix (not just "invalid YAML") | MEDIUM | Enhance schema validation to include human-readable explanations. Link to docs. |
+| **Rule testing without Claude Code** | Inline simulator that lets you test rules in isolation without running Claude | LOW | Already implemented in M1 (debug simulator). Enhance with more event types. |
 
-| Feature | Why Expected | Complexity | Dependencies | Notes |
-|---------|--------------|------------|--------------|-------|
-| **JSON Schema event validation** | Validate incoming hook events match Claude Code's schema before processing | Medium | schemars 1.2 (schema gen), jsonschema 0.41 (validation, already exists) | Draft-07 and 2020-12 support required |
-| **Pre-compiled schema caching** | Performance requirement: schema validation <0.1ms per event | Low | OnceCell or lazy_static (already exists) | Load-time compilation, not per-event |
-| **Fail-open validation mode** | Schema errors shouldn't block valid events (existing fail_open pattern) | Low | None | Log warnings, continue processing |
-| **Debug CLI: UserPromptSubmit simulation** | Close testing gap for prompt_match rules (v1.3 tech debt #3) | Low | None (existing tokio stdin) | Enable `rulez debug prompt --prompt "text"` |
-| **E2E tests: cross-platform paths** | Tests must pass on Linux, macOS, Windows in CI | Medium | fs::canonicalize, PathBuf (stdlib) | Resolve symlinks, platform-agnostic paths |
-| **E2E tests: broken pipe fixes** | Tests failing on Linux due to unread stdio pipes (v1.3 bug) | Low | Command::wait_with_output() (stdlib) | Always drain stdout/stderr or use Stdio::null() |
-| **Tauri 2.0: webkit2gtk-4.1** | Correct Linux dependency for Tauri 2.0 (4.0 removed in Ubuntu 24.04) | Low | System package (apt-get) | CI configuration, not code change |
-| **Tauri 2.0: CI matrix builds** | Multi-platform CI (Linux, macOS, Windows) to catch platform-specific issues | Medium | GitHub Actions, tauri-apps/tauri-action | Prevent "works on my machine" bugs |
+### Anti-Features (Commonly Requested, Often Problematic)
 
-### Why These Are Table Stakes
+Features that seem good but create problems.
 
-**Context from v1.3 Milestone Audit:**
-- Debug CLI cannot test prompt_match rules (gap identified in tech debt)
-- E2E tests have broken pipe issues on Linux (CI failures documented)
-- Tauri app builds locally but not in CI (no GitHub Actions workflow)
-- No validation of incoming hook events (assumed Claude Code sends valid JSON)
-
-**User expectation:** A "Stability & Polish" milestone means fixing known bugs and closing testing gaps. Missing any of these would leave v1.3 issues unresolved.
-
----
-
-## Differentiators
-
-Features that set v1.4 apart from a minimal bug-fix release. Not expected, but valuable for long-term maintainability.
-
-| Feature | Value Proposition | Complexity | Dependencies | Notes |
-|---------|-------------------|------------|--------------|-------|
-| **JSON Schema draft version validation** | Prevent breaking changes when schemas evolve (fail-closed on unsupported drafts) | Low | None | Require explicit `$schema` field, reject draft-04/draft-06 |
-| **Schema performance benchmarks in CI** | Guarantee <10ms processing budget with regression tests | Medium | cargo bench, criterion | Fail CI if p95 latency exceeds 10ms |
-| **LRU regex cache** | Fix unbounded REGEX_CACHE growth (v1.3 tech debt #1) | Low | lru crate | Max 100 compiled regexes, evict least-recently-used |
-| **Debug CLI correlation IDs** | Trace event flow across debug invocations for reproducibility | Low | uuid crate | Log correlation ID with every decision |
-| **Debug CLI `--clean` flag** | Force fresh state (clear caches) for guaranteed test isolation | Low | None | Alternative to default cache reuse |
-| **E2E symlink resolution tests** | Explicitly test macOS /var symlink handling (common CI failure source) | Low | std::os::unix::fs::symlink | Unix-only test, validates fs::canonicalize() works |
-| **Tauri build artifact verification** | CI validates correct binary name before upload (prevent stale cache issues) | Low | which, --version check | Detect renamed binaries in CI cache |
-| **Cross-platform CI matrix for E2E** | Run E2E tests on ubuntu-22.04, ubuntu-24.04, macos-latest, windows-latest | Medium | GitHub Actions matrix | Catch platform-specific bugs before release |
-
-### Why These Are Differentiators
-
-**Generic stability features** (schema validation, E2E tests, CI) are table stakes.
-
-**RuleZ-specific quality measures** (draft version enforcement, performance regression tests, cache limits, correlation IDs) go beyond "fix the bugs" to "prevent future bugs."
-
-**Example:** Most projects add JSON Schema validation. Few enforce draft version compatibility and fail-closed on missing `$schema` fields. Fewer still benchmark validation overhead in CI.
-
----
-
-## Anti-Features
-
-Features to explicitly NOT build in v1.4.
-
-| Anti-Feature | Why Avoid | What to Do Instead |
-|--------------|-----------|-------------------|
-| **New rule matchers or actions** | v1.4 is stability, not new features. Defer to v1.5 | Document feature requests in `.planning/backlog/` |
-| **Fail-closed schema validation by default** | Would block valid events if schema file missing/outdated | Fail-open with warnings (matches existing `fail_open: true` pattern) |
-| **Custom JSON Schema draft support** | Maintenance burden, compatibility risk | Support only LTS drafts: draft-07 and 2020-12 |
-| **Interactive debug CLI (REPL mode)** | Already exists (`rulez repl`), don't duplicate | Extend existing REPL with UserPromptSubmit support |
-| **Debug CLI persistent state across invocations** | Causes flaky tests, unreproducible bugs | Default to stateless, offer `--clean` flag for explicit cache clearing |
-| **E2E tests with full Tauri app** | Slow, brittle, requires GUI automation | Test web mode with Playwright (Tauri commands have fallbacks) |
-| **Tauri builds on every PR** | Slow CI (5-10 minutes per platform), expensive | Run on release branches only, E2E tests on every PR |
-| **Support for Ubuntu 20.04 / Debian 11** | webkit2gtk-4.1 not available, Tauri 2.0 incompatible | Document minimum OS: Ubuntu 22.04+ / Debian 12+ |
-| **Regex engine switching (fancy-regex vs regex)** | Security vs performance trade-off, not v1.4 scope | Defer to v1.5 if DDoS concerns arise |
-| **Schema migration tools** | Scope creep, users can manually update schemas | Document breaking changes in CHANGELOG, provide examples |
-
-### Rationale
-
-**v1.4 purpose:** Fix existing functionality, NOT add new capabilities.
-
-**Examples of scope creep to avoid:**
-- "While fixing debug CLI, let's add interactive mode" → NO (already exists)
-- "While adding schema validation, let's support custom drafts" → NO (maintenance burden)
-- "While fixing E2E tests, let's add full Tauri E2E" → NO (too slow, unnecessary)
-
-**Rule of thumb:** If it wasn't in v1.3 tech debt or doesn't fix a known bug, defer to v1.5.
-
----
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| **Real-time multi-user editing** | "Let teams edit rules together like Google Docs" | Extreme complexity, conflicts with file-based storage, YAML structure breaks with OT/CRDT | Use Git for collaboration. Show file modified warnings. Support import/export for sharing. |
+| **Cloud sync/backup** | "I want my rules synced across machines" | Adds cloud infrastructure, privacy concerns, vendor lock-in | Document how to use Git, Dropbox, or iCloud for config sync. File-based storage already supports this. |
+| **AI-powered rule generation** | "Generate rules from natural language" | Unpredictable output, requires LLM integration, prompt engineering complexity | Provide comprehensive template gallery instead. Users can use Claude Code itself to help write rules. |
+| **Visual drag-and-drop rule builder** | "I don't want to write YAML" | YAML structure is complex (nested conditions, regex, scripts). Visual builder would be massive and inflexible. | Provide autocomplete, snippets, templates, inline docs. YAML is the right abstraction. |
+| **Browser extension** | "Let me edit rules in the browser" | Security model conflicts (browser can't access filesystem or run binaries), limited API | Keep desktop app as primary interface. Consider read-only web viewer for sharing. |
+| **Integrated terminal** | "Run commands from the app" | Scope creep, security risks, poor UX for CLI power users | Users already have terminals. Focus on GUI-specific value (visual editing, simulation). |
+| **Plugin system** | "Let users extend the app" | Maintenance burden, security risks, API surface explosion | Build core features that cover 90% of use cases. Open-source for custom forks. |
 
 ## Feature Dependencies
 
-Dependencies between v1.4 features (build order implications).
-
 ```
-Feature Graph:
+[Audit Log Viewer]
+    └──requires──> [Binary Path Config]
+                       └──requires──> [Error Recovery for Missing Binary]
 
-JSON Schema Validation (Phase 1)
-├── Pre-compiled schema caching (required for performance)
-├── Draft version validation (required for correctness)
-└── Fail-open mode (required for backwards compat)
+[Rule Correlation in Audit Viewer]
+    └──requires──> [Audit Log Viewer]
+    └──requires──> [YAML AST Parser with Line Numbers]
 
-Debug CLI UserPromptSubmit (Phase 2)
-├── Event struct already has `prompt` field (v1.3) ✅
-├── tokio stdin support (v1.0) ✅
-└── LRU regex cache (optional, fixes v1.3 tech debt)
+[Config Diff View]
+    └──requires──> [Multi-file Support] (already in M1)
 
-E2E Test Stabilization (Phase 3)
-├── Cross-platform path handling (required for CI matrix)
-├── Broken pipe fixes (required for Linux CI)
-├── Binary artifact validation (required after v1.3 rename)
-└── Symlink resolution (optional, prevents macOS CI failures)
+[Inline Documentation on Hover]
+    └──requires──> [Schema-driven Autocomplete]
 
-Tauri CI Integration (Phase 4)
-├── E2E tests passing (Phase 3) — validates build artifacts work
-├── webkit2gtk-4.1 on Linux (required for Tauri 2.0)
-└── GitHub Actions matrix (required for multi-platform)
-```
+[First-run Wizard]
+    └──requires──> [Binary Path Config]
+    └──requires──> [Template Gallery]
+    └──requires──> [Debug Simulator] (already in M1)
 
-**Critical path:** Phases 1, 2, 3 are independent (can run in parallel). Phase 4 depends on Phase 3 (E2E tests must pass before Tauri builds are useful).
+[Rule Evaluation Timeline]
+    └──requires──> [Audit Log Viewer]
+    └──requires──> [CLI Timing Data] (requires rulez binary enhancement)
 
-**Suggested order:**
-1. Phase 1 + Phase 2 in parallel (schema validation + debug CLI, no dependencies)
-2. Phase 3 (E2E fixes, validates Phases 1-2 work correctly)
-3. Phase 4 (Tauri CI, validates everything works on all platforms)
+[Validation Error Explanations]
+    └──enhances──> [Inline Validation]
+    └──enhances──> [Error Recovery]
 
----
-
-## Feature Complexity Analysis
-
-Breakdown by implementation effort and risk.
-
-### Low Complexity (1-2 days each)
-
-| Feature | Why Low | Risk |
-|---------|---------|------|
-| Fail-open validation mode | Pattern already exists in config.rs | None |
-| Debug CLI `--prompt` flag | Add to clap args, pass to Event struct | None |
-| Broken pipe fixes | Replace `.spawn()` with `.output()` | None |
-| LRU regex cache | Drop-in replacement for HashMap | Low (breaking change in cache semantics) |
-| Tauri webkit dependency | CI config update, not code | None |
-| Binary artifact validation | Shell script in GitHub Actions | None |
-
-### Medium Complexity (3-5 days each)
-
-| Feature | Why Medium | Risk |
-|---------|------------|------|
-| JSON Schema event validation | New validation.rs module, integrate into main.rs | Medium (performance if not cached) |
-| Pre-compiled schema caching | Requires OnceCell in Rule struct, serde skip attribute | Low (well-understood pattern) |
-| Draft version validation | Parse `$schema` field, map to JSONSchema::Draft enum | Low (explicit error messages) |
-| Cross-platform path handling | Refactor all path usage to PathBuf, test on Windows | Medium (symlinks, path separators) |
-| E2E CI matrix | GitHub Actions matrix, 4 platforms × 3 test suites | Low (slow CI, may need caching tuning) |
-| Tauri CI builds | Multi-platform matrix, system deps, artifact uploads | High (platform-specific failures) |
-
-### High Complexity (5+ days)
-
-| Feature | Why High | Risk |
-|---------|----------|------|
-| Schema performance benchmarks | Criterion integration, CI regression tests, p95 tracking | Medium (flaky benchmarks, CI noise) |
-| Cross-platform E2E test suite | Path handling, symlinks, broken pipes, Windows line endings | High (platform-specific edge cases) |
-
-**Total effort estimate:** 15-25 developer-days (3-5 weeks for single developer).
-
----
-
-## MVP Recommendation
-
-Minimum viable v1.4 that delivers on "Stability & Polish" promise.
-
-### Prioritize (Must Have)
-
-**Phase 1: JSON Schema Validation**
-1. Add schemars 1.2 dependency
-2. Generate schemas for HookEvent and related types
-3. Pre-compile schemas at config load (OnceCell)
-4. Validate events in main.rs before processing (fail-open)
-5. Require `$schema` field, support draft-07 and 2020-12 only
-
-**Phase 2: Debug CLI UserPromptSubmit**
-1. Add UserPromptSubmit to SimEventType enum
-2. Add `--prompt` flag to debug CLI args
-3. Pass prompt to Event struct in build_event()
-4. Test: `rulez debug prompt --prompt "text"` matches prompt_match rules
-
-**Phase 3: E2E Test Stabilization**
-1. Fix broken pipe: use `.output()` or `.wait_with_output()`
-2. Canonicalize paths with `fs::canonicalize()` before comparison
-3. Use PathBuf for all path operations (not string concatenation)
-4. Add CI matrix: ubuntu-latest, macos-latest, windows-latest
-
-**Phase 4: Tauri CI Integration**
-1. Create `.github/workflows/tauri-build.yml`
-2. Install webkit2gtk-4.1-dev on Linux (Ubuntu 22.04 runner)
-3. Build on macOS, Linux, Windows (matrix strategy)
-4. Validate binary artifacts before upload
-
-**Success criteria:** All v1.3 tech debt items resolved, CI green on all platforms.
-
-### Defer (Nice to Have)
-
-- LRU regex cache (v1.3 tech debt, but not blocking)
-- Debug CLI correlation IDs (useful for tracing, but not critical)
-- Debug CLI `--clean` flag (workaround: restart process)
-- E2E symlink resolution tests (covered by fs::canonicalize)
-- Schema performance benchmarks (validate manually, add to CI later)
-- Cross-platform CI for core (already have CI, extend to more platforms later)
-
-### Rationale
-
-**MVP delivers:**
-- ✅ Schema validation for correctness
-- ✅ Debug CLI feature parity with production events
-- ✅ E2E tests passing on all platforms
-- ✅ Tauri builds in CI
-
-**Deferred features:**
-- Not blocking release (LRU cache, correlation IDs)
-- Can be added incrementally (benchmarks, extended CI)
-- Workarounds exist (`--clean` flag → restart process)
-
----
-
-## Expected Behavior (Table Stakes Detail)
-
-### JSON Schema Validation
-
-**User perspective:**
-```bash
-# Hook event from Claude Code
-echo '{"hook_event_name": "PreToolUse", "tool_name": "Bash", ...}' | rulez
-
-# Valid event → processes normally
-# Invalid event → logs warning, processes anyway (fail-open)
+[Template Gallery]
+    └──enhances──> [First-run Wizard]
+    └──enhances──> [Snippet Insertion]
 ```
 
-**Developer perspective:**
-```rust
-// Automatic schema generation from types
-#[derive(Deserialize, JsonSchema)]
-struct HookEvent {
-    hook_event_name: String,
-    tool_name: Option<String>,
-    // ... fields match schema exactly
-}
+### Dependency Notes
 
-// Validation at startup (not per-event)
-let schema = schema_for!(HookEvent);
-let validator = JSONSchema::compile(&schema)?;
+- **Audit Log Viewer requires Binary Path Config:** Can't read logs without knowing where rulez binary stores them (~/.claude/logs/rulez.log is default, but may be customized).
+- **Rule Correlation requires YAML AST Parser:** Need to map rule IDs in logs to line numbers in YAML files. `yaml-rust2` or `serde-yaml` with custom deserializer.
+- **Config Diff requires Multi-file Support:** Already implemented in M1 (global + project configs). Diff is a natural extension.
+- **First-run Wizard orchestrates multiple features:** Binary setup, template selection, simulator test. Must be built after prerequisites.
+- **Rule Evaluation Timeline requires CLI enhancement:** Current `rulez debug` output doesn't expose timing. Need `--trace` flag or JSON output mode.
 
-// Per-event validation (<0.1ms)
-if let Err(e) = validator.validate(&event_json) {
-    warn!("Schema validation failed: {}", e);  // Log, don't block
-}
-```
+## MVP Definition
 
-**Expected behavior:**
-- Schema compiled once at config load
-- Validation <0.1ms per event
-- Fail-open: invalid events log warnings but process anyway
-- Supported drafts: draft-07, 2020-12 (reject others)
-- Missing `$schema` field → error at config load
+### Launch With (v1.5)
 
-### Debug CLI UserPromptSubmit
+Minimum viable product for production-quality desktop app.
 
-**User perspective:**
-```bash
-# Before v1.4: Cannot test prompt_match rules
-rulez debug PreToolUse --tool Bash --command "git push"  # Works
-rulez debug UserPromptSubmit --prompt "write a function"  # Error: unsupported
+- [ ] **YAML autocomplete for RuleZ fields** — Core editor feature, expected by all users
+- [ ] **Inline validation with error tooltips** — Prevents user frustration, schema already exists
+- [ ] **Audit log viewer with filtering** — Primary use case for understanding rule behavior
+- [ ] **Import/export configurations** — Essential for sharing, backup, migration
+- [ ] **Binary path configuration** — Unblocks users with non-standard installs
+- [ ] **Error recovery for missing binary** — Prevents "app doesn't work" first impression
+- [ ] **Inline documentation on hover** — Reduces need for docs, improves discoverability
+- [ ] **Template gallery with preview** — Fastest way to get started, showcases capabilities
+- [ ] **First-run wizard** — Critical for onboarding, reduces support burden
 
-# After v1.4: Can test prompt_match rules
-rulez debug prompt --prompt "write a function to parse JSON"
-# Output: Shows which rules matched, including prompt_match rules
+### Add After Validation (v1.6)
 
-# Short aliases
-rulez debug prompt --prompt "refactor this code"
-rulez debug user-prompt-submit --prompt "delete database"
-```
+Features to add once core is working and user feedback collected.
 
-**Developer perspective:**
-```rust
-// Add to SimEventType enum
-enum SimEventType {
-    PreToolUse,
-    PostToolUse,
-    SessionStart,
-    PermissionRequest,
-    UserPromptSubmit,  // NEW
-}
+- [ ] **Rule correlation in audit viewer** — High value but depends on log parsing polish
+- [ ] **Config diff view** — Useful for power users, not critical for first release
+- [ ] **Snippet insertion** — Nice-to-have, templates + autocomplete cover 80% of use case
+- [ ] **Validation error explanations** — Enhances existing validation, can iterate based on feedback
+- [ ] **Workspace rule count dashboard** — Useful for monitoring, not critical for editing
 
-// Build event with prompt field
-let event = Event {
-    hook_event_name: "UserPromptSubmit",
-    prompt: Some(prompt_text),  // NEW: Set from --prompt flag
-    // ... other fields
-};
-```
+### Future Consideration (v2+)
 
-**Expected behavior:**
-- `rulez debug prompt --prompt "text"` simulates UserPromptSubmit
-- Event has `prompt` field populated (existing field in Event struct)
-- Rules with `prompt_match` matchers evaluate correctly
-- No state leakage between invocations
+Features to defer until product-market fit is established.
 
-### E2E Test Cross-Platform Reliability
+- [ ] **Rule evaluation timeline** — Requires CLI changes, complex visualization, niche use case
+- [ ] **Multi-workspace support** — Most users have 1-2 projects, not a pain point yet
+- [ ] **Rule version history** — Git already provides this, app integration is duplicative
+- [ ] **Performance profiling** — Users can use rulez CLI directly, GUI adds limited value
+- [ ] **Custom theme editor** — Dark/light modes cover 95% of needs
 
-**User perspective:**
-```bash
-# Before v1.4: Tests pass locally (macOS), fail in CI (Linux)
-cargo test --test e2e_git_push_block
-# macOS: ✅ 1 test passed
-# Linux CI: ❌ SIGPIPE error
+## Feature Prioritization Matrix
 
-# After v1.4: Tests pass everywhere
-cargo test --test e2e_*
-# macOS: ✅ All tests passed
-# Linux: ✅ All tests passed
-# Windows: ✅ All tests passed
-```
+| Feature | User Value | Implementation Cost | Priority |
+|---------|------------|---------------------|----------|
+| YAML autocomplete | HIGH | MEDIUM | P1 |
+| Inline validation tooltips | HIGH | LOW | P1 |
+| Audit log viewer | HIGH | MEDIUM-HIGH | P1 |
+| Import/export configs | HIGH | LOW | P1 |
+| Binary path config | HIGH | LOW | P1 |
+| Error recovery | HIGH | MEDIUM | P1 |
+| Inline documentation hover | MEDIUM-HIGH | MEDIUM | P1 |
+| Template gallery | HIGH | MEDIUM | P1 |
+| First-run wizard | HIGH | MEDIUM | P1 |
+| Rule correlation | MEDIUM-HIGH | MEDIUM | P2 |
+| Config diff view | MEDIUM | MEDIUM-HIGH | P2 |
+| Snippet insertion | MEDIUM | LOW-MEDIUM | P2 |
+| Validation error explanations | MEDIUM | MEDIUM | P2 |
+| Workspace dashboard | LOW-MEDIUM | LOW | P2 |
+| Rule evaluation timeline | MEDIUM | MEDIUM-HIGH | P3 |
+| Multi-workspace support | LOW | MEDIUM-HIGH | P3 |
+| Rule version history | LOW | HIGH | P3 |
+| Performance profiling | LOW | MEDIUM | P3 |
+| Custom theme editor | LOW | MEDIUM | P3 |
 
-**Developer perspective:**
-```rust
-// Before: Broken pipe on Linux
-let mut child = Command::cargo_bin("rulez")
-    .stdin(Stdio::piped())
-    .stdout(Stdio::piped())  // ❌ Pipe created but never read
-    .spawn()?;
-child.stdin.as_mut().unwrap().write_all(event_json.as_bytes())?;
-let status = child.wait()?;  // ❌ SIGPIPE if rulez writes to stdout
+**Priority key:**
+- P1: Must have for v1.5 launch (production-quality)
+- P2: Should have in v1.6 (post-feedback iteration)
+- P3: Nice to have in v2+ (future consideration)
 
-// After: Always drain pipes
-let output = Command::cargo_bin("rulez")
-    .write_stdin(event_json)
-    .output()?;  // ✅ Reads stdout/stderr automatically
-assert_eq!(output.status.code(), Some(0));
+## Competitor Feature Analysis
 
-// Path handling: Before
-let config_path = format!("{}/.claude/hooks.yaml", cwd);  // ❌ Breaks on Windows
+| Feature | VS Code Settings Editor | Visual Studio 2026 Settings | Policy Management Tools (Scrut, Oracle HCM) | Our Approach |
+|---------|-------------------------|------------------------------|---------------------------------------------|--------------|
+| **Schema-driven autocomplete** | Yes (IntelliSense, JSON Schema) | Yes (improved search, JSON tracking) | Limited (form-based) | Monaco + JSON Schema (same as VS Code) |
+| **Inline validation** | Yes (red squiggles, hover for details) | Yes (error list panel) | Form validation | Monaco markers + hover tooltips |
+| **Settings search** | Yes (fuzzy search, category filter) | Yes (improved search in 2026) | Basic search | Not needed (users search YAML directly with Ctrl+F) |
+| **Import/export** | Yes (settings sync, profiles via .code-profile drag-drop) | Yes (.vsconfig JSON files) | Yes (policy templates, 75+ templates in Scrut) | YAML file export/import with merge options |
+| **Diff view** | Yes (settings.json vs defaults) | No (but has version control integration) | Yes (config compare, side-by-side, color-coded) | Monaco diff editor (global vs project) |
+| **Audit trail** | No (VS Code doesn't track setting changes) | No | Yes (policy management requires audit trails) | JSONL log viewer with filtering |
+| **Template gallery** | Extensions marketplace | Project templates | 75+ policy templates (Scrut) | 10-15 rule templates in assets/ |
+| **First-run experience** | Welcome page, walkthrough | Welcome dialog, customization wizard | Onboarding workflows | Multi-step wizard (binary setup, template, test) |
+| **Error recovery** | Extension errors show in output panel | Build errors in error list | N/A | Modal with actionable steps (install, locate, skip) |
+| **Hover documentation** | Yes (IntelliSense hover) | Yes (parameter values inline during debug) | Limited | Schema descriptions + markdown snippets |
 
-// Path handling: After
-let config_path = PathBuf::from(&cwd).join(".claude").join("hooks.yaml");  // ✅
-```
+**Key Insights:**
+- **VS Code/Visual Studio set the bar:** Users expect autocomplete, validation, hover docs. We match this with Monaco.
+- **Policy tools focus on audit:** Unlike code editors, policy management tools prioritize audit trails and compliance. We align with this for RuleZ.
+- **Config diff is common in network tools:** SolarWinds, ManageEngine use side-by-side diff for comparing device configs. We adopt this pattern.
+- **Templates accelerate adoption:** Scrut has 75+ templates, Oracle HCM has built-in templates. We provide focused templates for AI policy use cases.
+- **First-run experience is critical:** VS Code, Visual Studio, and dev tools in 2026 all emphasize reducing time to first commit (3 days for SMBs, 2 weeks for enterprise). Our wizard targets <10 minutes to first working rule.
 
-**Expected behavior:**
-- E2E tests use `Command::output()` or `wait_with_output()` (always drain pipes)
-- All paths use `PathBuf`, not string concatenation
-- Symlinks resolved with `fs::canonicalize()` before comparison
-- Tests pass on Linux, macOS, Windows in CI matrix
+## Complexity Estimates
 
-### Tauri 2.0 CI Builds
+### LOW Complexity (1-2 days)
+- Import/export configs
+- Binary path config (settings UI)
+- Theme persistence
+- Snippet insertion
+- Workspace dashboard
 
-**User perspective (contributor):**
-```bash
-# Before v1.4: Local build works, CI fails
-cd rulez-ui
-bun run build:tauri
-# Local (macOS): ✅ Builds successfully
-# CI (Linux): ❌ Error: libwebkit2gtk-4.0-dev not found
+### MEDIUM Complexity (3-5 days)
+- YAML autocomplete (Monaco API integration)
+- Error recovery UI
+- Inline documentation hover
+- Template gallery
+- First-run wizard
+- Rule correlation (YAML parsing)
+- Validation error explanations
 
-# After v1.4: CI builds on all platforms
-git push origin feature/my-ui-change
-# GitHub Actions:
-#   - ✅ Linux build (ubuntu-22.04, webkit2gtk-4.1)
-#   - ✅ macOS build (macos-latest)
-#   - ✅ Windows build (windows-latest)
-```
+### MEDIUM-HIGH Complexity (5-10 days)
+- Audit log viewer (JSONL parsing, filtering, UI)
+- Config diff view (Monaco diff editor)
 
-**Developer perspective:**
-```yaml
-# .github/workflows/tauri-build.yml
-jobs:
-  build-tauri:
-    strategy:
-      matrix:
-        platform: [ubuntu-22.04, macos-latest, windows-latest]
-    runs-on: ${{ matrix.platform }}
-    steps:
-      - name: Install Tauri deps (Linux)
-        if: matrix.platform == 'ubuntu-22.04'
-        run: |
-          sudo apt-get install -y libwebkit2gtk-4.1-dev  # ✅ Correct version
-```
-
-**Expected behavior:**
-- CI builds Tauri app on Linux, macOS, Windows
-- Linux uses webkit2gtk-4.1-dev (NOT 4.0)
-- Builds succeed on ubuntu-22.04 (NOT ubuntu-latest/24.04 where 4.1 may be unstable)
-- Artifacts uploaded only on release branches (not every PR, too slow)
-
----
+### HIGH Complexity (10+ days)
+- Rule evaluation timeline (requires CLI changes + complex visualization)
 
 ## Sources
 
-**JSON Schema Validation (HIGH confidence):**
-- [jsonschema Rust crate](https://docs.rs/jsonschema) — Performance: 20-470x faster than alternatives, reusable validators
-- [schemars documentation](https://graham.cool/schemars/) — Automatic schema generation from Rust types
-- [jsonschema GitHub](https://github.com/Stranger6667/jsonschema) — Benchmarks, regex engine configuration
-- [GSoC 2026: JSON Schema Compatibility Checker](https://github.com/json-schema-org/community/issues/984) — Breaking changes between drafts
-- [JSON Schema Validation: Common Mistakes](https://www.countermetrics.org/validation-results/) — 41% of validation failures are missing required fields
-- [JSON Schema Data Types Guide](https://blog.postman.com/json-schema-data-types/) — Draft-07 vs 2020-12 differences
+### Desktop Configuration Editor Best Practices
+- [Visual Studio 2026 Settings Experience](https://devblogs.microsoft.com/visualstudio/a-first-look-at-the-all%E2%80%91new-ux-in-visual-studio-2026/) - All-new settings UI with transparency, JSON tracking, improved search
+- [Microsoft Desktop UX Guide](https://learn.microsoft.com/en-us/windows/win32/uxguide/how-to-design-desktop-ux) - Visual and functional consistency, feature simplicity
+- [UI Design Best Practices 2026](https://uxplaybook.org/articles/ui-fundamentals-best-practices-for-ux-designers) - Visual hierarchy, reducing friction
 
-**Debug CLI & Event Simulation (MEDIUM confidence):**
-- [AWS EventBridge test-event-pattern](https://docs.aws.amazon.com/cli/latest/reference/events/test-event-pattern.html) — CLI patterns for event testing
-- [Event-Driven Testing: Key Strategies](https://optiblack.com/insights/event-driven-testing-key-strategies) — Event recording, playback, simulation patterns
-- [Stripe CLI webhook testing](https://www.projectschool.dev/blogs/devessentials/How-to-Test-Webhooks-Using-Stripe-CLI) — Simulating events locally
+### Policy Management Tools
+- [26 Best Policy Management Software 2026](https://peoplemanagingpeople.com/tools/best-policy-management-software/) - Feature comparison, audit requirements
+- [Top 5 Policy Management Software 2026](https://www.v-comply.com/blog/top-policy-management-softwares/) - Centralized governance, structured workflows
+- [Policy Management Tools Review](https://www.smartsuite.com/blog/policy-management-software) - Built-in editors, version logging, real-time tracking
 
-**E2E Testing (HIGH confidence):**
-- [Testing - Command Line Applications in Rust](https://rust-cli.github.io/book/tutorial/testing.html) — assert_cmd best practices
-- [E2E Testing for Rust CLI Applications](https://www.slingacademy.com/article/approaches-for-end-to-end-testing-in-rust-cli-applications/) — assert_cmd integration tests
-- [E2E Testing Best Practices 2026](https://oneuptime.com/blog/post/2026-01-30-e2e-testing-best-practices/view) — Simulation, automation, CI/CD integration
-- [Rust Stdio pipes documentation](https://doc.rust-lang.org/stable/std/process/struct.Stdio.html) — Deadlock warnings, buffer sizes
-- [os_pipe.rs cross-platform pipes](https://github.com/oconnor663/os_pipe.rs) — Pipe deadlock prevention
+### YAML Editor Features
+- [Boost YAML with Autocompletion and Validation](https://medium.com/@alexmolev/boost-your-yaml-with-autocompletion-and-validation-b74735268ad7) - Schema-driven autocomplete, hover tooltips
+- [Oxygen XML YAML Editor](https://www.oxygenxml.com/yaml_editor.html) - Content completion, syntax highlighting, outline view
+- [Eclipse YAML Editor](https://marketplace.eclipse.org/content/yaml-editor) - Validation, outline, hierarchical dependencies
 
-**Tauri 2.0 CI (HIGH confidence):**
-- [Tauri GitHub Actions Guide](https://v2.tauri.app/distribute/pipelines/github/) — Official CI/CD setup
-- [tauri-apps/tauri-action](https://github.com/tauri-apps/tauri-action) — Multi-platform builds (Windows x64, Linux x64/ARM64, macOS x64/ARM64)
-- [Tauri 2.0 webkit2gtk-4.1 requirement](https://github.com/tauri-apps/tauri/issues/9662) — Ubuntu 24.04 removed webkit2gtk-4.0-dev
-- [Tauri v2 Prerequisites](https://v2.tauri.app/start/prerequisites/) — System dependencies per platform
+### Monaco Editor Integration
+- [Monaco Editor Custom Language](https://www.checklyhq.com/blog/customizing-monaco/) - `registerCompletionItemProvider` for custom languages
+- [Custom IntelliSense with Monaco](https://mono.software/2017/04/11/custom-intellisense-with-monaco-editor/) - Schema-driven autocompletion
+- [4 Steps to Add Custom Language Support](https://ohdarling88.medium.com/4-steps-to-add-custom-language-support-to-monaco-editor-5075eafa156d) - Monaco language infrastructure
 
-**Project Context (HIGH confidence):**
-- `.planning/research/STACK.md` — Existing dependencies, performance requirements
-- `.planning/research/ARCHITECTURE.md` — v1.3 event processing pipeline
-- `.planning/research/PITFALLS.md` — Known issues (broken pipe, schema draft incompatibility, webkit version)
-- `CLAUDE.md` — Pre-Push Checklist, binary rename history, CI failures
-- `MEMORY.md` — Stale binary artifacts, broken pipe on Linux lessons
+### Audit Log Viewer Patterns
+- [Microsoft Purview Audit Log Search](https://learn.microsoft.com/en-us/purview/audit-search) - Filtering, date ranges, activity filters
+- [Oracle Audit Logs](https://docs.oracle.com/en-us/iaas/Content/Logging/Concepts/audit_logs.htm) - Timeline features, query syntax
+- [CrowdStrike Secure Audit Log](https://pangea.cloud/docs/audit/using-secure-audit-log/log-viewer) - Download to CSV, search filters
+
+### Configuration Diff Tools
+- [ManageEngine Config Compare](https://www.manageengine.com/network-configuration-manager/compare-config.html) - Side-by-side comparison, color-coded changes
+- [SolarWinds Config Compare](https://www.solarwinds.com/network-configuration-manager/use-cases/config-compare) - Multi-vendor support, baseline comparison
+- [Best File Comparison Tools Linux 2026](https://thelinuxcode.com/10-best-file-comparison-and-diff-tools-in-linux-2026-developer-guide/) - KDiff3, line-by-line, word-by-word
+
+### Import/Export Patterns
+- [Export/Import App Configuration Microsoft](https://learn.microsoft.com/en-us/dynamics365/customer-service/implement/export-import-omnichannel-data) - Configuration Migration tool
+- [Visual Studio Import/Export Configurations](https://learn.microsoft.com/en-us/visualstudio/install/import-export-installation-configurations?view=visualstudio) - .vsconfig JSON format
+- [Azure App Configuration Import/Export](https://learn.microsoft.com/en-us/azure/azure-app-configuration/howto-import-export-data) - Data exchange patterns
+
+### VS Code Settings & UX
+- [VS Code User and Workspace Settings](https://code.visualstudio.com/docs/getstarted/settings) - Settings editor, graphical interface
+- [VS Code January 2026 Update](https://code.visualstudio.com/updates/v1_109) - Profile import via drag-and-drop
+- [VS Code Extension Settings Guidelines](https://code.visualstudio.com/api/ux-guidelines/settings) - Input boxes, booleans, dropdowns, lists
+
+### Inline Documentation & Hover
+- [Visual Studio 2026 Release Notes](https://learn.microsoft.com/en-us/visualstudio/releases/2026/release-notes) - Method parameter values inline, analyze with Copilot
+- [VS Code Programmatic Language Features](https://code.visualstudio.com/api/language-extensions/programmatic-language-features) - Hovers show symbol info and description
+- [JetBrains Quick Documentation](https://www.jetbrains.com/help/webstorm/viewing-inline-documentation.html) - Show on Mouse Move, Auto-Update, delay settings
+
+### Developer Onboarding
+- [Developer Tools That Matter 2026](https://dzone.com/articles/developer-tools-that-actually-matter-in-2026) - DevEx is about flow, reducing friction
+- [Developer Onboarding Best Practices](https://www.cortex.io/post/developer-onboarding-guide) - Time to first commit (3 days SMB, 2 weeks for enterprise)
+- [Developer Experience 2026](https://tutorialsdojo.com/what-developer-experience-really-means-in-2026/) - Developers expect tools that work with them, not against them
 
 ---
 
-**Researched:** 2026-02-10
-**Valid until:** 2026-05-10 (90 days — stable ecosystem, mature crates)
-
-**Confidence breakdown:**
-- JSON Schema features: **HIGH** (official docs, benchmarks, draft compatibility research)
-- Debug CLI simulation: **MEDIUM** (patterns from AWS/Stripe CLIs, not Rust-specific)
-- E2E test stabilization: **HIGH** (Rust official docs, assert_cmd best practices, stdio deadlock warnings)
-- Tauri CI integration: **HIGH** (official Tauri docs, GitHub issue confirming webkit2gtk-4.1 requirement)
-
-**Roadmap implications:**
-- v1.4 is **polish milestone**, not feature expansion
-- Phases 1-2 add correctness checks (schema validation, debug parity)
-- Phases 3-4 improve developer experience (reliable tests, working CI)
-- No new user-facing features (defer prompt injection, new matchers to v1.5)
+*Feature research for: RuleZ UI Desktop App (v1.5)*
+*Researched: 2026-02-10*

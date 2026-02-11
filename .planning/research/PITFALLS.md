@@ -1,963 +1,1430 @@
-# Domain Pitfalls: v1.4 Stability & Polish Features
+# Domain Pitfalls: RuleZ UI Desktop App (v1.5)
 
+**Domain:** Tauri 2.0 Desktop App with Monaco Editor, File Watching, Log Viewing
 **Project:** RuleZ Policy Engine
-**Milestone:** v1.4 - JSON Schema validation, debug CLI, E2E tests, Tauri CI
+**Milestone:** v1.5 - Production-ready desktop UI
 **Researched:** 2026-02-10
 **Confidence:** HIGH
 
 ## Summary
 
-v1.4 adds JSON Schema validation to an existing event processing pipeline, extends debug CLI with new event types, fixes E2E tests for CLI binary testing, and adds cross-platform Tauri 2.0 builds to GitHub Actions CI. This research identifies pitfalls specific to **adding these features to an existing system** that already experienced CI issues (binary rename artifacts, broken pipe on Linux).
+v1.5 adds production features to existing Tauri 2.0 + React 18 + Monaco scaffold. The app reads/writes YAML config files and JSONL audit logs via Tauri IPC. This research focuses on pitfalls when **adding production hardening** to a working prototype, not building from scratch.
 
-**Context from v1.3 Tech Debt:**
-- Debug CLI cannot simulate `UserPromptSubmit` or pass prompt text via flags
-- Unbounded regex cache (REGEX_CACHE) needs LRU/max-size guard
-- Debug CLI help text doesn't mention prompt-related event types
-- No sandboxing for inline shell scripts (deferred to v1.4)
+**Existing Foundation (v1.4):**
+- Dual-mode architecture (Tauri desktop + web testing mode)
+- Monaco editor scaffold (basic editing, no autocomplete)
+- Basic file tree sidebar
+- Playwright E2E tests (flaky/unstable)
+- Tauri CI builds working
 
-**v1.4-Specific Risks:**
-1. **JSON Schema draft compatibility** - Breaking changes between drafts
-2. **Schema validation performance** - Event processing pipeline overhead
-3. **Debug CLI state management** - Stateful event simulation pitfalls
-4. **E2E test tempfile handling** - Path resolution and cleanup issues
-5. **Tauri CI dependency hell** - webkit2gtk version conflicts, cross-platform builds
-6. **GitHub Actions cache staleness** - Binary rename artifacts, stale test results
+**Known Issues to Address:**
+- Tauri shell scope still references "cch" binary (renamed to "rulez")
+- E2E tests are flaky (timing issues, WebView differences)
+- Monaco autocomplete needs implementation (monaco-yaml schema integration)
+- No file watching (configs don't reload on external changes)
+- No log viewing (JSONL audit logs not displayable)
+- Binary path detection not implemented
+
+**v1.5-Specific Risks:**
+1. **Monaco-YAML schema integration** - Bundle size explosion, worker configuration failures
+2. **Tauri IPC with large JSONL files** - JSON serialization bottleneck, memory issues
+3. **File watching cross-platform** - FSEvents vs inotify differences, resource limits
+4. **Playwright E2E flakiness** - Monaco async loading, WebView rendering differences
+5. **Binary path detection** - Cross-platform PATH issues, permission problems
+6. **Zustand state management** - Memory leaks with file watchers, stale state
+7. **Desktop distribution** - Code signing costs, auto-update complexity, platform-specific issues
 
 ## Critical Pitfalls
 
-### Pitfall 1: JSON Schema Draft Version Incompatibility
+### Pitfall 1: Monaco Editor Bundle Size Explosion with Duplicate Instances
 
-**Severity:** CRITICAL - Correctness + Breaking Changes
+**Severity:** CRITICAL - Performance + UX
 
-**What goes wrong:** Using different JSON Schema draft versions in validation causes silent failures or breaking changes when schemas are upgraded.
+**What goes wrong:** Bundling `monaco-yaml` and `monaco-editor` separately causes 2+ MB of duplicate code, slow initial load times, and non-functional YAML autocomplete.
 
-**Why it happens:** JSON Schema has breaking changes between draft-07, draft-2019-09, and draft-2020-12. The `jsonschema` Rust crate supports multiple drafts, but defaults to the latest (2020-12). If RuleZ config files or user schemas specify older drafts, validation behavior changes unexpectedly.
+**Why it happens:** Build tools (Vite, Webpack) treat `monaco-editor` as a separate dependency when imported by `monaco-yaml`. Without proper configuration, the editor appears twice in the bundle.
 
 **Real-world evidence (2026):**
-- GSoC 2026 project proposed a "JSON Schema Compatibility Checker" because breaking changes between versions are common
-- Core keyword `dependencies` split into `dependentSchemas` and `dependentRequired` between draft-07 and 2020-12
-- Future JSON Schema will enforce strict backward/forward compatibility, but current versions DO NOT
+- monaco-yaml GitHub: "If monaco-editor appears twice in your bundle, this causes substantially larger bundle sizes and non-functional features"
+- Diagnosis command: `npm ls monaco-editor` or `yarn why monaco-editor`
+- Vite users report "Unexpected usage at EditorSimpleWorker.loadForeignModule" error
 
-**RuleZ-specific scenario:**
-```yaml
-# User's hooks.yaml references draft-07 schema
-rules:
-  - matchers:
-      event_schema:
-        $schema: "http://json-schema.org/draft-07/schema#"
-        properties:
-          tool_name: { type: "string" }
-        dependencies:
-          tool_name: ["tool_input"]  # draft-07 syntax
-```
+**RuleZ UI scenario:**
+```typescript
+// src/components/editor/ConfigEditor.tsx
+import * as monaco from 'monaco-editor';  // ❌ 1.2 MB
+import { configureMonacoYaml } from 'monaco-yaml';  // ❌ Another 1.2 MB (includes monaco-editor)
 
-```rust
-// RuleZ validates with jsonschema crate (defaults to 2020-12)
-let schema = serde_json::from_str(schema_str)?;
-let compiled = JSONSchema::compile(&schema)?;  // ❌ Interprets draft-07 as 2020-12
+// Total bundle: 2.4 MB just for editor
+// App load time: 3-5 seconds on slow connections
 ```
 
 **Consequences:**
-- Validation fails silently (schema ignored)
-- Breaking change when upgrading `jsonschema` crate
-- User configs break without clear error messages
-- Security policies bypass if validation fails open
+- Initial load takes 3-5 seconds (vs. 500ms target)
+- Lighthouse performance score <50
+- Schema autocomplete doesn't work (two editor instances conflict)
+- Memory usage 2x higher than necessary
+- Mobile Safari may refuse to load >3 MB bundles
 
 **Prevention strategy:**
 
-1. **Explicitly specify and validate draft version:**
-   ```rust
-   use jsonschema::{Draft, JSONSchema};
+1. **Configure Vite to deduplicate monaco-editor:**
+   ```typescript
+   // vite.config.ts
+   import { defineConfig } from 'vite';
+   import monacoEditorPlugin from 'vite-plugin-monaco-editor';
 
-   fn compile_schema(schema: &serde_json::Value) -> Result<JSONSchema> {
-       // Check $schema field
-       let draft_version = schema.get("$schema")
-           .and_then(|s| s.as_str())
-           .ok_or("Missing $schema field - required for validation")?;
+   export default defineConfig({
+     plugins: [
+       monacoEditorPlugin({
+         languageWorkers: ['editorWorkerService', 'yaml'],
+         // Exclude duplicate languages
+         customWorkers: [
+           {
+             label: 'yaml',
+             entry: 'monaco-yaml/yaml.worker',
+           },
+         ],
+       }),
+     ],
+     resolve: {
+       alias: {
+         // Force single monaco-editor instance
+         'monaco-editor': 'monaco-editor/esm/vs/editor/editor.api',
+       },
+     },
+     optimizeDeps: {
+       include: ['monaco-editor', 'monaco-yaml'],
+       esbuildOptions: {
+         target: 'esnext',
+       },
+     },
+   });
+   ```
 
-       // Only support LTS versions (draft-07 and 2020-12)
-       let draft = match draft_version {
-           "http://json-schema.org/draft-07/schema#" => Draft::Draft7,
-           "https://json-schema.org/draft/2020-12/schema" => Draft::Draft202012,
-           _ => return Err(format!("Unsupported schema draft: {}", draft_version)),
-       };
+2. **Use dynamic imports to code-split editor:**
+   ```typescript
+   // src/components/editor/ConfigEditor.tsx
+   import { lazy, Suspense } from 'react';
 
-       JSONSchema::options()
-           .with_draft(draft)
-           .compile(schema)
+   const MonacoEditor = lazy(() => import('./MonacoEditorLazy'));
+
+   export function ConfigEditor() {
+     return (
+       <Suspense fallback={<EditorSkeleton />}>
+         <MonacoEditor />
+       </Suspense>
+     );
    }
    ```
 
-2. **Fail-closed on missing `$schema`:**
-   - NEVER default to a draft version
-   - Require explicit `$schema` field in all user schemas
-   - Config validation must catch this before runtime
-
-3. **Document supported drafts in YAML schema:**
+3. **Verify bundle size in CI:**
    ```yaml
-   # .claude/hooks-schema.yaml
-   event_schema:
-     type: object
-     required: ["$schema"]
-     properties:
-       $schema:
-         type: string
-         enum:
-           - "http://json-schema.org/draft-07/schema#"
-           - "https://json-schema.org/draft/2020-12/schema"
-         description: "Required. Only draft-07 and 2020-12 supported."
+   # .github/workflows/ui-build.yml
+   - name: Check bundle size
+     run: |
+       cd rulez-ui
+       bun run build
+       BUNDLE_SIZE=$(du -sb dist/assets/*.js | awk '{sum+=$1} END {print sum}')
+       MAX_SIZE=$((1500 * 1024))  # 1.5 MB max for JS
+
+       if [ $BUNDLE_SIZE -gt $MAX_SIZE ]; then
+         echo "::error::Bundle size ${BUNDLE_SIZE} exceeds ${MAX_SIZE}"
+         echo "Check for duplicate monaco-editor instances: bun why monaco-editor"
+         exit 1
+       fi
    ```
 
-4. **Add migration warning for draft-04/draft-06:**
-   ```rust
-   if draft_version.contains("draft-04") || draft_version.contains("draft-06") {
-       warn!(
-           "JSON Schema {} is deprecated. Migrate to draft-07 or 2020-12. \
-            See https://json-schema.org/specification for migration guide.",
-           draft_version
-       );
+4. **Monitor monaco-editor instances at runtime:**
+   ```typescript
+   // src/lib/debug.ts
+   export function checkMonacoDuplicates() {
+     const instances = document.querySelectorAll('.monaco-editor');
+     if (instances.length > 1) {
+       console.error('Multiple Monaco instances detected!', instances);
+       // In dev mode, throw error
+       if (import.meta.env.DEV) {
+         throw new Error('Duplicate Monaco instances - check bundle config');
+       }
+     }
    }
    ```
 
-5. **Pin `jsonschema` crate version:**
-   ```toml
-   [dependencies]
-   jsonschema = "=0.18.0"  # Exact version, not "0.18" (prevents breaking updates)
+5. **Create custom YAML worker wrapper:**
+   ```typescript
+   // src/workers/yaml.worker.ts
+   import 'monaco-yaml/yaml.worker';
+
+   // Vite requires this for proper worker handling
+   export default {};
+   ```
+
+   ```typescript
+   // src/lib/monaco.ts
+   import { MonacoEnvironment } from 'monaco-editor';
+
+   (window as any).MonacoEnvironment = {
+     getWorker(_: unknown, label: string) {
+       if (label === 'yaml') {
+         return new Worker(
+           new URL('../workers/yaml.worker.ts', import.meta.url),
+           { type: 'module' }
+         );
+       }
+       return new Worker(
+         new URL('monaco-editor/esm/vs/editor/editor.worker.js', import.meta.url),
+         { type: 'module' }
+       );
+     },
+   } as MonacoEnvironment;
    ```
 
 **Warning signs:**
-- Schema validation passes in tests but fails in production
-- `jsonschema` crate update breaks existing configs
-- User reports "my schema stopped working after update"
-- Logs show "schema compilation failed" with cryptic errors
+- Bundle size >2 MB for single JS file
+- `bun why monaco-editor` shows multiple versions
+- Console error: "EditorSimpleWorker.loadForeignModule"
+- YAML autocomplete doesn't appear
+- Initial load time >2 seconds
 
 **Detection:**
 ```bash
-# Test schema with different drafts
-cat > /tmp/test-schema.json <<EOF
-{
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "properties": { "test": { "type": "string" } },
-  "dependencies": { "test": ["other"] }
-}
-EOF
+# Check for duplicate monaco-editor
+cd rulez-ui
+bun why monaco-editor
 
-# Should fail gracefully if draft not supported
-rulez validate --schema /tmp/test-schema.json
+# Should show single instance, NOT multiple paths
+
+# Build and check size
+bun run build
+du -h dist/assets/*.js | sort -h
+
+# Largest JS file should be <1.5 MB
 ```
 
-**Phase mapping:** Phase 1 (JSON Schema Integration) MUST validate draft versions.
+**Phase mapping:** Phase 1 (Monaco Autocomplete) MUST configure Vite properly.
 
 ---
 
-### Pitfall 2: Schema Validation Performance in Event Pipeline
+### Pitfall 2: Tauri IPC JSON Serialization Bottleneck with Large JSONL Logs
 
-**Severity:** CRITICAL - Performance
+**Severity:** CRITICAL - Performance + Memory
 
-**What goes wrong:** Adding JSON Schema validation to the hot path (per-event processing) causes unacceptable latency if schemas are not pre-compiled and cached.
+**What goes wrong:** Loading large JSONL audit logs (>10 MB, 100K+ lines) via Tauri IPC causes 5-30 second freezes due to JSON serialization overhead and memory exhaustion.
 
-**Why it happens:** The `jsonschema` crate documentation explicitly warns: "For better performance when validating multiple instances against the same schema, build a validator once and reuse it."
+**Why it happens:** Tauri IPC uses JSON-RPC protocol requiring all data to be JSON-serializable. Large JSONL files get parsed, deserialized to Rust structs, re-serialized to JSON, sent over IPC, then parsed again in JavaScript.
 
-**Performance data (from research):**
-- Schema compilation: ~0.5-2ms per schema (depending on complexity)
-- Validation with cached validator: ~0.01-0.1ms
-- Validation with recompilation: ~0.5-2ms
-- **RuleZ budget:** <10ms total per event (currently <3ms)
+**Real-world evidence (2026):**
+- Tauri Discussion #7699: "Deprecate JSON in IPC" - serialization is major bottleneck
+- Benchmark: 10 MB data takes ~5ms on macOS but ~200ms on Windows
+- JSON doesn't support BigInt or binary data, requires array conversion
+- "When sharing large amounts of data, serializing in backend and deserializing in frontend can lead to significant costs"
 
-**RuleZ-specific scenario:**
+**RuleZ UI scenario:**
 ```rust
-// WRONG: Compiles schema on every event
-pub fn process_event(event: &Event, config: &Config) -> Response {
-    for rule in &config.rules {
-        if let Some(schema_str) = &rule.matchers.event_schema {
-            let schema = serde_json::from_str(schema_str)?;  // ❌ Parse JSON
-            let validator = JSONSchema::compile(&schema)?;   // ❌ Compile schema
-            if !validator.is_valid(&serde_json::to_value(event)?) {
-                return Response::block("Schema validation failed");
-            }
-        }
-    }
-}
+// src-tauri/src/commands/logs.rs
+#[tauri::command]
+async fn load_audit_logs(path: String) -> Result<Vec<LogEntry>, String> {
+    let contents = fs::read_to_string(path)?;  // 10 MB file
 
-// With 100 rules, each with schema: 100 * 0.5ms = 50ms ❌ 5x OVER BUDGET
+    let entries: Vec<LogEntry> = contents
+        .lines()
+        .map(|line| serde_json::from_str(line).unwrap())
+        .collect();  // ❌ Allocates 20 MB (10 MB file + 10 MB Vec<LogEntry>)
+
+    Ok(entries)  // ❌ Serializes to JSON (30 MB total), sends over IPC
+}
 ```
 
+```typescript
+// src/lib/tauri.ts
+export async function loadAuditLogs(path: string): Promise<LogEntry[]> {
+  const logs = await invoke<LogEntry[]>('load_audit_logs', { path });
+  // ❌ Received 30 MB JSON, parses to JS objects (60 MB total)
+  return logs;
+}
+```
+
+**Performance breakdown for 100K line JSONL (10 MB):**
+- Rust: Read file (50ms) + Parse JSONL (100ms) + Serialize to JSON (200ms) = 350ms
+- IPC: Transfer 30 MB JSON (100ms on localhost, 300ms over WebSocket)
+- JS: Parse JSON (300ms) + Render in React (500ms) = 800ms
+- **Total: 1.2 seconds MINIMUM, up to 5+ seconds on Windows**
+
 **Consequences:**
-- p95 latency exceeds 10ms target
-- Processing time scales linearly with rule count
-- User-visible slowdown on every Claude Code interaction
-- May trigger Claude Code's hook timeout (default unknown)
+- App freezes for 5-30 seconds when viewing logs
+- Memory usage spikes to 200+ MB
+- Out of memory errors on machines with <8 GB RAM
+- UI becomes unresponsive (React can't update during JSON parse)
+- Users think app crashed
 
 **Prevention strategy:**
 
-1. **Pre-compile schemas at config load time:**
+1. **Implement streaming with pagination:**
    ```rust
-   use jsonschema::JSONSchema;
-   use once_cell::sync::OnceCell;
+   // src-tauri/src/commands/logs.rs
+   use std::io::{BufRead, BufReader};
 
-   pub struct Rule {
-       // ... existing fields ...
+   #[tauri::command]
+   async fn load_audit_logs_page(
+       path: String,
+       offset: usize,
+       limit: usize,
+   ) -> Result<LogPage, String> {
+       let file = File::open(path)?;
+       let reader = BufReader::new(file);
 
-       #[serde(skip)]  // Don't serialize this field
-       pub compiled_schema: OnceCell<JSONSchema>,
+       let entries: Vec<LogEntry> = reader
+           .lines()
+           .skip(offset)
+           .take(limit)
+           .filter_map(|line| {
+               line.ok()
+                   .and_then(|l| serde_json::from_str(&l).ok())
+           })
+           .collect();
+
+       Ok(LogPage {
+           entries,
+           total: count_lines(&path)?,  // Cache this
+           offset,
+           limit,
+       })
+   }
+   ```
+
+2. **Use streaming API with async iteration:**
+   ```rust
+   // src-tauri/src/commands/logs.rs
+   use tauri::Window;
+
+   #[tauri::command]
+   async fn stream_audit_logs(window: Window, path: String) -> Result<(), String> {
+       let file = File::open(path)?;
+       let reader = BufReader::new(file);
+
+       const CHUNK_SIZE: usize = 1000;
+       let mut chunk = Vec::with_capacity(CHUNK_SIZE);
+
+       for line in reader.lines() {
+           let entry: LogEntry = serde_json::from_str(&line.unwrap())?;
+           chunk.push(entry);
+
+           if chunk.len() >= CHUNK_SIZE {
+               // Emit event with chunk
+               window.emit("log-chunk", &chunk)?;
+               chunk.clear();
+           }
+       }
+
+       // Send remaining entries
+       if !chunk.is_empty() {
+           window.emit("log-chunk", &chunk)?;
+       }
+
+       window.emit("log-stream-complete", ())?;
+       Ok(())
+   }
+   ```
+
+   ```typescript
+   // src/lib/tauri.ts
+   import { listen } from '@tauri-apps/api/event';
+
+   export async function streamAuditLogs(
+     path: string,
+     onChunk: (entries: LogEntry[]) => void,
+   ): Promise<void> {
+     const unlisten = await listen<LogEntry[]>('log-chunk', (event) => {
+       onChunk(event.payload);
+     });
+
+     await listen('log-stream-complete', () => {
+       unlisten();
+     });
+
+     await invoke('stream_audit_logs', { path });
+   }
+   ```
+
+3. **Add virtual scrolling for log display:**
+   ```typescript
+   // src/components/logs/LogViewer.tsx
+   import { useVirtualizer } from '@tanstack/react-virtual';
+
+   export function LogViewer({ entries }: { entries: LogEntry[] }) {
+     const parentRef = useRef<HTMLDivElement>(null);
+
+     const virtualizer = useVirtualizer({
+       count: entries.length,
+       getScrollElement: () => parentRef.current,
+       estimateSize: () => 35,  // Row height
+       overscan: 10,
+     });
+
+     return (
+       <div ref={parentRef} className="h-full overflow-auto">
+         <div
+           style={{
+             height: `${virtualizer.getTotalSize()}px`,
+             position: 'relative',
+           }}
+         >
+           {virtualizer.getVirtualItems().map((item) => (
+             <LogRow
+               key={item.key}
+               entry={entries[item.index]}
+               style={{
+                 position: 'absolute',
+                 top: 0,
+                 left: 0,
+                 width: '100%',
+                 transform: `translateY(${item.start}px)`,
+               }}
+             />
+           ))}
+         </div>
+       </div>
+     );
+   }
+   ```
+
+4. **Cache parsed logs with invalidation:**
+   ```rust
+   // src-tauri/src/log_cache.rs
+   use lru::LruCache;
+   use std::sync::Mutex;
+
+   lazy_static! {
+       static ref LOG_CACHE: Mutex<LruCache<String, Vec<LogEntry>>> = {
+           Mutex::new(LruCache::new(NonZeroUsize::new(5).unwrap()))
+       };
    }
 
-   impl Config {
-       pub fn load(path: Option<&Path>) -> Result<Self> {
-           let mut config: Config = /* ... load from YAML ... */;
+   pub fn get_cached_logs(path: &str, mtime: SystemTime) -> Option<Vec<LogEntry>> {
+       let cache = LOG_CACHE.lock().unwrap();
+       cache.peek(&format!("{}-{:?}", path, mtime)).cloned()
+   }
+   ```
 
-           // Pre-compile all schemas
-           for rule in &mut config.rules {
-               if let Some(schema_str) = &rule.matchers.event_schema {
-                   let schema_value = serde_json::from_str(schema_str)?;
-                   let validator = compile_schema(&schema_value)?;  // From Pitfall 1
-                   rule.compiled_schema.set(validator).unwrap();
-               }
+5. **Add loading indicators and progress:**
+   ```typescript
+   // src/components/logs/LogLoader.tsx
+   export function LogLoader({ path }: { path: string }) {
+     const [progress, setProgress] = useState(0);
+     const [entries, setEntries] = useState<LogEntry[]>([]);
+
+     useEffect(() => {
+       let count = 0;
+       streamAuditLogs(path, (chunk) => {
+         setEntries((prev) => [...prev, ...chunk]);
+         count += chunk.length;
+         setProgress(count);
+       });
+     }, [path]);
+
+     return (
+       <>
+         {progress > 0 && <Progress value={progress} />}
+         <LogViewer entries={entries} />
+       </>
+     );
+   }
+   ```
+
+**Warning signs:**
+- App freezes when clicking "View Logs"
+- Memory usage spikes >500 MB
+- Browser DevTools shows "Long Task" warnings >500ms
+- React DevTools shows long render times
+- Console shows "Out of memory" errors
+
+**Detection:**
+```bash
+# Create large test log
+seq 1 100000 | awk '{print "{\"timestamp\":\"2026-02-10T12:00:00Z\",\"event\":\"test\",\"line\":" $1 "}"}' > /tmp/large.jsonl
+
+# Test load time
+time rulez-ui --load-logs /tmp/large.jsonl
+
+# Should be <2 seconds; if >5 seconds, pagination needed
+```
+
+**Phase mapping:** Phase 2 (Log Viewing) MUST implement streaming/pagination.
+
+---
+
+### Pitfall 3: File Watching Resource Exhaustion on Linux (inotify Limits)
+
+**Severity:** CRITICAL - Production Failures
+
+**What goes wrong:** File watching stops working when monitoring >8192 files on Linux due to inotify limits, causing configs to not reload and users to think the app is broken.
+
+**Why it happens:** Linux inotify has per-user limits (`fs.inotify.max_user_watches`, default 8192). Watching a directory tree with many files exhausts the limit, causing silent failures.
+
+**Real-world evidence (2026):**
+- notify crate docs: "fs.inotify.max_user_watches specifies the upper limit for the number of watches per user"
+- Common error: "no space left on device" or "too many open files"
+- Rust notify crate: "When watching a very large amount of files, notify may fail to receive all events"
+- macOS FSEvents and Windows don't have this limit (cross-platform inconsistency)
+
+**RuleZ UI scenario:**
+```rust
+// src-tauri/src/file_watcher.rs
+use notify::{Watcher, RecursiveMode};
+
+#[tauri::command]
+async fn watch_config_files() -> Result<(), String> {
+    let mut watcher = notify::recommended_watcher(|res| {
+        match res {
+            Ok(event) => println!("File changed: {:?}", event),
+            Err(e) => eprintln!("Watch error: {:?}", e),  // ❌ Silent failure on inotify limit
+        }
+    })?;
+
+    // Watch global and project configs
+    watcher.watch(Path::new("~/.claude"), RecursiveMode::Recursive)?;  // ❌ May have 10K+ files
+    watcher.watch(Path::new(".claude"), RecursiveMode::Recursive)?;
+
+    Ok(())
+}
+```
+
+**When it breaks:**
+- User has large `~/.claude/` directory (multiple projects, logs, cache)
+- `~/.claude/logs/` contains 10K+ JSONL log files
+- inotify watch count: 10K files × 1 watch = 10K watches > 8192 limit
+- `watcher.watch()` **silently fails** - no error returned
+- Users edit configs externally, app doesn't reload them
+
+**Consequences:**
+- File watching silently stops working on Linux
+- Users edit `.claude/hooks.yaml` in external editor, RuleZ UI doesn't update
+- No error message - users think app is broken
+- Works on macOS/Windows (FSEvents/ReadDirectoryChangesW don't have limits)
+- GitHub issues: "File watching doesn't work on Ubuntu"
+
+**Prevention strategy:**
+
+1. **Watch specific files, not entire directories:**
+   ```rust
+   // src-tauri/src/file_watcher.rs
+   use notify::{Watcher, RecursiveMode};
+
+   #[tauri::command]
+   async fn watch_specific_configs(paths: Vec<String>) -> Result<(), String> {
+       let mut watcher = notify::recommended_watcher(event_handler)?;
+
+       // Watch ONLY the specific config files, NOT directories
+       for path in paths {
+           if Path::new(&path).is_file() {
+               watcher.watch(Path::new(&path), RecursiveMode::NonRecursive)?;
            }
+       }
 
-           Ok(config)
+       Ok(())
+   }
+   ```
+
+2. **Use polling fallback on Linux when inotify fails:**
+   ```rust
+   // src-tauri/src/file_watcher.rs
+   use notify::{PollWatcher, RecommendedWatcher, Watcher};
+   use std::time::Duration;
+
+   fn create_watcher() -> Result<Box<dyn Watcher>, notify::Error> {
+       // Try inotify first (fast)
+       match RecommendedWatcher::new(event_handler, Config::default()) {
+           Ok(watcher) => Ok(Box::new(watcher)),
+           Err(_) => {
+               // Fallback to polling (slower but always works)
+               warn!("inotify watcher failed, using polling fallback");
+               let config = Config::default()
+                   .with_poll_interval(Duration::from_secs(2));
+               Ok(Box::new(PollWatcher::new(event_handler, config)?))
+           }
        }
    }
    ```
 
-2. **Benchmark schema validation overhead:**
+3. **Check inotify limits at startup:**
    ```rust
-   // benches/schema_validation.rs
-   use criterion::{black_box, criterion_group, criterion_main, Criterion};
+   // src-tauri/src/system_check.rs
+   #[cfg(target_os = "linux")]
+   fn check_inotify_limits() -> Result<(), String> {
+       let max_watches = fs::read_to_string("/proc/sys/fs/inotify/max_user_watches")
+           .map_err(|e| format!("Cannot read inotify limits: {}", e))?
+           .trim()
+           .parse::<usize>()
+           .unwrap_or(8192);
 
-   fn bench_schema_validation(c: &mut Criterion) {
-       let config = Config::load(Some(Path::new("fixtures/100-rules.yaml"))).unwrap();
-       let event = fixture_event("pre-tool-use.json");
+       if max_watches < 16384 {
+           warn!(
+               "inotify max_user_watches is low ({}). File watching may fail. \
+                Increase with: sudo sysctl fs.inotify.max_user_watches=524288",
+               max_watches
+           );
+       }
 
-       c.bench_function("validate event with 100 schemas", |b| {
-           b.iter(|| {
-               black_box(hooks::process_event(&event, &config))
-           });
-       });
-   }
-
-   criterion_group!(benches, bench_schema_validation);
-   criterion_main!(benches);
-   ```
-
-3. **Add performance regression test to CI:**
-   ```yaml
-   # .github/workflows/ci.yml
-   - name: Benchmark schema validation
-     run: |
-       cargo bench --bench schema_validation -- --save-baseline main
-       if [ -f target/criterion/*/new/estimates.json ]; then
-         LATENCY=$(jq '.mean.point_estimate' target/criterion/*/new/estimates.json)
-         if (( $(echo "$LATENCY > 10000000" | bc -l) )); then  # 10ms in nanoseconds
-           echo "::error::Schema validation exceeds 10ms budget: ${LATENCY}ns"
-           exit 1
-         fi
-       fi
-   ```
-
-4. **Fail config load on schema compilation errors:**
-   ```rust
-   // Don't defer errors to runtime - catch at startup
-   if rule.compiled_schema.get().is_none() {
-       return Err(format!(
-           "Failed to compile schema for rule '{}': invalid schema syntax",
-           rule.name.unwrap_or("<unnamed>".to_string())
-       ));
+       Ok(())
    }
    ```
 
-**Warning signs:**
-- `cargo bench` shows increasing latency with rule count
-- Flamegraph shows `jsonschema::compile` in hot path
-- `Config::load()` time is constant but event processing time scales with rules
-- Memory usage spikes during event processing (schema allocation)
-
-**Detection:**
-```bash
-# Profile with 100-rule config
-cargo build --release
-hyperfine --warmup 3 \
-  'echo "{\"hook_event_name\":\"PreToolUse\"}" | target/release/rulez'
-
-# Should be <10ms; if >50ms, schemas aren't cached
-```
-
-**Phase mapping:** Phase 1 (JSON Schema Integration) MUST implement schema caching.
-
----
-
-### Pitfall 3: Debug CLI Event State Contamination
-
-**Severity:** HIGH - Correctness
-
-**What goes wrong:** Adding `UserPromptSubmit` event simulation to debug CLI without proper state isolation causes cross-event state leakage and unreproducible bugs.
-
-**Why it happens:** Event simulators (discrete event simulation) maintain global state (clock, event queue, system state). If the debug CLI shares state between `rulez debug` invocations, previous event side-effects (e.g., prompt text stored in static memory, regex cache pollution) leak into subsequent tests.
-
-**Real-world patterns (from research):**
-- Discrete Event Simulation requires: clock, priority queue, state updates committed immediately
-- Event emulators need programmatic event generation without shared mutable state
-- Amazon EventBridge's `evb-cli` uses correlation IDs to debug event flow
-
-**RuleZ-specific scenario:**
-```rust
-// WRONG: Global state shared across debug invocations
-lazy_static! {
-    static ref REGEX_CACHE: Mutex<HashMap<String, Regex>> = Mutex::new(HashMap::new());
-    static ref LAST_PROMPT: Mutex<Option<String>> = Mutex::new(None);  // ❌ Leaks across tests
-}
-
-// Test 1: Simulate UserPromptSubmit with prompt "delete database"
-$ rulez debug user-prompt-submit --prompt "delete database"
-# REGEX_CACHE now contains patterns matched, LAST_PROMPT = Some("delete database")
-
-// Test 2: Simulate PreToolUse without prompt
-$ rulez debug pre-tool-use --command "git push"
-# ❌ LAST_PROMPT still contains "delete database" from Test 1
-# Rules that check prompt will unexpectedly match!
-```
-
-**Consequences:**
-- Debug mode produces different results than production
-- Test isolation violations cause flaky tests
-- Unbounded REGEX_CACHE (v1.3 tech debt) grows indefinitely across debug invocations
-- Cannot reproduce production bugs in debug mode
-
-**Prevention strategy:**
-
-1. **Reset global state between debug invocations:**
+4. **Show warning when watch fails:**
    ```rust
-   pub fn debug_event(event_type: EventType, params: DebugParams) -> Result<Response> {
-       // Clear caches before processing
-       REGEX_CACHE.lock().unwrap().clear();
-
-       // Build isolated event context
-       let event = build_event(event_type, params)?;
-       let config = Config::load(None)?;  // Load fresh config
-
-       // Process with clean state
-       process_event(&event, &config)
+   // src-tauri/src/file_watcher.rs
+   impl FileWatcher {
+       pub fn watch(&mut self, path: &Path) -> Result<(), String> {
+           match self.watcher.watch(path, RecursiveMode::NonRecursive) {
+               Ok(()) => Ok(()),
+               Err(notify::Error::Io(e)) if e.raw_os_error() == Some(28) => {
+                   // ENOSPC: No space left on device (inotify limit)
+                   Err(format!(
+                       "Cannot watch file (inotify limit reached). \
+                        Increase fs.inotify.max_user_watches. \
+                        See: https://github.com/guard/listen/wiki/Increasing-the-amount-of-inotify-watchers"
+                   ))
+               }
+               Err(e) => Err(format!("Watch failed: {}", e)),
+           }
+       }
    }
    ```
 
-2. **Implement LRU cache with size limit (addresses v1.3 tech debt):**
-   ```rust
-   use lru::LruCache;
-   use std::num::NonZeroUsize;
+5. **Document inotify increase in README:**
+   ```markdown
+   ## File Watching on Linux
 
-   lazy_static! {
-       static ref REGEX_CACHE: Mutex<LruCache<String, Regex>> = {
-           let cache_size = NonZeroUsize::new(100).unwrap();  // Max 100 regexes
-           Mutex::new(LruCache::new(cache_size))
-       };
-   }
-   ```
+   If file watching doesn't work, increase inotify limits:
 
-3. **Use correlation IDs for debug tracing:**
-   ```rust
-   pub struct DebugContext {
-       correlation_id: Uuid,
-       event_chain: Vec<EventType>,  // Track event sequence
-   }
-
-   // Log with correlation ID
-   info!(
-       correlation_id = %ctx.correlation_id,
-       "Processing event {} in debug mode",
-       event.hook_event_name
-   );
-   ```
-
-4. **Add `--clean` flag to force fresh state:**
    ```bash
-   # Default: reuse caches (faster, but may have state leakage)
-   rulez debug pre-tool-use --command "git push"
+   # Temporary (until reboot)
+   sudo sysctl fs.inotify.max_user_watches=524288
 
-   # Explicit clean state (slower, guaranteed isolation)
-   rulez debug --clean pre-tool-use --command "git push"
+   # Permanent
+   echo "fs.inotify.max_user_watches=524288" | sudo tee -a /etc/sysctl.conf
+   sudo sysctl -p
    ```
-
-5. **Validate state isolation in tests:**
-   ```rust
-   #[test]
-   fn test_debug_state_isolation() {
-       // Pollute state
-       let _r1 = debug_event(
-           EventType::UserPromptSubmit,
-           DebugParams { prompt: Some("delete database".to_string()), ..Default::default() }
-       );
-
-       // Verify clean state
-       let r2 = debug_event(
-           EventType::PreToolUse,
-           DebugParams { command: Some("git push".to_string()), ..Default::default() }
-       );
-
-       // r2 should NOT have access to "delete database" prompt
-       assert!(!r2.matched_rules.iter().any(|r| r.contains("delete")));
-   }
    ```
 
 **Warning signs:**
-- Debug results differ from production for identical events
-- `rulez debug` output changes based on invocation order
-- REGEX_CACHE size grows unbounded (check with `cargo flamegraph`)
-- Cannot reproduce user-reported bugs with `rulez debug`
+- File watching works locally (macOS) but not in Docker (Linux)
+- Configs don't reload when edited externally
+- Console error: "no space left on device" but disk has free space
+- `cat /proc/sys/fs/inotify/max_user_watches` shows low number
+- Works with small projects, fails with large monorepos
 
 **Detection:**
 ```bash
-# Test state isolation
-rulez debug user-prompt-submit --prompt "secret data" > /tmp/out1.json
-rulez debug pre-tool-use --command "echo test" > /tmp/out2.json
+# Check current inotify limit
+cat /proc/sys/fs/inotify/max_user_watches
 
-# out2.json should NOT contain "secret data"
-grep -i "secret" /tmp/out2.json && echo "STATE LEAK DETECTED"
+# Should be >16384; if 8192, will hit limits
+
+# Count current watches
+find /proc/*/fd -lname anon_inode:inotify -printf '%hinfo/%f\n' 2>/dev/null | \
+  xargs cat | grep -c '^inotify'
+
+# Test watching many files
+for i in {1..10000}; do touch /tmp/test_$i; done
+# Try watching /tmp - should fail
 ```
 
-**Phase mapping:** Phase 2 (Debug CLI Improvements) MUST implement state isolation.
+**Phase mapping:** Phase 3 (File Watching) MUST use file-specific watches + polling fallback.
 
 ---
 
-### Pitfall 4: E2E Test Tempfile Path Resolution Across Platforms
+### Pitfall 4: Playwright E2E Flakiness with Monaco Editor Async Loading
 
 **Severity:** HIGH - Test Reliability
 
-**What goes wrong:** E2E tests using `assert_cmd` and `tempfile` fail on Windows or in CI due to incorrect path resolution, symlink handling, or tempfile cleanup race conditions.
+**What goes wrong:** E2E tests pass locally but fail in CI with "element not found" or "element not clickable" due to Monaco editor's async module loading and WebView rendering differences.
 
-**Why it happens:** `assert_cmd::Command::write_stdin()` uses paths relative to `env::current_dir`, NOT `Command::current_dir`. Windows uses backslashes and has different tempfile locations. Symlinks behave differently on macOS vs Linux.
+**Why it happens:** Monaco loads language workers asynchronously, triggers re-renders, and WebView rendering timing differs from Chromium. Playwright's default timeouts don't account for Monaco's initialization sequence.
 
-**Real-world evidence (from research):**
-- `assert_cmd` docs: "Paths relative to `env::current_dir`, not `Command::current_dir`"
-- GitHub Actions matrix builds: Windows/Unix have path separator and line ending incompatibilities
-- Cross-compilation: "Windows and Unix have compatibility issues developers should actively handle rather than ignore"
+**Real-world evidence (2026):**
+- BrowserStack Guide: "Flaky tests in Playwright are automated tests that pass during one execution and fail the next, even when no changes have been made to the codebase"
+- Primary cause: "Artificial timeouts (`waitForTimeout()`) should be replaced with auto-waiting actions"
+- Tauri WebView differences: WKWebView (macOS), WebView2 (Windows), WebKitGTK (Linux) have different rendering speeds
+- Monaco issue #2755: "Autocomplete suggestions UI doesn't immediately show up when returning a promise"
 
-**RuleZ-specific scenario (from `e2e_git_push_block.rs`):**
-```rust
-fn setup_claude_code_event(config_name: &str, command: &str) -> (tempfile::TempDir, String) {
-    let temp_dir = setup_test_env(config_name);
-    let cwd = temp_dir.path().to_string_lossy().to_string();  // ❌ May have symlinks
+**RuleZ UI test scenario:**
+```typescript
+// tests/editor.spec.ts (FLAKY VERSION)
+test("should show YAML autocomplete", async ({ page }) => {
+  await page.goto("/");
 
-    let event = serde_json::json!({
-        "cwd": cwd,  // ❌ On macOS, /var -> /private/var symlink confuses path matching
-        // ...
-    });
+  // Click to open file
+  await page.click('[data-testid="file-hooks.yaml"]');
 
-    (temp_dir, serde_json::to_string(&event).unwrap())
-}
+  // Try to type in editor
+  await page.click('.monaco-editor');  // ❌ Element not yet rendered
+  await page.keyboard.type('rule');
 
-// Later...
-let output = Command::cargo_bin("rulez")
-    .current_dir(temp_dir.path())  // ❌ Different from env::current_dir
-    .write_stdin(event_json)
-    .output()?;
+  // Wait for autocomplete
+  await page.waitForTimeout(500);  // ❌ Artificial timeout
+
+  // Check autocomplete appears
+  await expect(page.locator('.monaco-suggest')).toBeVisible();  // ❌ Flaky
+});
 ```
 
-**Consequences on different platforms:**
-- **macOS:** `/var/folders/...` is symlink to `/private/var/folders/...`, causing cwd mismatch
-- **Windows:** `C:\Users\...` vs `C:/Users/...` (backslash/forward slash)
-- **Linux (tmpfs):** `/tmp` cleanup race if test runner is too fast
-- **CI:** Parallel test execution causes tempdir conflicts
+**Failure modes:**
+- **CI (Linux WebKitGTK):** Monaco takes 800ms to load, test clicks before render
+- **macOS (WKWebView):** Monaco loads in 200ms, test passes
+- **Windows (WebView2):** Monaco takes 1200ms, test times out
+- **Parallel test runs:** Shared worker resources cause race conditions
+
+**Consequences:**
+- E2E tests fail randomly in CI (30-50% pass rate)
+- Developers disable flaky tests, reducing coverage
+- False negatives block valid PRs
+- Debugging wastes hours (works locally, fails in CI)
+- Cannot trust test results
 
 **Prevention strategy:**
 
-1. **Canonicalize paths before comparing:**
-   ```rust
-   use std::fs;
+1. **Use Playwright auto-waiting instead of timeouts:**
+   ```typescript
+   // tests/editor.spec.ts (STABLE VERSION)
+   import { expect, test } from "@playwright/test";
 
-   fn setup_claude_code_event(config_name: &str, command: &str) -> (tempfile::TempDir, String) {
-       let temp_dir = setup_test_env(config_name);
+   test("should show YAML autocomplete", async ({ page }) => {
+     await page.goto("/");
 
-       // Resolve symlinks (macOS /var -> /private/var)
-       let canonical_path = fs::canonicalize(temp_dir.path())
-           .unwrap_or_else(|_| temp_dir.path().to_path_buf());
+     // Wait for Monaco to fully initialize
+     await page.waitForSelector('.monaco-editor .view-lines', {
+       state: 'visible',
+       timeout: 10000,  // Longer timeout for CI
+     });
 
-       let cwd = canonical_path.to_string_lossy().to_string();
+     // Click specific file
+     await page.click('[data-testid="file-hooks.yaml"]');
 
-       let event = serde_json::json!({
-           "cwd": cwd,
-           // ...
-       });
+     // Wait for editor content to load
+     await expect(page.locator('.monaco-editor .view-line')).toHaveCount(
+       { min: 1 },
+       { timeout: 5000 }
+     );
 
-       (temp_dir, serde_json::to_string(&event).unwrap())
+     // Focus editor (auto-waits for clickable)
+     await page.click('.monaco-editor textarea');
+
+     // Type to trigger autocomplete
+     await page.keyboard.type('rules:', { delay: 50 });
+
+     // Trigger autocomplete manually (Ctrl+Space)
+     await page.keyboard.press('Control+Space');
+
+     // Wait for suggestions widget (NOT timeout)
+     await expect(page.locator('.suggest-widget')).toBeVisible({
+       timeout: 3000,
+     });
+   });
+   ```
+
+2. **Add custom Playwright matchers for Monaco:**
+   ```typescript
+   // tests/helpers/monaco-matchers.ts
+   import { expect as baseExpect, Locator } from '@playwright/test';
+
+   async function toHaveMonacoText(locator: Locator, expected: string) {
+     // Extract text from Monaco's DOM structure
+     const lines = await locator.locator('.view-line').allTextContents();
+     const text = lines.join('\n');
+
+     return {
+       pass: text.includes(expected),
+       message: () => `Expected Monaco to contain "${expected}", got "${text}"`,
+     };
+   }
+
+   export const expect = baseExpect.extend({
+     toHaveMonacoText,
+   });
+   ```
+
+3. **Stub slow operations in test mode:**
+   ```typescript
+   // src/lib/monaco.ts
+   export async function initializeMonaco() {
+     if (import.meta.env.TEST) {
+       // Skip worker loading in tests
+       return Promise.resolve();
+     }
+
+     // Production: Full initialization
+     await import('monaco-yaml');
+     // ... worker setup
    }
    ```
 
-2. **Use platform-agnostic path handling:**
-   ```rust
-   use std::path::PathBuf;
-
-   // WRONG: String manipulation
-   let config_path = format!("{}/.claude/hooks.yaml", cwd);  // ❌ Breaks on Windows
-
-   // RIGHT: Path API
-   let config_path = PathBuf::from(&cwd)
-       .join(".claude")
-       .join("hooks.yaml");
-   ```
-
-3. **Ensure tempdir cleanup with explicit drop:**
-   ```rust
-   #[test]
-   fn test_e2e_git_push_blocked() {
-       let (temp_dir, event_json) = setup_claude_code_event("block-all-push.yaml", "git push");
-
-       let output = Command::cargo_bin("rulez")
-           .current_dir(temp_dir.path())
-           .write_stdin(event_json)
-           .output()
-           .expect("command should run");
-
-       assert_eq!(output.status.code(), Some(2));
-
-       // Explicit cleanup before test ends
-       drop(temp_dir);  // Force cleanup, don't wait for scope exit
-   }
-   ```
-
-4. **Add cross-platform test matrix:**
+4. **Use consistent WebView in CI:**
    ```yaml
    # .github/workflows/e2e.yml
    jobs:
      e2e-tests:
-       strategy:
-         matrix:
-           os: [ubuntu-latest, macos-latest, windows-latest]
-       runs-on: ${{ matrix.os }}
+       runs-on: ubuntu-22.04  # Consistent WebKitGTK version
        steps:
-         - name: Run E2E tests
-           run: cargo test --test e2e_* -- --nocapture
+         - name: Install WebKitGTK
+           run: sudo apt-get install -y libwebkit2gtk-4.1-dev
+
+         - name: Run Playwright tests
+           run: |
+             cd rulez-ui
+             bun run test:e2e --retries=2 --workers=1  # Serialize tests, allow retries
    ```
 
-5. **Test symlink handling explicitly:**
-   ```rust
-   #[test]
-   #[cfg(unix)]
-   fn test_e2e_symlink_cwd() {
-       use std::os::unix::fs::symlink;
+5. **Add retry logic for known-flaky interactions:**
+   ```typescript
+   // tests/helpers/retry.ts
+   export async function retryUntilVisible(
+     page: Page,
+     selector: string,
+     action: () => Promise<void>,
+     maxRetries = 3,
+   ): Promise<void> {
+     for (let i = 0; i < maxRetries; i++) {
+       await action();
 
-       let temp_dir = tempfile::tempdir().unwrap();
-       let symlink_dir = tempfile::tempdir().unwrap();
+       try {
+         await page.waitForSelector(selector, { timeout: 2000 });
+         return;  // Success
+       } catch (e) {
+         if (i === maxRetries - 1) throw e;
+         await page.waitForTimeout(500);  // Brief pause before retry
+       }
+     }
+   }
+   ```
 
-       // Create symlink to temp_dir
-       let symlink_path = symlink_dir.path().join("link");
-       symlink(temp_dir.path(), &symlink_path).unwrap();
+6. **Test Monaco initialization separately:**
+   ```typescript
+   // tests/monaco-init.spec.ts
+   test("Monaco editor initializes within 5 seconds", async ({ page }) => {
+     await page.goto("/");
 
-       // Event cwd points to symlink
-       let event = json!({
-           "hook_event_name": "PreToolUse",
-           "cwd": symlink_path.to_string_lossy(),
-           // ...
-       });
+     const startTime = Date.now();
 
-       // Should still find .claude/hooks.yaml via canonical path
-       let output = Command::cargo_bin("rulez")
-           .current_dir(&symlink_path)
-           .write_stdin(serde_json::to_string(&event).unwrap())
-           .output()
-           .unwrap();
+     await page.waitForSelector('.monaco-editor', { state: 'attached' });
+     await page.waitForSelector('.view-lines', { state: 'visible' });
 
-       assert!(output.status.success());
+     const initTime = Date.now() - startTime;
+
+     expect(initTime).toBeLessThan(5000);  // Fail if too slow
+   });
+   ```
+
+**Warning signs:**
+- Tests pass 3/5 times locally, fail in CI
+- "element not found" errors for `.monaco-editor` or `.suggest-widget`
+- Tests with `waitForTimeout()` fail randomly
+- Different pass rates on macOS vs Linux
+- Parallel test runs have lower pass rate
+
+**Detection:**
+```bash
+# Run tests 10 times to detect flakiness
+for i in {1..10}; do
+  bun run test:e2e && echo "PASS $i" || echo "FAIL $i"
+done
+
+# Should see 10/10 PASS; if <8/10, tests are flaky
+
+# Check for artificial timeouts
+grep -r "waitForTimeout" tests/
+# Should find ZERO occurrences
+```
+
+**Phase mapping:** Phase 4 (E2E Test Stabilization) MUST eliminate `waitForTimeout()`.
+
+---
+
+### Pitfall 5: Binary Path Detection Failures on Windows (PATH Separator Issues)
+
+**Severity:** HIGH - Correctness
+
+**What goes wrong:** `rulez` binary detection fails on Windows due to incorrect PATH parsing, causing UI to show "binary not found" even when installed.
+
+**Why it happens:** Windows uses semicolon (`;`) as PATH separator (vs. colon `:` on Unix), and `process.env.PATH` is case-insensitive but not normalized. Additionally, Windows executable extensions (`.exe`, `.cmd`) are implicit.
+
+**Real-world evidence (2026):**
+- cross-platform-node-guide: "Windows uses `%ENV_VAR%`, POSIX uses `$ENV_VAR`"
+- PATH separator: Windows `;` vs Unix `:`
+- Node.js path.delimiter: `process.platform === 'win32' ? ';' : ':'`
+- Environment variables case-insensitive on Windows: `PATH`, `Path`, `path` all valid
+
+**RuleZ UI scenario:**
+```typescript
+// src/lib/binary-finder.ts (WRONG)
+export function findRulezBinary(): string | null {
+  const paths = process.env.PATH.split(':');  // ❌ Breaks on Windows (uses ';')
+
+  for (const dir of paths) {
+    const binaryPath = path.join(dir, 'rulez');  // ❌ Missing '.exe' on Windows
+    if (fs.existsSync(binaryPath)) {
+      return binaryPath;
+    }
+  }
+
+  return null;
+}
+```
+
+**Failure on Windows:**
+```
+PATH = C:\Windows\System32;C:\Program Files\Rust\bin;C:\Users\alice\.cargo\bin
+
+paths.split(':')  // ❌ Returns single element (no ':' in Windows PATH)
+  => ["C:\Windows\System32;C:\Program Files\Rust\bin;C:\Users\alice\.cargo\bin"]
+
+path.join(paths[0], 'rulez')
+  => "C:\Windows\System32;C:\Program Files\Rust\bin;C:\Users\alice\.cargo\bin\rulez"
+  // ❌ Invalid path
+
+fs.existsSync(...)  // ❌ Always false
+```
+
+**Consequences:**
+- UI shows "rulez binary not found" on Windows
+- Simulator tab disabled (requires binary)
+- Users must manually configure binary path
+- Works on macOS/Linux, fails only on Windows
+- GitHub issues: "Can't find rulez on Windows"
+
+**Prevention strategy:**
+
+1. **Use Node.js built-in path delimiter:**
+   ```typescript
+   // src/lib/binary-finder.ts
+   import path from 'path';
+   import fs from 'fs';
+
+   export function findRulezBinary(): string | null {
+     const pathEnv = process.env.PATH || '';
+     const paths = pathEnv.split(path.delimiter);  // ✓ Uses ':' or ';' based on platform
+
+     // Windows: Check PATH, Path, path (case-insensitive)
+     const pathKey = Object.keys(process.env).find(
+       (key) => key.toUpperCase() === 'PATH'
+     );
+     const pathValue = pathKey ? process.env[pathKey] : '';
+
+     for (const dir of pathValue.split(path.delimiter)) {
+       const candidates = [
+         path.join(dir, 'rulez'),
+         path.join(dir, 'rulez.exe'),  // Windows
+         path.join(dir, 'rulez.cmd'),  // Windows
+       ];
+
+       for (const candidate of candidates) {
+         if (fs.existsSync(candidate)) {
+           return candidate;
+         }
+       }
+     }
+
+     return null;
+   }
+   ```
+
+2. **Use cross-platform `which` library:**
+   ```typescript
+   // src/lib/binary-finder.ts
+   import which from 'which';
+
+   export async function findRulezBinary(): Promise<string | null> {
+     try {
+       // Automatically handles PATH parsing, extensions, case-sensitivity
+       const binaryPath = await which('rulez');
+       return binaryPath;
+     } catch (e) {
+       return null;
+     }
+   }
+   ```
+
+3. **Fallback to common installation paths:**
+   ```typescript
+   // src/lib/binary-finder.ts
+   const COMMON_PATHS = [
+     // Unix
+     '/usr/local/bin/rulez',
+     path.join(os.homedir(), '.cargo/bin/rulez'),
+
+     // Windows
+     path.join(process.env.USERPROFILE || '', '.cargo', 'bin', 'rulez.exe'),
+     'C:\\Program Files\\rulez\\rulez.exe',
+   ];
+
+   export function findRulezBinary(): string | null {
+     // Try PATH first
+     const inPath = which.sync('rulez', { nothrow: true });
+     if (inPath) return inPath;
+
+     // Fallback to common paths
+     for (const candidate of COMMON_PATHS) {
+       if (fs.existsSync(candidate)) {
+         return candidate;
+       }
+     }
+
+     return null;
+   }
+   ```
+
+4. **Test on Windows in CI:**
+   ```yaml
+   # .github/workflows/e2e.yml
+   strategy:
+     matrix:
+       os: [ubuntu-22.04, macos-latest, windows-latest]
+
+   steps:
+     - name: Install rulez
+       run: cargo install --path rulez
+
+     - name: Verify binary in PATH
+       shell: bash
+       run: |
+         which rulez || where rulez  # Unix: which, Windows: where
+         rulez --version
+
+     - name: Run UI tests
+       run: |
+         cd rulez-ui
+         bun run test:e2e
+   ```
+
+5. **Show helpful error with install instructions:**
+   ```typescript
+   // src/components/simulator/BinaryCheck.tsx
+   export function BinaryCheck() {
+     const [binaryPath, setBinaryPath] = useState<string | null>(null);
+
+     useEffect(() => {
+       findRulezBinary().then(setBinaryPath);
+     }, []);
+
+     if (!binaryPath) {
+       return (
+         <Alert variant="warning">
+           <AlertTitle>rulez binary not found</AlertTitle>
+           <AlertDescription>
+             The simulator requires the <code>rulez</code> CLI.
+             <br />
+             Install with: <code>cargo install --path rulez</code>
+             <br />
+             Or download from: <a href="...">Releases</a>
+           </AlertDescription>
+         </Alert>
+       );
+     }
+
+     return <Simulator binaryPath={binaryPath} />;
    }
    ```
 
 **Warning signs:**
-- E2E tests pass locally but fail in CI
-- Tests fail only on macOS or Windows
-- Flaky tests with "file not found" errors
-- Tempdir cleanup errors in CI logs
+- UI works on macOS/Linux, fails on Windows
+- Console error: "rulez not found" but `where rulez` shows path
+- Tests pass locally (Unix), fail in Windows CI
+- Binary path detection works in Node.js but fails in Electron/Tauri
+- PATH environment variable not split correctly
 
 **Detection:**
 ```bash
-# Test on all platforms
-cargo test --test e2e_* -- --nocapture
+# Test on Windows
+echo %PATH%  # Should show semicolons
 
-# macOS: Check for symlink resolution
-ls -la /var/folders  # Should see symlink
+# Test binary detection
+node -e "console.log(process.env.PATH.split(require('path').delimiter))"
 
-# Windows: Check path separators
-echo %TEMP%  # Should use backslashes
+# Should show multiple paths, NOT single string
+
+# Verify rulez.exe in PATH
+where rulez  # Windows
+which rulez  # Unix
 ```
 
-**Phase mapping:** Phase 3 (E2E Test Fixes) MUST handle cross-platform paths.
+**Phase mapping:** Phase 5 (Binary Path Detection) MUST test on Windows.
 
 ---
 
-### Pitfall 5: Tauri 2.0 webkit2gtk Version Conflict in CI
+### Pitfall 6: Zustand Store Memory Leaks with File Watcher Subscriptions
 
-**Severity:** CRITICAL - Build Failures
+**Severity:** HIGH - Memory + Stability
 
-**What goes wrong:** Tauri 2.0 requires `libwebkit2gtk-4.1-dev` but Ubuntu 24.04 removed `libwebkit2gtk-4.0-dev`, causing CI builds to fail with "dependency not found" errors.
+**What goes wrong:** File watcher event listeners registered in Zustand stores are never cleaned up, causing memory leaks and eventually crashing the app after prolonged use.
 
-**Why it happens:** Tauri v1 used webkit2gtk 4.0, but Tauri v2 migrated to webkit2gtk 4.1 for Flatpak support. Ubuntu 24.04 and Debian 13 dropped the 4.0 packages from repositories.
+**Why it happens:** Zustand stores persist for the application lifetime, but Tauri event listeners registered in stores create closures that capture store state. Without cleanup, listeners accumulate and old state references prevent garbage collection.
 
-**Real-world evidence (from research):**
-- GitHub Issue #9662: "libwebkit2gtk-4.0 not available in Ubuntu 24 & Debian 13 repositories"
-- Tauri docs: "For Ubuntu, Tauri 2.0 requires webkit2gtk-4.1-dev (works on Ubuntu 22.04+)"
-- Migration guide: "Tauri v2 migrated to webkit2gtk-4.1 as a result of aiming to add flatpak support"
+**Real-world evidence (2026):**
+- Zustand Discussion #2540: "Memory leak issue when stores are created in React Context"
+- Zustand Discussion #2054: "Will not cleaning up subscriber result in a memory leak? Yes."
+- Zustand docs: "Use `store.destroy()` in tests to prevent state leaks"
+- React: "Always return cleanup function from useEffect hooks"
 
-**RuleZ CI scenario:**
-```yaml
-# .github/workflows/ci.yml
-jobs:
-  build-tauri:
-    runs-on: ubuntu-latest  # Uses ubuntu-24.04 by default
-    steps:
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.0-dev  # ❌ Package not found on 24.04
+**RuleZ UI scenario:**
+```typescript
+// src/stores/configStore.ts (LEAKY VERSION)
+import { create } from 'zustand';
+import { listen } from '@tauri-apps/api/event';
+
+interface ConfigStore {
+  config: Config | null;
+  loadConfig: () => Promise<void>;
+  watchConfig: () => void;  // ❌ No cleanup
+}
+
+export const useConfigStore = create<ConfigStore>((set, get) => ({
+  config: null,
+
+  loadConfig: async () => {
+    const config = await invoke<Config>('load_config');
+    set({ config });
+  },
+
+  watchConfig: async () => {
+    // ❌ Event listener never removed
+    await listen('config-changed', async () => {
+      const { loadConfig } = get();  // Captures store reference
+      await loadConfig();
+    });
+  },
+}));
 ```
 
-**Error message:**
+```typescript
+// src/App.tsx
+export function App() {
+  const watchConfig = useConfigStore((s) => s.watchConfig);
+
+  useEffect(() => {
+    watchConfig();  // ❌ Registers listener, never cleans up
+  }, []);  // Runs once on mount
+
+  // ❌ If App remounts (HMR, navigation), creates duplicate listener
+  // ❌ Old listener still references old store state
+  // ❌ Memory leak: old closures + old state never garbage collected
+}
 ```
-E: Package 'libwebkit2gtk-4.0-dev' has no installation candidate
-Error: Process completed with exit code 100.
-```
+
+**Memory leak progression:**
+1. Initial mount: 1 listener, 50 KB memory
+2. HMR reload (dev mode): 2 listeners, 100 KB memory
+3. After 10 reloads: 10 listeners, 500 KB memory
+4. After 100 reloads: 100 listeners, 5 MB memory
+5. Eventually: Out of memory crash
 
 **Consequences:**
-- All Tauri CI builds fail on ubuntu-latest
-- Cannot test Tauri UI changes in pull requests
-- Forced to use older Ubuntu runners (22.04) which are deprecated
-- Manual local builds work but CI is broken
+- Memory usage grows over time (10-50 MB per hour in dev mode)
+- App becomes sluggish after extended use
+- Multiple config reloads on single file change (duplicate listeners)
+- HMR in dev mode causes exponential listener growth
+- Production: App crashes after days of continuous use
 
 **Prevention strategy:**
 
-1. **Use correct webkit2gtk version for Tauri 2.0:**
-   ```yaml
-   # .github/workflows/tauri-build.yml
-   jobs:
-     build-tauri:
-       runs-on: ubuntu-22.04  # Explicit version, supports both 4.0 and 4.1
-       steps:
-         - name: Install Tauri 2.0 dependencies
-           run: |
-             sudo apt-get update
-             sudo apt-get install -y \
-               libwebkit2gtk-4.1-dev \  # Tauri 2.0 requirement
-               libgtk-3-dev \
-               libayatana-appindicator3-dev \
-               librsvg2-dev \
-               curl \
-               wget \
-               file \
-               libssl-dev
+1. **Return cleanup function from Zustand actions:**
+   ```typescript
+   // src/stores/configStore.ts
+   import { create } from 'zustand';
+   import { UnlistenFn, listen } from '@tauri-apps/api/event';
+
+   interface ConfigStore {
+     config: Config | null;
+     watcherUnlisten: UnlistenFn | null;
+     startWatching: () => Promise<void>;
+     stopWatching: () => void;
+   }
+
+   export const useConfigStore = create<ConfigStore>((set, get) => ({
+     config: null,
+     watcherUnlisten: null,
+
+     startWatching: async () => {
+       // Clean up existing listener
+       const { watcherUnlisten } = get();
+       if (watcherUnlisten) {
+         watcherUnlisten();
+       }
+
+       // Register new listener
+       const unlisten = await listen('config-changed', async () => {
+         const config = await invoke<Config>('load_config');
+         set({ config });
+       });
+
+       set({ watcherUnlisten: unlisten });
+     },
+
+     stopWatching: () => {
+       const { watcherUnlisten } = get();
+       if (watcherUnlisten) {
+         watcherUnlisten();
+         set({ watcherUnlisten: null });
+       }
+     },
+   }));
    ```
 
-2. **Pin runner OS version explicitly:**
-   ```yaml
-   # WRONG: Uses latest (currently 24.04)
-   runs-on: ubuntu-latest
+2. **Use React hooks for cleanup:**
+   ```typescript
+   // src/App.tsx
+   export function App() {
+     const { startWatching, stopWatching } = useConfigStore();
 
-   # RIGHT: Explicit version for stability
-   runs-on: ubuntu-22.04
+     useEffect(() => {
+       startWatching();
+
+       // ✓ Cleanup on unmount
+       return () => {
+         stopWatching();
+       };
+     }, [startWatching, stopWatching]);
+   }
    ```
 
-3. **Add fallback for webkit2gtk-4.0 if building both v1 and v2:**
-   ```yaml
-   - name: Install webkit2gtk (version-aware)
-     run: |
-       # Try 4.1 first (Tauri v2), fallback to 4.0 (Tauri v1)
-       sudo apt-get install -y libwebkit2gtk-4.1-dev || \
-       sudo apt-get install -y libwebkit2gtk-4.0-dev
+3. **Store unlisteners in Set for multiple watchers:**
+   ```typescript
+   // src/stores/configStore.ts
+   interface ConfigStore {
+     watchers: Set<UnlistenFn>;
+     addWatcher: (path: string) => Promise<void>;
+     removeAllWatchers: () => void;
+   }
+
+   export const useConfigStore = create<ConfigStore>((set, get) => ({
+     watchers: new Set(),
+
+     addWatcher: async (path: string) => {
+       const unlisten = await listen(`file-changed:${path}`, handler);
+       set((state) => {
+         state.watchers.add(unlisten);
+         return { watchers: state.watchers };
+       });
+     },
+
+     removeAllWatchers: () => {
+       const { watchers } = get();
+       watchers.forEach((unlisten) => unlisten());
+       set({ watchers: new Set() });
+     },
+   }));
    ```
 
-4. **Test on multiple Ubuntu versions:**
-   ```yaml
-   strategy:
-     matrix:
-       os: [ubuntu-22.04, ubuntu-24.04]
-       include:
-         - os: ubuntu-22.04
-           webkit: libwebkit2gtk-4.1-dev
-         - os: ubuntu-24.04
-           webkit: libwebkit2gtk-4.1-dev
+4. **Test for memory leaks in E2E tests:**
+   ```typescript
+   // tests/memory-leak.spec.ts
+   import { test, expect } from '@playwright/test';
+
+   test('should not leak memory on config reload', async ({ page }) => {
+     await page.goto('/');
+
+     // Get initial memory usage
+     const initialMemory = await page.evaluate(() => {
+       if (performance.memory) {
+         return performance.memory.usedJSHeapSize;
+       }
+       return 0;
+     });
+
+     // Reload config 50 times
+     for (let i = 0; i < 50; i++) {
+       await page.click('[data-testid="reload-config"]');
+       await page.waitForTimeout(100);
+     }
+
+     // Force garbage collection (requires --expose-gc flag)
+     await page.evaluate(() => {
+       if (global.gc) global.gc();
+     });
+
+     const finalMemory = await page.evaluate(() => {
+       if (performance.memory) {
+         return performance.memory.usedJSHeapSize;
+       }
+       return 0;
+     });
+
+     // Memory should not grow >2x
+     const growth = finalMemory / initialMemory;
+     expect(growth).toBeLessThan(2);
+   });
    ```
 
-5. **Document system dependencies in README:**
-   ```markdown
-   ## Tauri UI Development
+5. **Use Zustand middleware for automatic cleanup:**
+   ```typescript
+   // src/lib/zustand-cleanup.ts
+   import { StateCreator, StoreMutatorIdentifier } from 'zustand';
 
-   ### Ubuntu 22.04+ / Debian 12+
-   ```bash
-   sudo apt-get install libwebkit2gtk-4.1-dev libgtk-3-dev \
-     libayatana-appindicator3-dev librsvg2-dev
-   ```
+   export const cleanupMiddleware = <T>(
+     config: StateCreator<T>,
+   ): StateCreator<T> => (set, get, api) => {
+     const cleanup = new Set<() => void>();
 
-   ### Ubuntu 20.04 / Debian 11 (NOT SUPPORTED)
-   Tauri 2.0 requires webkit2gtk-4.1 which is not available on older distributions.
-   Upgrade to Ubuntu 22.04+ or use Tauri 1.x.
-   ```
+     // Wrap set to track cleanup functions
+     const wrappedSet: typeof set = (partial, replace) => {
+       if (typeof partial === 'function') {
+         const next = partial(get());
+         if (next && typeof next.cleanup === 'function') {
+           cleanup.add(next.cleanup);
+         }
+       }
+       return set(partial, replace);
+     };
 
-**Warning signs:**
-- CI builds fail with "Package 'libwebkit2gtk-4.0-dev' has no installation candidate"
-- Local builds work but GitHub Actions fail
-- Tauri build succeeds on macOS/Windows but fails on Linux
-- `cargo build` in rulez-ui/ fails with webkit linker errors
+     // Add destroy method
+     (api as any).destroy = () => {
+       cleanup.forEach((fn) => fn());
+       cleanup.clear();
+     };
 
-**Detection:**
-```bash
-# Check available webkit versions
-apt-cache search webkit2gtk
-
-# Should see:
-# - libwebkit2gtk-4.1-dev (Tauri v2)
-# On Ubuntu 24.04, libwebkit2gtk-4.0-dev is MISSING
-
-# Test Tauri build locally
-cd rulez-ui
-cargo tauri build  # Should complete without webkit errors
-```
-
-**Phase mapping:** Phase 4 (Tauri CI Setup) MUST use webkit2gtk-4.1.
-
----
-
-### Pitfall 6: GitHub Actions Rust Cache Invalidation on Binary Rename
-
-**Severity:** HIGH - CI Performance + Stale Artifacts
-
-**What goes wrong:** Renaming binary from `cch` to `rulez` leaves stale cached binaries in `~/.cargo/bin/`, causing tests to execute old code or CI to upload wrong artifacts.
-
-**Why it happens:** GitHub Actions `Swatinem/rust-cache` caches the entire `target/` directory and `~/.cargo/bin/`. When a binary is renamed, the cache contains both old (`cch`) and new (`rulez`) binaries, but CI scripts may execute the wrong one.
-
-**Real-world evidence (from research):**
-- rust-cache action "removes old binaries that were present before the action ran"
-- Cache invalidation: "each repo is limited to 10GB total cache size, which fills quickly with whole target/ directory"
-- Binary caching: "compiled binaries cached in `~/.cargo-install/<crate-name>`, expire after 7 days of inactivity"
-
-**RuleZ-specific history (from project context):**
-> "RuleZ already had CI issues: binary rename from cch to rulez caused stale binary artifacts"
-
-**CI failure scenario:**
-```yaml
-# .github/workflows/ci.yml
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: Swatinem/rust-cache@v2  # Restores cache with old 'cch' binary
-
-      - name: Build
-        run: cargo build --release --bin rulez  # Builds new 'rulez' binary
-
-      - name: Test
-        run: cargo test  # ❌ Tests may invoke cached 'cch' via $PATH
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: rulez-binary
-          path: target/release/rulez  # ✓ Correct binary
-
-      # BUT: If another job uses 'cch' in scripts, fails
-      - name: E2E test
-        run: |
-          cch --version  # ❌ Uses stale cached binary, not 'rulez'
-```
-
-**Consequences:**
-- Tests execute against old code, false positives
-- CI uploads wrong binary to releases
-- E2E tests fail with "command not found: rulez"
-- Debugging wastes hours on cache invalidation
-
-**Prevention strategy:**
-
-1. **Explicitly clear cache on binary rename:**
-   ```yaml
-   # AFTER renaming binary, force cache invalidation
-   - name: Clear Rust cache
-     run: |
-       rm -rf ~/.cargo/bin/cch
-       rm -rf target/release/cch
-       rm -rf target/debug/cch
-       cargo clean
-   ```
-
-2. **Use cache key versioning:**
-   ```yaml
-   - uses: Swatinem/rust-cache@v2
-     with:
-       # Include binary name in cache key
-       key: rulez-v2-${{ hashFiles('**/Cargo.lock') }}
-       # When binary renames, key changes, cache invalidates
-   ```
-
-3. **Always use `cargo run` instead of bare binary name:**
-   ```yaml
-   # WRONG: Executes whatever is in $PATH (may be cached)
-   - run: rulez --version
-
-   # RIGHT: Executes freshly built binary
-   - run: cargo run --bin rulez -- --version
-   ```
-
-4. **Validate binary in CI before tests:**
-   ```yaml
-   - name: Validate binary
-     run: |
-       EXPECTED_NAME="rulez"
-       ACTUAL_PATH=$(which rulez || echo "")
-
-       if [ -z "$ACTUAL_PATH" ]; then
-         echo "Binary not found in PATH"
-         exit 1
-       fi
-
-       if [[ "$ACTUAL_PATH" != *"$EXPECTED_NAME"* ]]; then
-         echo "Wrong binary in PATH: $ACTUAL_PATH"
-         exit 1
-       fi
-
-       # Check version contains expected build info
-       cargo run --bin rulez -- --version | grep -q "rulez" || exit 1
-   ```
-
-5. **Remove old binaries in CI setup:**
-   ```yaml
-   - name: Cleanup old binaries
-     run: |
-       # Remove any previously installed binaries
-       rm -f ~/.cargo/bin/cch
-       rm -f ~/.cargo/bin/rulez
-
-       # Force rebuild
-       cargo build --release --bin rulez
+     return config(wrappedSet, get, api);
+   };
    ```
 
 **Warning signs:**
-- CI test results don't match local test results
-- "command not found" errors for newly renamed binary
-- `which rulez` shows wrong path in CI
-- Artifact uploads contain old binary name
-- Tests pass in CI but features don't work in release
+- Chrome DevTools Memory tab shows growing heap
+- Multiple event listeners for same event (check Tauri DevTools)
+- App slows down after prolonged use
+- HMR causes duplicate events
+- Memory profiler shows uncollected closures
 
 **Detection:**
-```bash
-# Locally test binary name
-cargo build --release
-ls -lh target/release/ | grep -E "(cch|rulez)"
+```typescript
+// src/lib/debug.ts
+export function monitorEventListeners() {
+  if (import.meta.env.DEV) {
+    setInterval(() => {
+      const listeners = (window as any).__TAURI__?.event?._listeners || {};
+      const counts = Object.entries(listeners).map(([event, list]) =>
+        `${event}: ${(list as any[]).length}`
+      );
 
-# Should only see 'rulez', NOT 'cch'
-
-# In CI, validate:
-which rulez
-rulez --version
-# Should NOT find 'cch'
+      if (counts.some((c) => parseInt(c.split(': ')[1]) > 5)) {
+        console.warn('Possible event listener leak:', counts);
+      }
+    }, 5000);
+  }
+}
 ```
 
-**Phase mapping:** Phase 3 (E2E Test Fixes) MUST validate binary artifacts.
+**Phase mapping:** Phase 3 (File Watching) MUST implement cleanup.
 
 ---
 
 ## Moderate Pitfalls
 
-### Pitfall 7: JSON Schema `allOf` Misuse with `#[serde(flatten)]`
+### Pitfall 7: Tauri Shell Scope Still References Old Binary Name "cch"
 
 **Severity:** MEDIUM - Correctness
 
-**What goes wrong:** Using `#[serde(flatten)]` to map JSON Schema's `allOf` construct is incorrect and can result in structs where no valid data deserializes correctly.
+**What goes wrong:** UI cannot execute `rulez` binary because Tauri shell scope still allows "cch", not "rulez".
 
-**Why it happens:** JSON Schema's `allOf` applies ALL constraints (intersection), but Serde's `flatten` merges fields (union). They have opposite semantics.
+**Why it happens:** Binary was renamed from `cch` to `rulez` but `tauri.conf.json` shell scope wasn't updated.
 
-**Real-world evidence (from research):**
-> "Using `#[serde(flatten)]` to map JSON Schema's `allOf` construct is wrong and can result in structs for which no data results in valid deserialization or serializations that don't match the given schema."
+**Evidence from project:**
+- tauri.conf.json lines 49-52: `"name": "cch", "cmd": "cch"`
+- Should be: `"name": "rulez", "cmd": "rulez"`
 
-**Example:**
-```yaml
-# JSON Schema with allOf (intersection semantics)
-event_schema:
-  $schema: "http://json-schema.org/draft-07/schema#"
-  allOf:
-    - properties:
-        tool_name: { type: "string" }
-      required: ["tool_name"]
-    - properties:
-        tool_input: { type: "object" }
-      required: ["tool_input"]
-  # Valid data MUST have both tool_name AND tool_input
-```
-
-```rust
-// WRONG: Serde flatten (union semantics)
-#[derive(Deserialize)]
-struct Event {
-    #[serde(flatten)]
-    base: BaseEvent,  // Has tool_name
-
-    #[serde(flatten)]
-    extended: ExtendedEvent,  // Has tool_input
-
-    // Problem: If fields overlap, last one wins (not intersection)
+**Prevention:**
+```json
+// rulez-ui/src-tauri/tauri.conf.json
+{
+  "plugins": {
+    "shell": {
+      "open": true,
+      "scope": [
+        {
+          "name": "rulez",
+          "cmd": "rulez",
+          "args": true
+        }
+      ]
+    }
+  }
 }
 ```
 
-**Prevention:**
-- Don't use `#[serde(flatten)]` for `allOf` schemas
-- Validate with `jsonschema` crate instead of Serde deserialization
-- If using Serde, manually validate constraints after deserialization
-
-**Phase mapping:** Phase 1 (JSON Schema Integration) - Document this in schema guidelines.
+**Phase mapping:** Phase 5 (Binary Integration) - Update immediately.
 
 ---
 
-### Pitfall 8: Broken Pipe on Linux from Unread stdio in Tests
+### Pitfall 8: Monaco YAML Schema URI Triggers Unnecessary Network Requests
 
-**Severity:** MEDIUM - Test Reliability
+**Severity:** MEDIUM - Performance
 
-**What goes wrong:** CLI tests that spawn processes but don't read stdout/stderr cause SIGPIPE on Linux, resulting in non-zero exit codes and test failures.
+**What goes wrong:** Monaco-YAML tries to download schemas from `http://example.com/schema.json` URLs even when schema is provided inline.
 
-**Why it happens (from project context):**
-> "piped-but-unread stdio caused broken pipe on Linux"
+**Why it happens:** Using generic URIs like `http://example.com` triggers download attempts. Using filename in URI prevents this.
 
-**Example:**
-```rust
-// WRONG: Doesn't read stdout
-let mut child = Command::cargo_bin("rulez")
-    .stdin(Stdio::piped())
-    .stdout(Stdio::piped())  // ❌ Pipe created but never read
-    .spawn()?;
+**Real-world evidence (2026):**
+- monaco-yaml GitHub Issue #214: "Changing URI to include filename resolves download attempts"
 
-child.stdin.as_mut().unwrap().write_all(event_json.as_bytes())?;
-let status = child.wait()?;  // ❌ SIGPIPE if rulez writes to stdout
+**Prevention:**
+```typescript
+// src/lib/monaco-schema.ts
+import { configureMonacoYaml } from 'monaco-yaml';
 
-// RIGHT: Read stdout before waiting
-let output = child.wait_with_output()?;  // Reads and returns stdout/stderr
+configureMonacoYaml(monaco, {
+  schemas: [
+    {
+      uri: 'https://rulez.local/hooks-schema.json',  // ✓ Filename in URI
+      fileMatch: ['**/hooks.yaml'],
+      schema: {
+        $schema: 'http://json-schema.org/draft-07/schema#',
+        // ... schema definition
+      },
+    },
+  ],
+});
 ```
 
-**Prevention:**
-- Always use `wait_with_output()` if stdout/stderr are piped
-- Or use `Stdio::null()` if output is not needed
-- Never create pipe without reading it
-
-**Phase mapping:** Phase 3 (E2E Test Fixes) - Audit all test spawn() calls.
+**Phase mapping:** Phase 1 (Monaco Autocomplete) - Use proper URIs.
 
 ---
 
-### Pitfall 9: Debug CLI Flag Proliferation Without Subcommands
+### Pitfall 9: WebView Rendering Differences Cause Layout Shifts
 
 **Severity:** MEDIUM - UX
 
-**What goes wrong:** Adding flags for each event type (`--pre-tool-use`, `--post-tool-use`, `--user-prompt-submit`, etc.) creates complex, hard-to-use CLI.
+**What goes wrong:** UI looks correct on macOS but has layout issues on Windows/Linux due to WebView rendering differences.
 
-**Why it happens:** Extending existing `rulez debug` with flags seems simpler than refactoring to subcommands.
+**Why it happens:** WKWebView (macOS), WebView2 (Windows), WebKitGTK (Linux) have different font rendering, scrollbar styles, and CSS support.
 
-**Better design:**
-```bash
-# WRONG: Flag proliferation
-rulez debug --event-type user-prompt-submit --prompt "text" --cwd /path
-
-# RIGHT: Subcommands
-rulez debug user-prompt-submit --prompt "text" --cwd /path
-rulez debug pre-tool-use --command "git push" --cwd /path
-```
+**Real-world evidence (2026):**
+- Tauri Discussion #12311: "Layout and rendering differences between Windows and Linux"
+- WebView versions differ: macOS (Safari-based), Windows (Chromium-based), Linux (WebKit-based)
+- Use normalize.css for consistency
 
 **Prevention:**
-- Use `clap` subcommands from the start
-- Event types are naturally subcommands, not flags
-- Easier to add help text per event type
+```css
+/* src/styles/globals.css */
+/* Normalize scrollbars across platforms */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
 
-**Phase mapping:** Phase 2 (Debug CLI Improvements) - Use subcommands, not flags.
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--muted-foreground);
+  border-radius: 4px;
+}
+
+/* Force consistent font rendering */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+```
+
+**Phase mapping:** Phase 6 (Cross-Platform Polish) - Test on all platforms.
 
 ---
 
@@ -965,115 +1432,146 @@ rulez debug pre-tool-use --command "git push" --cwd /path
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Skip JSON Schema draft validation | Faster implementation | Breaking changes on schema updates, silent failures | Never (fail-closed requirement) |
-| Compile schemas on every event | No caching complexity | 5-10x performance penalty, exceeds latency budget | Only in MVP with <10 rules |
-| Share state across debug invocations | Faster execution (cache reuse) | Flaky tests, unreproducible bugs | Only with `--clean` flag option |
-| Use `ubuntu-latest` in CI | Automatic updates | Breaking changes when GitHub updates runner OS | Never for system dependencies (webkit) |
-| Use string paths instead of PathBuf | Less typing | Cross-platform failures, Windows incompatibility | Only in examples, never in core code |
-| Skip cross-platform E2E tests | Faster CI | Platform-specific bugs reach production | Only if CI time >30min (currently <5min) |
+| Load entire JSONL file via IPC | Simple implementation | App freezes on large files, OOM | Only for <1000 line logs |
+| Use `waitForTimeout()` in E2E tests | Tests pass quickly | Flaky tests, CI failures | Never (use auto-waiting) |
+| Watch entire directories with inotify | Simpler code | Linux resource exhaustion | Only if <100 files total |
+| Bundle Monaco without code-splitting | Faster dev setup | 3+ second load times | Only in internal tools |
+| Skip binary path detection fallbacks | Works on developer machines | Fails on Windows, user installs | Never (support all platforms) |
+| Don't cleanup Zustand event listeners | Less boilerplate | Memory leaks in production | Never (always cleanup) |
 
 ## Integration Gotchas
 
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| `jsonschema` crate | Recompile schema on every validation | Pre-compile at config load, store in `OnceCell<JSONSchema>` |
-| `assert_cmd` testing | Use relative paths for stdin | Canonicalize paths, use `PathBuf`, test on Windows |
-| GitHub Actions rust-cache | Assume cache invalidates on binary rename | Explicit cleanup or versioned cache keys |
-| Tauri 2.0 Linux builds | Install `libwebkit2gtk-4.0-dev` | Use `libwebkit2gtk-4.1-dev` on Ubuntu 22.04+ |
-| Debug CLI with global state | Share REGEX_CACHE across invocations | Clear state or use LRU cache with size limit |
+| monaco-yaml | Bundle includes duplicate monaco-editor | Configure Vite to deduplicate, use shared instance |
+| Tauri IPC (large data) | Send 10 MB JSONL in single invoke() | Stream with events + pagination |
+| notify (Linux) | Watch directories recursively | Watch specific files, use polling fallback |
+| Playwright + Monaco | Use `waitForTimeout()` for editor load | Wait for `.view-lines` selector, use auto-waiting |
+| Windows PATH | Split on `:` (Unix) | Use `path.delimiter` (platform-aware) |
+| Zustand + Tauri events | Register listeners without cleanup | Store unlisten functions, cleanup on unmount |
 
 ## Performance Traps
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Schema compilation in hot path | Latency scales with rule count | Pre-compile at config load | >20 rules with schemas |
-| Unbounded REGEX_CACHE | Memory grows indefinitely | LRU cache with max 100 entries | Long-running processes (daemons) |
-| JSON Schema draft mismatch | Validation silently fails | Require `$schema` field, fail if missing | User upgrades `jsonschema` crate |
-| Tempfile symlink non-resolution | macOS tests pass, CI fails | `fs::canonicalize()` before path comparison | macOS `/var` symlink |
-| Broken pipe on unread stdio | Tests fail with SIGPIPE on Linux | Always `wait_with_output()` if pipes exist | Linux CI runners |
+| Monaco bundle duplication | 3+ second load, 2+ MB JS | Vite deduplication config | Every page load |
+| JSONL IPC without streaming | 5-30 second freezes | Pagination + virtual scrolling | >10K log lines |
+| inotify watch exhaustion | File watching stops | Watch specific files, not dirs | >8K files (Linux default) |
+| Monaco async loading | E2E tests fail randomly | Auto-waiting, not timeouts | CI (different WebView timing) |
+| Event listener accumulation | Memory grows 10-50 MB/hour | Cleanup in useEffect | Long-running sessions |
+
+## Security Mistakes
+
+| Mistake | Risk | Prevention |
+|---------|------|------------|
+| Shell scope allows any binary | Command injection | Allowlist only "rulez" binary |
+| No validation on file paths from IPC | Path traversal | Validate paths are within `.claude/` |
+| Eval YAML as code | Code execution | Use `yaml.parse()`, never `eval()` |
+| No CSP (Content Security Policy) | XSS attacks | Configure CSP in tauri.conf.json |
+| Unsigned binaries | SmartScreen warnings | Code sign with EV certificate |
+
+## UX Pitfalls
+
+| Pitfall | User Impact | Better Approach |
+|---------|-------------|-----------------|
+| No loading indicator for logs | App appears frozen | Show progress bar with streaming |
+| File watching fails silently | Configs don't update | Show error banner with fix instructions |
+| Binary not found, no guidance | Feature appears broken | Show install instructions, link to docs |
+| Monaco loads slowly on first edit | Typing feels laggy | Preload Monaco on app startup |
+| No error handling for IPC failures | Blank screen, no context | Toast notifications with retry button |
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **JSON Schema validation:** Tested with all supported drafts (07, 2020-12), NOT just latest
-- [ ] **Schema performance:** Benchmarked with 100+ rules, stays <10ms p95
-- [ ] **Debug CLI state:** Verified no cross-invocation state leakage with automated test
-- [ ] **E2E tests:** Run on Linux, macOS, Windows in CI matrix (not just locally)
-- [ ] **Tauri builds:** CI uses `webkit2gtk-4.1-dev`, tested on Ubuntu 22.04 AND 24.04
-- [ ] **Binary rename:** Validated no stale artifacts with explicit `which rulez` check in CI
-- [ ] **Cross-platform paths:** Used `PathBuf` everywhere, tested Windows backslashes
-- [ ] **Regex cache:** LRU limit enforced, tested cache eviction with >100 unique patterns
+- [ ] **Monaco autocomplete:** Schema appears in editor, but bundle size >2 MB (deduplication failed)
+- [ ] **Log viewing:** Works with 100 lines, but freezes with 10K lines (no pagination)
+- [ ] **File watching:** Works on macOS, but fails on Linux with many files (no inotify limit check)
+- [ ] **E2E tests:** Pass locally, but fail in CI 50% of time (artificial timeouts, not auto-waiting)
+- [ ] **Binary detection:** Works on Unix, but fails on Windows (PATH separator issue)
+- [ ] **Zustand stores:** Work in production, but memory leaks in long-running sessions (no cleanup)
+- [ ] **Cross-platform UI:** Perfect on macOS, but layout shifts on Windows (WebView differences)
+- [ ] **Tauri shell scope:** Can execute commands, but binary name is outdated ("cch" not "rulez")
 
 ## Recovery Strategies
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Schema draft incompatibility | LOW | Add `$schema` validation to config load, reject unsupported drafts |
-| Schema compilation overhead | MEDIUM | Refactor to `OnceCell<JSONSchema>`, add benchmarks to CI |
-| Debug state contamination | LOW | Add `REGEX_CACHE.clear()` at start of debug command |
-| E2E path resolution | MEDIUM | Refactor to use `fs::canonicalize()`, add Windows CI job |
-| Tauri webkit dependency | LOW | Update CI to use `libwebkit2gtk-4.1-dev`, pin runner to `ubuntu-22.04` |
-| Stale binary cache | MEDIUM | Clear `~/.cargo/bin/`, invalidate cache key, rebuild |
-| Broken pipe in tests | LOW | Replace `.spawn()` + `.wait()` with `.output()` or `.wait_with_output()` |
+| Monaco bundle duplication | LOW | Add Vite deduplication config, verify with `bun why monaco-editor` |
+| JSONL IPC freeze | MEDIUM | Refactor to streaming API with events, add virtual scrolling |
+| inotify exhaustion | LOW | Switch to file-specific watches, add polling fallback |
+| E2E flakiness | MEDIUM | Remove all `waitForTimeout()`, use Playwright auto-waiting |
+| Windows PATH issues | LOW | Use `path.delimiter`, add Windows to CI matrix |
+| Zustand memory leak | MEDIUM | Add cleanup to all event listeners, test with memory profiler |
+| WebView rendering diff | LOW | Add normalize.css, test on all platforms |
+| Shell scope outdated | LOW | Update tauri.conf.json, redeploy |
 
 ## Pitfall-to-Phase Mapping
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| P1: JSON Schema draft incompatibility | Phase 1 (Schema Integration) | Config validation rejects missing `$schema`, unit tests for draft-07 and 2020-12 |
-| P2: Schema validation performance | Phase 1 (Schema Integration) | Criterion benchmark shows <10ms with 100 rules |
-| P3: Debug CLI state contamination | Phase 2 (Debug CLI) | Integration test verifies state isolation between invocations |
-| P4: E2E tempfile paths | Phase 3 (E2E Fixes) | CI matrix runs on ubuntu/macos/windows, all pass |
-| P5: Tauri webkit dependency | Phase 4 (Tauri CI) | CI build succeeds on ubuntu-22.04 and ubuntu-24.04 |
-| P6: Stale binary cache | Phase 3 (E2E Fixes) | CI validates binary name with `which rulez` before tests |
-| P7: `allOf` with `flatten` | Phase 1 (Schema Integration) | Documentation explicitly warns against this pattern |
-| P8: Broken pipe on Linux | Phase 3 (E2E Fixes) | All tests use `wait_with_output()`, Linux CI passes |
-| P9: Debug CLI flag proliferation | Phase 2 (Debug CLI) | CLI uses subcommands, help text is clear and concise |
+| P1: Monaco bundle duplication | Phase 1 (Autocomplete) | Bundle size <1.5 MB, `bun why monaco-editor` shows single instance |
+| P2: JSONL IPC bottleneck | Phase 2 (Log Viewing) | Load 100K line log in <2 seconds |
+| P3: inotify exhaustion | Phase 3 (File Watching) | Works with >10K files, shows error if limit hit |
+| P4: E2E flakiness | Phase 4 (Test Stabilization) | 100% pass rate over 10 runs |
+| P5: Windows PATH issues | Phase 5 (Binary Detection) | CI passes on Windows, macOS, Linux |
+| P6: Zustand memory leak | Phase 3 (File Watching) | Memory stable after 1 hour runtime |
+| P7: Shell scope outdated | Phase 5 (Binary Detection) | Can execute `rulez` from UI |
+| P8: Schema URI downloads | Phase 1 (Autocomplete) | No network requests in DevTools |
+| P9: WebView rendering diff | Phase 6 (Polish) | Consistent layout on all platforms |
 
 ## Sources
 
-**JSON Schema (HIGH confidence):**
-- [GSoC 2026: JSON Schema Compatibility Checker](https://github.com/json-schema-org/community/issues/984)
-- [The Last Breaking Change - JSON Schema Blog](https://json-schema.org/blog/posts/the-last-breaking-change)
-- [Rust and JSON Schema: odd couple or perfect strangers](https://ahl.dtrace.org/2024/01/22/rust-and-json-schema/)
-- [jsonschema crate - docs.rs](https://docs.rs/jsonschema)
-- [jsonschema - crates.io: Rust Package Registry](https://crates.io/crates/jsonschema)
-- [GitHub - Stranger6667/jsonschema: A high-performance JSON Schema validator for Rust](https://github.com/Stranger6667/jsonschema)
+**Monaco Editor (HIGH confidence):**
+- [monaco-yaml GitHub](https://github.com/remcohaszing/monaco-yaml)
+- [Monaco YAML Issue #214 - Schema URI downloads](https://github.com/remcohaszing/monaco-yaml/issues/214)
+- [Monaco Editor Issue #2755 - Async autocomplete](https://github.com/microsoft/monaco-editor/issues/2755)
+- [Monaco Editor Issue #4033 - Performance with large files](https://github.com/microsoft/monaco-editor/issues/4033)
+- [Vite Plugin Monaco Editor](https://github.com/vbenjs/vite-plugin-monaco-editor)
 
-**Tauri 2.0 Dependencies (HIGH confidence):**
-- [libwebkit2gtk-4.0 not available in Ubuntu 24 - GitHub Issue #9662](https://github.com/tauri-apps/tauri/issues/9662)
-- [Tauri v2 Prerequisites](https://v2.tauri.app/start/prerequisites/)
-- [Migration to webkit2gtk-4.1 on Linux port](https://v2.tauri.app/blog/tauri-2-0-0-alpha-3/)
-- [Problem with WebKitGTK · tauri-apps/tauri · Discussion #9088](https://github.com/tauri-apps/tauri/discussions/9088)
-- [GitHub | Tauri](https://v2.tauri.app/distribute/pipelines/github/)
-- [GitHub - tauri-apps/tauri-action: Build your Web application as a Tauri binary](https://github.com/tauri-apps/tauri-action)
+**Tauri IPC (HIGH confidence):**
+- [Tauri IPC Documentation](https://v2.tauri.app/concept/inter-process-communication/)
+- [Tauri Discussion #7699 - Deprecate JSON in IPC](https://github.com/tauri-apps/tauri/discussions/7699)
+- [Tauri Issue #7127 - Binary data in IPC](https://github.com/tauri-apps/tauri/issues/7127)
+- [Tauri WebView Versions](https://v2.tauri.app/reference/webview-versions/)
 
-**CLI Testing (HIGH confidence):**
-- [Testing - Command Line Applications in Rust](https://rust-cli.github.io/book/tutorial/testing.html)
-- [assert_cmd documentation](https://docs.rs/assert_cmd/latest/assert_cmd/)
-- [stdin handling API issue - GitHub #73](https://github.com/assert-rs/assert_cmd/issues/73)
-- [Master Cross-Platform Development in Rust | Windows, macOS, Linux Guide](https://codezup.com/building-cross-platform-tools-rust-guide-windows-macos-linux/)
-- [How I test Rust command-line apps with assert_cmd](https://alexwlchan.net/2025/testing-rust-cli-apps-with-assert-cmd/)
+**File Watching (HIGH confidence):**
+- [Rust notify crate documentation](https://docs.rs/notify/latest/notify/)
+- [notify crate - Platform differences](https://github.com/notify-rs/notify)
+- [Parcel Watcher Issue #171 - FSEvents vs inotify](https://github.com/parcel-bundler/watcher/issues/171)
+- [Notify 9.0 RC - Debouncing enhancements](https://cargo-run.news/p/notify-9-0-rc-enhances-filesystem-watching-with-robust-debouncing)
 
-**Rust CLI Best Practices (MEDIUM confidence):**
-- [Guide: Building Beautiful & User-Friendly Rust CLI Tools](https://gist.github.com/g1ibby/786cc16cc981090abb6692d5d40a6e1b)
-- [5 Tips for Writing Small CLI Tools in Rust - Pascal's Scribbles](https://deterministic.space/rust-cli-tips.html)
-- [dialoguer - Rust](https://docs.rs/dialoguer)
+**Playwright Testing (HIGH confidence):**
+- [Playwright Flaky Tests Guide (2026)](https://www.browserstack.com/guide/playwright-flaky-tests)
+- [Tauri Testing Documentation](https://v2.tauri.app/develop/tests/)
+- [Playwright Best Practices (2026)](https://www.browserstack.com/guide/playwright-best-practices)
+- [Playwright CDP with Tauri](https://github.com/Haprog/playwright-cdp)
 
-**GitHub Actions (MEDIUM confidence):**
-- [Rust Cache Action](https://github.com/Swatinem/rust-cache)
-- [GitHub Actions Matrix Builds](https://oneuptime.com/blog/post/2026-01-25-github-actions-matrix-builds/view)
-- [Tauri GitHub Actions](https://v2.tauri.app/distribute/pipelines/github/)
+**Cross-Platform (HIGH confidence):**
+- [cross-platform-node-guide - Environment Variables](https://github.com/ehmicky/cross-platform-node-guide/blob/main/docs/4_terminal/environment_variables.md)
+- [cross-platform-node-guide - File Paths](https://github.com/ehmicky/cross-platform-node-guide/blob/main/docs/3_filesystem/file_paths.md)
+- [Tauri Discussion #12311 - Layout differences](https://github.com/tauri-apps/tauri/discussions/12311)
 
-**Discrete Event Simulation (MEDIUM confidence):**
-- [Discrete-event simulation - James Hanlon](https://www.jameswhanlon.com/discrete-event-simulation.html)
-- [Event-Driven Architecture: The Hard Parts - Three Dots Labs](https://threedots.tech/episode/event-driven-architecture/)
+**State Management (MEDIUM confidence):**
+- [Zustand Discussion #2540 - Memory leaks](https://github.com/pmndrs/zustand/discussions/2540)
+- [Zustand Discussion #2054 - Subscriber cleanup](https://github.com/pmndrs/zustand/discussions/2054)
+- [Zustand Discussion #1394 - Avoiding stale state](https://github.com/pmndrs/zustand/discussions/1394)
+- [Zustand Documentation - Persisting Store Data](https://zustand.docs.pmnd.rs/integrations/persisting-store-data)
+
+**Performance (MEDIUM confidence):**
+- [JSONL Performance Guide](https://ndjson.com/performance/)
+- [stream-json - Node.js streaming JSON parser](https://github.com/uhop/stream-json)
+- [TanStack Virtual](https://tanstack.com/virtual)
+
+**Tauri Security (HIGH confidence):**
+- [Tauri Command Scopes](https://v2.tauri.app/security/scope/)
+- [Tauri Shell Security Advisory](https://github.com/tauri-apps/plugins-workspace/security/advisories/GHSA-c9pr-q8gx-3mgp)
+- [Tauri Updater Plugin](https://v2.tauri.app/plugin/updater/)
 
 **Project Context (HIGH confidence):**
-- RuleZ v1.3 Milestone Audit (internal)
-- RuleZ CI history: binary rename, broken pipe issues (project context)
-- Existing E2E tests: `e2e_git_push_block.rs` (codebase)
+- RuleZ UI tauri.conf.json (shell scope references "cch")
+- RuleZ UI test files (flaky E2E tests)
+- RuleZ v1.4 completion (Tauri CI working)
 
 ---
 
 **Last Updated:** 2026-02-10
-**Next Review:** After Phase 1 implementation (validate performance assumptions with benchmarks)
+**Next Review:** After Phase 1 implementation (validate Monaco bundle size)

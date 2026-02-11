@@ -1,1093 +1,1639 @@
-# Architecture Integration: v1.4 Stability & Polish
+# Architecture Integration: v1.5 RuleZ UI Production Features
 
-**Domain:** Policy Engine Runtime Validation, CLI Debugging, Cross-Platform Testing
-**Milestone:** v1.4 - JSON Schema validation, Debug CLI improvements, E2E test fixes, Tauri CI
+**Domain:** Desktop Application for Policy Configuration Management
+**Milestone:** v1.5 - Log Viewer, Settings Persistence, File Watching, Config Management
 **Researched:** 2026-02-10
-**Confidence:** HIGH (based on existing codebase analysis, jsonschema crate docs, Tauri 2.0 docs, GitHub Actions patterns)
+**Confidence:** HIGH (based on Tauri 2.0 docs, React patterns, existing M1 scaffold analysis)
 
 ---
 
 ## Executive Summary
 
-v1.4 integrates **four stability features** into the existing RuleZ architecture without breaking changes:
+v1.5 adds **four production features** to the existing RuleZ UI scaffold (M1) without breaking the established architecture:
 
-1. **JSON Schema validation for hook events** — Pre-validation layer in event processing pipeline
-2. **Debug CLI UserPromptSubmit simulation** — Extends existing `cli/debug.rs` with new event type
-3. **E2E test cross-platform fixes** — Path canonicalization in test setup helpers
-4. **Tauri 2.0 CI builds** — New GitHub Actions workflow for desktop app
+1. **Log Viewer** — Real-time JSONL audit log streaming with virtual scrolling
+2. **Settings Persistence** — User preferences stored via Tauri Store plugin
+3. **File Watching** — Live config reload when hooks.yaml changes externally
+4. **Config Diffing** — Visual comparison of global vs project configurations
 
-**Integration Pattern:** All features are **additive enhancements** to existing components. No modifications to core rule evaluation engine (`hooks.rs`).
+**Integration Pattern:** All features follow the **existing M1 architecture** (Zustand stores, Tauri commands, dual-mode support). New features add:
+- 1 new Zustand store (`logStore`)
+- 1 new Tauri command module (`logs.rs`)
+- 3 new component groups (logs/, settings/, diff/)
+- 0 breaking changes to existing scaffold
 
-**Performance Impact:** JSON Schema validation adds <0.1ms per event (cached validator). Total overhead within <10ms budget.
+**Performance Impact:** Virtual scrolling handles 100K+ log lines. File watching uses debounced Tauri fs-watch plugin (<50ms latency).
 
-**Build Dependencies:** ONE new Rust dependency (`schemars 1.2.1` for schema generation). E2E and Tauri CI use existing test infrastructure.
-
----
-
-## Existing Architecture (v1.3 Baseline)
-
-### Core Event Processing Pipeline
-
-```
-Claude Code (sends JSON via stdin)
-    ↓
-main.rs::process_hook_event()
-    ├─> io::stdin().read_to_string(&mut buffer)
-    ├─> serde_json::from_str::<Event>(&buffer)  [Syntax validation only]
-    └─> Config::load(event.cwd)
-            ├─> Try .claude/hooks.yaml (project)
-            ├─> Try ~/.claude/hooks.yaml (global)
-            └─> Default (empty config, fail-open)
-    ↓
-hooks::process_event(event, debug_config)
-    ├─> For each rule in config.rules:
-    │       ├─> evaluate_matchers(rule, event)
-    │       │   (event_types, tools, prompt_match, require_fields, field_types)
-    │       │
-    │       ├─> If matched:
-    │       │   └─> execute_actions(rule, event)
-    │       │       ├─> Block → exit 2 (stderr reason)
-    │       │       ├─> Inject → Response { context: Some(...) }
-    │       │       └─> Validate → run inline_script or validate_expr
-    │       │
-    │       └─> log_entry(decision, rule, timing)
-    │
-    └─> Aggregate results (priority order)
-            ↓
-Response { continue_: bool, context: Option<String>, reason: Option<String> }
-    ↓
-stdout (JSON) or exit 2 (stderr)
-```
-
-### Key Components (v1.3)
-
-| Component | File | Responsibility |
-|-----------|------|----------------|
-| **Event Parser** | `main.rs:228-271` | Read stdin, deserialize Event, call process_event |
-| **Config Loader** | `config.rs:82-121` | Load YAML with fallback, validate structure |
-| **Rule Evaluator** | `hooks.rs` | Match event to rules, execute actions |
-| **Data Models** | `models.rs` | Type defs (Event, Rule, Response, etc.) |
-| **Audit Logger** | `logging.rs` | JSON Lines audit trail |
-| **Debug CLI** | `cli/debug.rs` | Simulate events (PreToolUse, PostToolUse, SessionStart, PermissionRequest) |
-| **Regex Cache** | `hooks.rs:36-37` | LazyLock global cache (unbounded, v1.3 tech debt) |
+**Dependencies:** 2 new Rust crates (`tauri-plugin-fs 2.0`, `tauri-plugin-store 2.0`), 1 new React library (`react-window` for virtual scrolling).
 
 ---
 
-## v1.4 Integration Points
+## Existing Architecture (M1 Baseline)
 
-### Integration Point 1: JSON Schema Validation in Event Pipeline
+### M1 Scaffold Overview
 
-**Where:** `main.rs::process_hook_event()` BEFORE `hooks::process_event()`
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                           RuleZ UI (M1)                              │
+├─────────────────────────────────────────────────────────────────────┤
+│  React 18 + TypeScript + Tailwind CSS 4                             │
+│                                                                       │
+│  ┌─────────────────────┐  ┌─────────────────────┐                   │
+│  │   Layout Layer      │  │   State Layer       │                   │
+│  ├─────────────────────┤  ├─────────────────────┤                   │
+│  │ • AppShell          │  │ • configStore       │                   │
+│  │ • Header            │  │ • editorStore       │                   │
+│  │ • Sidebar           │  │ • uiStore           │                   │
+│  │ • MainContent       │  └─────────────────────┘                   │
+│  │ • RightPanel        │                                             │
+│  │ • StatusBar         │                                             │
+│  └─────────────────────┘                                             │
+│                                                                       │
+│  ┌─────────────────────────────────────────────────────────┐         │
+│  │              Component Groups (18 total)                │         │
+│  ├─────────────────────────────────────────────────────────┤         │
+│  │ editor/    │ YamlEditor, RuleTreeView, ValidationPanel  │         │
+│  │ files/     │ FileTabBar                                 │         │
+│  │ simulator/ │ DebugSimulator, EventForm, ResultView      │         │
+│  │ layout/    │ 6 shell components                         │         │
+│  │ ui/        │ ThemeToggle, ConfirmDialog                 │         │
+│  └─────────────────────────────────────────────────────────┘         │
+├─────────────────────────────────────────────────────────────────────┤
+│                         Tauri 2.0 Backend                            │
+│                                                                       │
+│  Rust Commands (src-tauri/src/commands/)                             │
+│  ┌────────────────────┐  ┌────────────────────┐                     │
+│  │  config.rs         │  │  debug.rs          │                     │
+│  ├────────────────────┤  ├────────────────────┤                     │
+│  │ list_config_files  │  │ run_debug          │                     │
+│  │ read_config        │  │ validate_config    │                     │
+│  │ write_config       │  └────────────────────┘                     │
+│  └────────────────────┘                                              │
+├─────────────────────────────────────────────────────────────────────┤
+│                      Dual-Mode Architecture                          │
+│                                                                       │
+│  src/lib/tauri.ts::isTauri()                                         │
+│      ├─> Desktop Mode: Real Tauri IPC commands                      │
+│      └─> Web Mode: Mock data fallbacks (for Playwright E2E)         │
+└─────────────────────────────────────────────────────────────────────┘
+```
 
-**Current Flow (v1.3):**
+### M1 Data Flow
+
+```
+User Action (e.g., open config file)
+    ↓
+Component Event Handler
+    ↓
+Tauri Abstraction Layer (src/lib/tauri.ts)
+    ├─> isTauri() === true?
+    │   ├─> YES: invoke("list_config_files", { projectDir })
+    │   │       ↓
+    │   │   Tauri Backend (commands/config.rs)
+    │   │       ↓
+    │   │   Filesystem I/O
+    │   │       ↓
+    │   │   Return ConfigFile[]
+    │   │
+    │   └─> NO: mockListConfigFiles(projectDir)
+    │           ↓
+    │       Return mock data
+    ↓
+Update Zustand Store (configStore.setGlobalConfig)
+    ↓
+React Re-render (subscribers notified)
+    ↓
+UI Update
+```
+
+### M1 Key Patterns
+
+| Pattern | Implementation | Purpose |
+|---------|---------------|---------|
+| **Dual-Mode IPC** | `src/lib/tauri.ts::isTauri()` | Run in desktop (Tauri) or browser (E2E tests) |
+| **State Management** | Zustand stores (configStore, editorStore, uiStore) | Global state without prop drilling |
+| **Component Organization** | Grouped by feature (editor/, simulator/, layout/) | Maintainability |
+| **Monaco Integration** | `@monaco-editor/react` + `monaco-yaml` | YAML editing with JSON Schema validation |
+| **Tauri Commands** | Rust functions with `#[tauri::command]` macro | Type-safe IPC |
+
+---
+
+## v1.5 Integration Points
+
+### Integration Point 1: Log Viewer with Streaming
+
+**Where:** New component group `components/logs/` + new Tauri command `commands/logs.rs`
+
+**Components to Add:**
+
+```
+src/components/logs/
+├── LogViewer.tsx          # Main container (virtualized list)
+├── LogFilterBar.tsx       # Filter controls (level, rule name, date range)
+├── LogEntry.tsx           # Single log line (memoized)
+└── LogStats.tsx           # Summary stats (total entries, time range)
+```
+
+**New Zustand Store:**
+
+```typescript
+// src/stores/logStore.ts (NEW)
+import { create } from "zustand";
+
+export interface LogEntry {
+  timestamp: string;
+  level: "debug" | "info" | "warn" | "error";
+  event_type: string;
+  rule_name?: string;
+  outcome: "Allow" | "Block" | "Inject";
+  reason?: string;
+  evaluation_time_ms: number;
+}
+
+interface LogState {
+  entries: LogEntry[];
+  filter: {
+    level: string[];
+    outcome: string[];
+    ruleNames: string[];
+    dateRange: { start?: Date; end?: Date };
+  };
+  isLoading: boolean;
+  isStreaming: boolean;
+  totalEntries: number;
+}
+
+interface LogActions {
+  loadLogs: () => Promise<void>;
+  startStreaming: () => void;
+  stopStreaming: () => void;
+  setFilter: (filter: Partial<LogState["filter"]>) => void;
+  clearLogs: () => void;
+}
+
+export const useLogStore = create<LogState & LogActions>((set, get) => ({
+  // State
+  entries: [],
+  filter: {
+    level: [],
+    outcome: [],
+    ruleNames: [],
+    dateRange: {},
+  },
+  isLoading: false,
+  isStreaming: false,
+  totalEntries: 0,
+
+  // Actions
+  loadLogs: async () => {
+    set({ isLoading: true });
+    try {
+      const logs = await readLogs({ limit: 1000 }); // From tauri.ts
+      set({ entries: logs, totalEntries: logs.length, isLoading: false });
+    } catch (error) {
+      console.error("Failed to load logs:", error);
+      set({ isLoading: false });
+    }
+  },
+
+  startStreaming: () => {
+    // Use Tauri event listener for file changes
+    const unlisten = watchLogFile((newEntry: LogEntry) => {
+      set((state) => ({
+        entries: [...state.entries, newEntry],
+        totalEntries: state.totalEntries + 1,
+      }));
+    });
+    set({ isStreaming: true });
+  },
+
+  stopStreaming: () => {
+    // Cleanup listener
+    set({ isStreaming: false });
+  },
+
+  setFilter: (filter) =>
+    set((state) => ({
+      filter: { ...state.filter, ...filter },
+    })),
+
+  clearLogs: () => set({ entries: [], totalEntries: 0 }),
+}));
+```
+
+**New Tauri Commands:**
 
 ```rust
-// rulez/src/main.rs:228-271
-async fn process_hook_event(cli: &Cli, _config: &config::Config) -> Result<()> {
-    let mut buffer = String::new();
-    io::stdin().read_to_string(&mut buffer)?;
+// rulez-ui/src-tauri/src/commands/logs.rs (NEW)
+use serde::{Deserialize, Serialize};
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+use std::path::PathBuf;
 
-    // Parse event (serde validates JSON syntax ONLY, not structure)
-    let event: models::Event = serde_json::from_str(&buffer)?;
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LogEntry {
+    pub timestamp: String,
+    pub level: String,
+    pub event_type: String,
+    pub rule_name: Option<String>,
+    pub outcome: String,
+    pub reason: Option<String>,
+    pub evaluation_time_ms: f64,
+}
 
-    // Load config using event.cwd (project-scoped)
-    let project_config = config::Config::load(event.cwd.as_ref().map(...))?;
+#[derive(Debug, Deserialize)]
+pub struct ReadLogsParams {
+    pub limit: Option<usize>,
+    pub offset: Option<usize>,
+}
 
-    // Process event
-    let response = hooks::process_event(event, &debug_config).await?;
+/// Get log file path (~/.claude/logs/rulez.log)
+fn get_log_path() -> Option<PathBuf> {
+    dirs::home_dir().map(|home| home.join(".claude").join("logs").join("rulez.log"))
+}
 
-    // Return response or exit 2
-    if !response.continue_ {
-        eprintln!("{}", response.reason.as_deref().unwrap_or("Blocked"));
-        std::process::exit(2);
+/// Read logs from JSONL file with optional pagination
+#[tauri::command]
+pub async fn read_logs(params: ReadLogsParams) -> Result<Vec<LogEntry>, String> {
+    let log_path = get_log_path()
+        .ok_or_else(|| "Could not determine log path".to_string())?;
+
+    if !log_path.exists() {
+        return Ok(vec![]);
     }
 
-    println!("{}", serde_json::to_string(&response)?);
+    let file = File::open(&log_path)
+        .map_err(|e| format!("Failed to open log file: {}", e))?;
+
+    let reader = BufReader::new(file);
+    let offset = params.offset.unwrap_or(0);
+    let limit = params.limit.unwrap_or(1000);
+
+    let entries: Result<Vec<LogEntry>, String> = reader
+        .lines()
+        .skip(offset)
+        .take(limit)
+        .map(|line| {
+            let line = line.map_err(|e| format!("Failed to read line: {}", e))?;
+            serde_json::from_str(&line)
+                .map_err(|e| format!("Failed to parse log entry: {}", e))
+        })
+        .collect();
+
+    entries
+}
+
+/// Count total log entries
+#[tauri::command]
+pub async fn count_logs() -> Result<usize, String> {
+    let log_path = get_log_path()
+        .ok_or_else(|| "Could not determine log path".to_string())?;
+
+    if !log_path.exists() {
+        return Ok(0);
+    }
+
+    let file = File::open(&log_path)
+        .map_err(|e| format!("Failed to open log file: {}", e))?;
+
+    let reader = BufReader::new(file);
+    Ok(reader.lines().count())
+}
+
+/// Clear log file
+#[tauri::command]
+pub async fn clear_logs() -> Result<(), String> {
+    let log_path = get_log_path()
+        .ok_or_else(|| "Could not determine log path".to_string())?;
+
+    if log_path.exists() {
+        std::fs::write(&log_path, "")
+            .map_err(|e| format!("Failed to clear log file: {}", e))?;
+    }
+
     Ok(())
 }
 ```
 
-**NEW Flow (v1.4):**
+**Frontend Wrapper (Dual-Mode):**
 
-```rust
-// rulez/src/main.rs (MODIFIED)
-async fn process_hook_event(cli: &Cli, _config: &config::Config) -> Result<()> {
-    let mut buffer = String::new();
-    io::stdin().read_to_string(&mut buffer)?;
+```typescript
+// src/lib/tauri.ts (ADD)
+import type { LogEntry, ReadLogsParams } from "@/types";
 
-    // NEW STEP 1: Parse as generic JSON Value
-    let event_json: serde_json::Value = serde_json::from_str(&buffer)?;
-
-    // NEW STEP 2: Validate against JSON Schema (cached validator)
-    validate_event_schema(&event_json)?;  // ← NEW function
-
-    // EXISTING: Deserialize to Event struct
-    let event: models::Event = serde_json::from_value(event_json)?;
-
-    // ... rest unchanged
-}
-
-// NEW: Schema validation function
-use std::sync::LazyLock;
-use jsonschema::JSONSchema;
-
-static EVENT_SCHEMA_VALIDATOR: LazyLock<JSONSchema> = LazyLock::new(|| {
-    let schema_json: serde_json::Value = serde_json::from_str(
-        include_str!("../schema/hook-event-schema.json")
-    ).expect("Failed to parse event schema");
-
-    JSONSchema::compile(&schema_json)
-        .expect("Failed to compile event schema")
-});
-
-fn validate_event_schema(event: &serde_json::Value) -> Result<()> {
-    EVENT_SCHEMA_VALIDATOR.validate(event)
-        .map_err(|errors| {
-            let messages: Vec<_> = errors.map(|e| e.to_string()).collect();
-            anyhow::anyhow!("Event schema validation failed: {}", messages.join(", "))
-        })
-}
-```
-
-**New Component: Schema File**
-
-```json
-// rulez/schema/hook-event-schema.json (NEW FILE)
-{
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "RuleZ Hook Event",
-  "type": "object",
-  "required": ["hook_event_name", "session_id"],
-  "properties": {
-    "hook_event_name": {
-      "type": "string",
-      "enum": ["PreToolUse", "PostToolUse", "SessionStart", "PermissionRequest", "UserPromptSubmit"]
-    },
-    "session_id": { "type": "string" },
-    "tool_name": { "type": "string" },
-    "tool_input": { "type": "object" },
-    "prompt": { "type": "string" },
-    "cwd": { "type": "string" },
-    "timestamp": { "type": "string", "format": "date-time" }
+export async function readLogs(params: ReadLogsParams): Promise<LogEntry[]> {
+  if (isTauri()) {
+    const { invoke } = await import("@tauri-apps/api/core");
+    return invoke<LogEntry[]>("read_logs", params);
   }
+  return mockReadLogs(params);
+}
+
+export async function countLogs(): Promise<number> {
+  if (isTauri()) {
+    const { invoke } = await import("@tauri-apps/api/core");
+    return invoke<number>("count_logs");
+  }
+  return mockCountLogs();
+}
+
+export async function clearLogs(): Promise<void> {
+  if (isTauri()) {
+    const { invoke } = await import("@tauri-apps/api/core");
+    return invoke<void>("clear_logs");
+  }
+  return mockClearLogs();
+}
+
+// Mock implementations for web mode
+async function mockReadLogs(params: ReadLogsParams): Promise<LogEntry[]> {
+  await delay(100);
+  // Return sample JSONL data
+  return [
+    {
+      timestamp: new Date().toISOString(),
+      level: "info",
+      event_type: "PreToolUse",
+      rule_name: "block-force-push",
+      outcome: "Block",
+      reason: "Force push prohibited",
+      evaluation_time_ms: 1.2,
+    },
+    // ... more mock entries
+  ].slice(params.offset || 0, (params.offset || 0) + (params.limit || 1000));
 }
 ```
 
-**Schema Generation (Automatic via schemars):**
+**Virtual Scrolling with react-window:**
 
-```rust
-// rulez/src/models.rs (MODIFIED)
-use schemars::{JsonSchema, schema_for};
+```typescript
+// src/components/logs/LogViewer.tsx (NEW)
+import { FixedSizeList as List } from "react-window";
+import { useLogStore } from "@/stores/logStore";
+import { LogEntry } from "./LogEntry";
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]  // ← Add JsonSchema derive
-pub struct Event {
-    pub hook_event_name: EventType,
-    pub session_id: String,
-    pub tool_name: Option<String>,
-    pub tool_input: Option<serde_json::Value>,
-    pub prompt: Option<String>,
-    pub cwd: Option<String>,
-    pub timestamp: DateTime<Utc>,
-    // ... other fields
-}
+export function LogViewer() {
+  const { entries, loadLogs, isLoading } = useLogStore();
 
-// Generate schema programmatically
-pub fn generate_event_schema() -> serde_json::Value {
-    let schema = schema_for!(Event);
-    serde_json::to_value(&schema).expect("Schema serialization failed")
+  useEffect(() => {
+    loadLogs();
+  }, []);
+
+  if (isLoading) {
+    return <div>Loading logs...</div>;
+  }
+
+  return (
+    <div className="h-full">
+      <List
+        height={600}
+        itemCount={entries.length}
+        itemSize={40}
+        width="100%"
+      >
+        {({ index, style }) => (
+          <LogEntry entry={entries[index]!} style={style} />
+        )}
+      </List>
+    </div>
+  );
 }
 ```
 
-**Integration Pattern:**
+**Integration with Existing Layout:**
 
-1. **Schema generation:** Use `schemars` derive macro on `Event` struct → automatic schema from Rust types
-2. **Schema compilation:** One-time at startup, cached in `LazyLock<JSONSchema>`
-3. **Validation:** Per-event, <0.1ms overhead (pre-compiled validator)
-4. **Error handling:** Return `Err()` → exit code 1 (config error, not blocking)
+```typescript
+// src/stores/uiStore.ts (MODIFY)
+export type RightPanelTab = "simulator" | "tree" | "logs";  // ← Add "logs"
+
+// src/components/layout/RightPanel.tsx (MODIFY)
+export function RightPanel() {
+  const { rightPanelTab } = useUIStore();
+
+  return (
+    <div className="w-96 border-l border-gray-200 dark:border-gray-800">
+      <div className="flex border-b">
+        <TabButton tab="simulator" label="Simulator" />
+        <TabButton tab="tree" label="Tree" />
+        <TabButton tab="logs" label="Logs" />  {/* ← NEW */}
+      </div>
+
+      <div className="p-4">
+        {rightPanelTab === "simulator" && <DebugSimulator />}
+        {rightPanelTab === "tree" && <RuleTreeView />}
+        {rightPanelTab === "logs" && <LogViewer />}  {/* ← NEW */}
+      </div>
+    </div>
+  );
+}
+```
+
+**Modified Files:**
+
+- `rulez-ui/src/stores/logStore.ts`: NEW (log state management)
+- `rulez-ui/src/components/logs/*.tsx`: NEW (4 components)
+- `rulez-ui/src-tauri/src/commands/logs.rs`: NEW (JSONL reader)
+- `rulez-ui/src-tauri/src/commands/mod.rs`: Add `pub mod logs;`
+- `rulez-ui/src/lib/tauri.ts`: Add log functions with dual-mode support
+- `rulez-ui/src/types/index.ts`: Add LogEntry, ReadLogsParams types
+- `rulez-ui/package.json`: Add `react-window` dependency
+- `rulez-ui/src-tauri/Cargo.toml`: No new deps (uses std::fs)
 
 **Performance:**
 
 ```
-Schema compilation:  ~0.5ms  (once at startup, cached)
-Per-event validation: <0.1ms (pre-compiled validator)
-Total overhead:       <0.1ms (within <10ms budget)
+Virtual scrolling:    Renders only ~20 visible items (not 100K)
+JSONL parsing:        ~1-2ms per 1000 lines
+Initial load (1K):    <100ms
+Memory footprint:     ~100 bytes per entry in state
+```
+
+---
+
+### Integration Point 2: Settings Persistence with Tauri Store Plugin
+
+**Where:** New component `components/settings/` + Tauri Store plugin integration
+
+**Settings Structure:**
+
+```typescript
+// src/types/index.ts (ADD)
+export interface UserSettings {
+  theme: "light" | "dark" | "system";
+  editorFontSize: number;
+  autoSave: boolean;
+  autoSaveDelay: number; // ms
+  defaultConfigScope: "global" | "project";
+  rulez_binary_path?: string; // Custom binary location
+  logLevel: "debug" | "info" | "warn" | "error";
+}
+```
+
+**New Tauri Commands:**
+
+```rust
+// rulez-ui/src-tauri/src/commands/settings.rs (NEW)
+use serde::{Deserialize, Serialize};
+use tauri::State;
+use tauri_plugin_store::StoreExt;
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct UserSettings {
+    pub theme: String,
+    pub editor_font_size: u32,
+    pub auto_save: bool,
+    pub auto_save_delay: u32,
+    pub default_config_scope: String,
+    pub rulez_binary_path: Option<String>,
+    pub log_level: String,
+}
+
+impl Default for UserSettings {
+    fn default() -> Self {
+        Self {
+            theme: "system".to_string(),
+            editor_font_size: 14,
+            auto_save: true,
+            auto_save_delay: 2000,
+            default_config_scope: "project".to_string(),
+            rulez_binary_path: None,
+            log_level: "info".to_string(),
+        }
+    }
+}
+
+/// Load settings from Tauri Store
+#[tauri::command]
+pub async fn load_settings(app: tauri::AppHandle) -> Result<UserSettings, String> {
+    let store = app.store("settings.json")
+        .map_err(|e| format!("Failed to load store: {}", e))?;
+
+    let settings = store.get("user_settings")
+        .and_then(|v| serde_json::from_value(v).ok())
+        .unwrap_or_default();
+
+    Ok(settings)
+}
+
+/// Save settings to Tauri Store
+#[tauri::command]
+pub async fn save_settings(
+    app: tauri::AppHandle,
+    settings: UserSettings,
+) -> Result<(), String> {
+    let store = app.store("settings.json")
+        .map_err(|e| format!("Failed to load store: {}", e))?;
+
+    store.set("user_settings", serde_json::to_value(&settings).unwrap());
+    store.save()
+        .map_err(|e| format!("Failed to save settings: {}", e))?;
+
+    Ok(())
+}
+```
+
+**Tauri Store Plugin Setup:**
+
+```rust
+// rulez-ui/src-tauri/src/main.rs (MODIFY)
+use tauri_plugin_store::StoreBuilder;
+
+fn main() {
+    tauri::Builder::default()
+        .plugin(tauri_plugin_store::Builder::default().build())  // ← NEW
+        .invoke_handler(tauri::generate_handler![
+            // ... existing commands
+            commands::settings::load_settings,
+            commands::settings::save_settings,
+        ])
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}
+```
+
+**Integration with uiStore:**
+
+```typescript
+// src/stores/uiStore.ts (MODIFY)
+import { loadSettings, saveSettings } from "@/lib/tauri";
+
+export const useUIStore = create<UIState & UIActions>((set, get) => ({
+  // ... existing state
+
+  // NEW: Initialize from Tauri Store
+  initSettings: async () => {
+    try {
+      const settings = await loadSettings();
+      set({
+        theme: settings.theme,
+        // ... other settings
+      });
+    } catch (error) {
+      console.error("Failed to load settings:", error);
+    }
+  },
+
+  // MODIFY: Persist theme changes
+  setTheme: async (theme) => {
+    set({ theme });
+    try {
+      const settings = { ...get(), theme };
+      await saveSettings(settings);
+    } catch (error) {
+      console.error("Failed to save theme:", error);
+    }
+  },
+}));
+```
+
+**Settings UI Component:**
+
+```typescript
+// src/components/settings/SettingsPanel.tsx (NEW)
+export function SettingsPanel() {
+  const { theme, setTheme } = useUIStore();
+  const [binaryPath, setBinaryPath] = useState("");
+
+  async function handleBinaryPathChange() {
+    // Use Tauri dialog to select binary
+    const selected = await openFileDialog({
+      filters: [{ name: "Executables", extensions: ["exe", ""] }],
+    });
+    if (selected) {
+      setBinaryPath(selected);
+      await saveSettings({ rulez_binary_path: selected });
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <Section title="Appearance">
+        <ThemeToggle />
+        <FontSizeSlider />
+      </Section>
+
+      <Section title="Editor">
+        <Toggle label="Auto-save" />
+        <NumberInput label="Auto-save delay (ms)" />
+      </Section>
+
+      <Section title="RuleZ Binary">
+        <FilePathInput
+          label="Custom binary path"
+          value={binaryPath}
+          onChange={handleBinaryPathChange}
+        />
+      </Section>
+    </div>
+  );
+}
 ```
 
 **Modified Files:**
 
-- `rulez/src/main.rs`: Add `validate_event_schema()` call
-- `rulez/src/models.rs`: Add `#[derive(JsonSchema)]` to Event
-- `rulez/schema/hook-event-schema.json`: NEW (auto-generated)
-- `rulez/Cargo.toml`: Add `schemars = { version = "1.2", features = ["derive"] }`
+- `rulez-ui/src-tauri/src/commands/settings.rs`: NEW (settings CRUD)
+- `rulez-ui/src-tauri/src/main.rs`: Register store plugin
+- `rulez-ui/src-tauri/Cargo.toml`: Add `tauri-plugin-store = "2.0"`
+- `rulez-ui/src/stores/uiStore.ts`: Add settings persistence
+- `rulez-ui/src/components/settings/*.tsx`: NEW (settings UI)
+- `rulez-ui/package.json`: Add `@tauri-apps/plugin-store`
+
+**Storage Location:**
+
+```
+macOS:     ~/Library/Application Support/com.rulez.ui/settings.json
+Linux:     ~/.config/rulez-ui/settings.json
+Windows:   C:\Users\<user>\AppData\Roaming\com.rulez.ui\settings.json
+```
 
 ---
 
-### Integration Point 2: Debug CLI UserPromptSubmit Extension
+### Integration Point 3: File Watching for Live Config Reload
 
-**Where:** `cli/debug.rs::SimEventType` enum and `build_event()` function
+**Where:** Enhance existing `configStore` + add Tauri fs-watch plugin
 
-**Current Gap (v1.3):**
+**New Tauri Commands:**
 
 ```rust
-// rulez/src/cli/debug.rs:14-42
-pub enum SimEventType {
-    PreToolUse,
-    PostToolUse,
-    SessionStart,
-    PermissionRequest,
-    // ❌ Missing: UserPromptSubmit (cannot test prompt_match rules)
+// rulez-ui/src-tauri/src/commands/config.rs (MODIFY)
+use tauri_plugin_fs::FsExt;
+
+/// Watch config file for changes
+#[tauri::command]
+pub async fn watch_config_file(
+    app: tauri::AppHandle,
+    path: String,
+) -> Result<(), String> {
+    let app_clone = app.clone();
+    let path_clone = path.clone();
+
+    // Use Tauri fs plugin for watching
+    app.fs_scope()
+        .watch(
+            vec![path.clone()],
+            move |event| {
+                // Emit event to frontend when file changes
+                app_clone.emit("config-file-changed", &path_clone)
+                    .expect("Failed to emit config change event");
+            },
+            Default::default(),
+        )
+        .map_err(|e| format!("Failed to watch file: {}", e))?;
+
+    Ok(())
 }
 
-impl SimEventType {
-    fn from_str(s: &str) -> Option<Self> {
-        match s.to_lowercase().as_str() {
-            "pretooluse" | "pre" | "pre-tool-use" => Some(SimEventType::PreToolUse),
-            "posttooluse" | "post" | "post-tool-use" => Some(SimEventType::PostToolUse),
-            "sessionstart" | "session" | "start" => Some(SimEventType::SessionStart),
-            "permissionrequest" | "permission" | "perm" => Some(SimEventType::PermissionRequest),
-            _ => None,  // ❌ UserPromptSubmit not recognized
-        }
-    }
-}
-
-pub async fn run(
-    event_type: String,
-    tool: Option<String>,
-    command: Option<String>,
-    path: Option<String>,
-    verbose: bool,  // ❌ No prompt parameter
-) -> Result<()> {
-    // ...
+/// Stop watching config file
+#[tauri::command]
+pub async fn unwatch_config_file(
+    app: tauri::AppHandle,
+    path: String,
+) -> Result<(), String> {
+    // Cleanup watcher (implementation depends on plugin API)
+    Ok(())
 }
 ```
 
-**NEW Implementation (v1.4):**
+**Frontend Integration:**
 
-```rust
-// rulez/src/cli/debug.rs (MODIFIED)
-pub enum SimEventType {
-    PreToolUse,
-    PostToolUse,
-    SessionStart,
-    PermissionRequest,
-    UserPromptSubmit,  // ← NEW
-}
+```typescript
+// src/lib/tauri.ts (ADD)
+export async function watchConfigFile(
+  path: string,
+  callback: () => void
+): Promise<() => void> {
+  if (isTauri()) {
+    const { invoke, listen } = await import("@tauri-apps/api/core");
 
-impl SimEventType {
-    fn from_str(s: &str) -> Option<Self> {
-        match s.to_lowercase().as_str() {
-            "pretooluse" | "pre" | "pre-tool-use" => Some(SimEventType::PreToolUse),
-            "posttooluse" | "post" | "post-tool-use" => Some(SimEventType::PostToolUse),
-            "sessionstart" | "session" | "start" => Some(SimEventType::SessionStart),
-            "permissionrequest" | "permission" | "perm" => Some(SimEventType::PermissionRequest),
-            "userpromptsubmit" | "prompt" | "user-prompt" => Some(SimEventType::UserPromptSubmit),  // ← NEW
-            _ => None,
-        }
-    }
+    // Start watching
+    await invoke("watch_config_file", { path });
 
-    fn as_model_event_type(self) -> ModelEventType {
-        match self {
-            SimEventType::PreToolUse => ModelEventType::PreToolUse,
-            SimEventType::PostToolUse => ModelEventType::PostToolUse,
-            SimEventType::SessionStart => ModelEventType::SessionStart,
-            SimEventType::PermissionRequest => ModelEventType::PermissionRequest,
-            SimEventType::UserPromptSubmit => ModelEventType::UserPromptSubmit,  // ← NEW
-        }
-    }
-}
-
-// MODIFIED: Add prompt parameter
-pub async fn run(
-    event_type: String,
-    tool: Option<String>,
-    command: Option<String>,
-    path: Option<String>,
-    prompt: Option<String>,  // ← NEW parameter
-    verbose: bool,
-) -> Result<()> {
-    // CRITICAL: Clear global state to prevent cross-invocation leakage
-    {
-        use crate::hooks::REGEX_CACHE;
-        REGEX_CACHE.lock().unwrap().clear();  // ← NEW: State isolation
-    }
-
-    let event_type = SimEventType::from_str(&event_type)?;
-    let event = build_event(event_type, tool, command, path, prompt)?;  // ← Pass prompt
-
-    // ... existing processing
-}
-
-// MODIFIED: Handle prompt in event building
-fn build_event(
-    event_type: SimEventType,
-    tool: Option<String>,
-    command: Option<String>,
-    path: Option<String>,
-    prompt: Option<String>,  // ← NEW parameter
-) -> Event {
-    let session_id = format!("debug-{}", uuid_simple());
-
-    match event_type {
-        SimEventType::UserPromptSubmit => {
-            // NEW: Build UserPromptSubmit event
-            Event {
-                hook_event_name: event_type.as_model_event_type(),
-                session_id,
-                prompt,  // ← Set prompt field
-                tool_name: None,
-                tool_input: None,
-                timestamp: Utc::now(),
-                cwd: Some(std::env::current_dir()?.to_string_lossy().to_string()),
-                // ... other fields None
-            }
-        },
-        SimEventType::PreToolUse => {
-            // EXISTING: Build PreToolUse event
-            let tool_name = tool.unwrap_or_else(|| "Bash".to_string());
-            let cmd = command.unwrap_or_else(|| "echo 'test'".to_string());
-            Event {
-                hook_event_name: event_type.as_model_event_type(),
-                session_id,
-                tool_name: Some(tool_name),
-                tool_input: Some(json!({ "command": cmd })),
-                prompt: None,  // ← No prompt for PreToolUse
-                // ...
-            }
-        },
-        // ... other event types
-    }
-}
-```
-
-**CLI Interface Changes:**
-
-```rust
-// rulez/src/main.rs (MODIFIED)
-#[derive(Subcommand)]
-enum Commands {
-    Debug {
-        event_type: String,
-        #[arg(short, long)]
-        tool: Option<String>,
-        #[arg(short, long)]
-        command: Option<String>,
-        #[arg(short, long)]
-        path: Option<String>,
-        #[arg(short = 'p', long)]
-        prompt: Option<String>,  // ← NEW flag
-        #[arg(short, long)]
-        verbose: bool,
-    },
-    // ... other commands
-}
-
-// Update dispatch
-Some(Commands::Debug { event_type, tool, command, path, prompt, verbose }) => {
-    cli::debug::run(event_type, tool, command, path, prompt, verbose).await?;
-}
-```
-
-**Usage:**
-
-```bash
-# NEW: Simulate UserPromptSubmit event
-rulez debug UserPromptSubmit --prompt "create a React component"
-rulez debug prompt --prompt "refactor this code"  # Alias
-
-# EXISTING: Other event types still work
-rulez debug PreToolUse --tool Bash --command "git push"
-rulez debug SessionStart
-```
-
-**Integration Pattern:**
-
-1. **Additive enum variant:** `UserPromptSubmit` added to `SimEventType`
-2. **Optional parameter:** `prompt: Option<String>` (backwards compatible)
-3. **State isolation:** Clear REGEX_CACHE at start of `run()` to prevent leakage
-4. **Reuse existing pipeline:** `process_event()` unchanged, sees proper Event struct
-
-**Modified Files:**
-
-- `rulez/src/cli/debug.rs`: Add `UserPromptSubmit` variant, `prompt` param, state clearing
-- `rulez/src/main.rs`: Add `--prompt` flag to Debug command
-
----
-
-### Integration Point 3: E2E Test Path Canonicalization
-
-**Where:** `tests/common/mod.rs` helper functions and E2E test setup
-
-**Current Issue (v1.3):**
-
-```rust
-// rulez/tests/e2e_git_push_block.rs:28-47
-fn setup_claude_code_event(config_name: &str, command: &str) -> (tempfile::TempDir, String) {
-    let temp_dir = setup_test_env(config_name);
-    let cwd = temp_dir.path().to_string_lossy().to_string();  // ❌ Symlinks not resolved
-
-    let event = serde_json::json!({
-        "cwd": cwd,  // ❌ macOS: /var → /private/var symlink causes mismatch
-        // ...
+    // Listen for change events
+    const unlisten = await listen("config-file-changed", (event) => {
+      if (event.payload === path) {
+        callback();
+      }
     });
 
-    (temp_dir, serde_json::to_string(&event).unwrap())
+    return async () => {
+      unlisten();
+      await invoke("unwatch_config_file", { path });
+    };
+  }
+
+  // Mock mode: no watching
+  return () => {};
 }
 ```
 
-**Problem:**
-- **macOS:** `/var/folders/...` is symlink to `/private/var/folders/...`
-- **Windows:** `C:\Users\...` vs `C:/Users/...` separator differences
-- **Result:** `event.cwd` doesn't match `Command::current_dir()`, config loading fails
+**ConfigStore Integration:**
 
-**NEW Helper (v1.4):**
+```typescript
+// src/stores/configStore.ts (MODIFY)
+import { watchConfigFile, readConfig } from "@/lib/tauri";
 
-```rust
-// rulez/tests/common/mod.rs (NEW function)
-use std::fs;
-use std::path::{Path, PathBuf};
+export const useConfigStore = create<ConfigState & ConfigActions>((set, get) => ({
+  // ... existing state
 
-/// Canonicalize path to resolve symlinks and normalize separators
-///
-/// Handles:
-/// - macOS /var → /private/var symlink
-/// - Windows backslash normalization
-/// - Relative path resolution
-pub fn canonicalize_path<P: AsRef<Path>>(path: P) -> PathBuf {
-    fs::canonicalize(path.as_ref())
-        .unwrap_or_else(|_| {
-            // Fallback if canonicalize fails (path doesn't exist yet)
-            path.as_ref().to_path_buf()
-        })
-}
-```
+  // NEW: Start watching active file
+  watchActiveFile: async () => {
+    const { activeFile } = get();
+    if (!activeFile) return;
 
-**MODIFIED Test Setup:**
-
-```rust
-// rulez/tests/e2e_git_push_block.rs (MODIFIED)
-fn setup_claude_code_event(config_name: &str, command: &str) -> (tempfile::TempDir, String) {
-    let temp_dir = setup_test_env(config_name);
-
-    // NEW: Resolve symlinks and normalize path
-    let canonical_path = common::canonicalize_path(temp_dir.path());
-    let cwd = canonical_path.to_string_lossy().to_string();  // ✓ Canonical path
-
-    let event = serde_json::json!({
-        "hook_event_name": "PreToolUse",
-        "tool_name": "Bash",
-        "tool_input": { "command": command },
-        "session_id": "e2e-test-session",
-        "cwd": cwd,  // ✓ Now resolves /var → /private/var on macOS
-        // ...
+    const unlisten = await watchConfigFile(activeFile, async () => {
+      // Reload file when changed externally
+      const content = await readConfig(activeFile);
+      set((state) => {
+        const newOpenFiles = new Map(state.openFiles);
+        const fileState = newOpenFiles.get(activeFile);
+        if (fileState) {
+          newOpenFiles.set(activeFile, {
+            ...fileState,
+            content,
+            originalContent: content,
+            modified: false,
+          });
+        }
+        return { openFiles: newOpenFiles };
+      });
     });
 
-    (temp_dir, serde_json::to_string(&event).unwrap())
+    // Store cleanup function
+    set({ unwatchActiveFile: unlisten });
+  },
+
+  // Cleanup on file close
+  closeFile: (path) => {
+    const { unwatchActiveFile } = get();
+    if (unwatchActiveFile) {
+      unwatchActiveFile();
+    }
+    // ... existing close logic
+  },
+}));
+```
+
+**User Notification:**
+
+```typescript
+// src/components/editor/YamlEditor.tsx (MODIFY)
+export function YamlEditor() {
+  const { activeFile, watchActiveFile } = useConfigStore();
+
+  useEffect(() => {
+    if (activeFile) {
+      watchActiveFile();
+    }
+  }, [activeFile]);
+
+  // Show toast notification when file reloaded
+  useEffect(() => {
+    const file = openFiles.get(activeFile);
+    if (file && !file.modified) {
+      toast.info("Config file reloaded from disk");
+    }
+  }, [openFiles]);
+
+  // ...
 }
 ```
 
-**GitHub Actions Matrix:**
-
-```yaml
-# .github/workflows/ci.yml (MODIFIED)
-jobs:
-  test-e2e:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]  # ← NEW: Cross-platform
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - name: Run E2E tests
-        run: cargo test --test e2e_* -- --nocapture
-```
-
-**Integration Pattern:**
-
-1. **Helper function:** `canonicalize_path()` in `tests/common/mod.rs`
-2. **Use everywhere:** All E2E tests call helper before path comparison
-3. **CI matrix:** Test on all platforms (macOS, Linux, Windows)
-4. **Fallback:** If canonicalize fails, return original path (graceful degradation)
-
-**Cross-Platform Handling:**
-
-| Platform | Issue | Resolution |
-|----------|-------|------------|
-| macOS | `/var` → `/private/var` symlink | `fs::canonicalize()` resolves symlink |
-| Windows | Backslash vs forward slash | `PathBuf` normalizes to OS-native separator |
-| Linux | `/tmp` cleanup races | Explicit `drop(temp_dir)` at test end |
-| CI | Parallel test conflicts | `tempfile` crate handles unique names |
-
 **Modified Files:**
 
-- `rulez/tests/common/mod.rs`: Add `canonicalize_path()` helper
-- `rulez/tests/e2e_git_push_block.rs`: Use canonical paths in setup
-- `.github/workflows/ci.yml`: Add Windows and macOS to test matrix
+- `rulez-ui/src-tauri/src/commands/config.rs`: Add watch/unwatch commands
+- `rulez-ui/src-tauri/Cargo.toml`: Add `tauri-plugin-fs = { version = "2.0", features = ["watch"] }`
+- `rulez-ui/src-tauri/src/main.rs`: Register fs plugin
+- `rulez-ui/src/stores/configStore.ts`: Add file watching logic
+- `rulez-ui/src/lib/tauri.ts`: Add watchConfigFile wrapper
+- `rulez-ui/package.json`: Add `@tauri-apps/plugin-fs`
+
+**Performance:**
+
+```
+Watch latency:        <50ms (debounced by Tauri plugin)
+File reload:          Same as existing readConfig (~30ms)
+Memory overhead:      ~1 KB per watched file
+```
 
 ---
 
-### Integration Point 4: Tauri 2.0 CI Build Pipeline
+### Integration Point 4: Config Diffing (Global vs Project)
 
-**Where:** New GitHub Actions workflow `.github/workflows/tauri-build.yml`
+**Where:** New component group `components/diff/` + new UI tab
 
-**Current State (v1.3):**
+**Components to Add:**
 
-- Tauri app builds locally but not in CI
-- No E2E tests for UI
-- Manual testing only
-
-**NEW CI Workflow (v1.4):**
-
-```yaml
-# .github/workflows/tauri-build.yml (NEW FILE)
-name: Tauri Build
-
-on:
-  push:
-    branches: [main, develop, 'feature/**']
-  pull_request:
-
-env:
-  CARGO_TERM_COLOR: always
-  RUST_BACKTRACE: 1
-
-jobs:
-  # Job 1: E2E tests (fast, runs on every PR)
-  test-e2e:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-
-      - name: Install frontend deps
-        run: bun install
-        working-directory: rulez-ui
-
-      - name: Install Playwright
-        run: bunx playwright install --with-deps chromium
-        working-directory: rulez-ui
-
-      - name: Run E2E tests (web mode)
-        run: bun run test:e2e
-        working-directory: rulez-ui
-
-  # Job 2: Tauri builds (slower, multi-platform matrix)
-  build-tauri:
-    needs: test-e2e  # Only build if E2E passes
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-22.04  # ← CRITICAL: NOT ubuntu-latest (uses 24.04)
-            target: x86_64-unknown-linux-gnu
-          - os: macos-latest
-            target: x86_64-apple-darwin
-          - os: macos-latest
-            target: aarch64-apple-darwin
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-
-    runs-on: ${{ matrix.os }}
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
-
-      - name: Rust cache
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: rulez-ui/src-tauri -> target
-          key: ${{ matrix.os }}-${{ matrix.target }}
-
-      # CRITICAL: Tauri 2.0 requires webkit2gtk-4.1 (NOT 4.0)
-      - name: Install Linux dependencies (Tauri 2.0)
-        if: matrix.os == 'ubuntu-22.04'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libwebkit2gtk-4.1-dev \
-            libgtk-3-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev \
-            patchelf \
-            curl \
-            wget \
-            file \
-            libssl-dev \
-            libxdo-dev
-
-      - name: Install frontend deps
-        run: bun install
-        working-directory: rulez-ui
-
-      - name: Build Tauri app
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          projectPath: rulez-ui
-          tauriScript: bunx tauri
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: rulez-ui-${{ matrix.os }}-${{ matrix.target }}
-          path: |
-            rulez-ui/src-tauri/target/release/bundle/**/*.dmg
-            rulez-ui/src-tauri/target/release/bundle/**/*.msi
-            rulez-ui/src-tauri/target/release/bundle/**/*.AppImage
-          if-no-files-found: warn
+```
+src/components/diff/
+├── ConfigDiff.tsx         # Main container
+├── DiffView.tsx           # Side-by-side diff display
+└── DiffStats.tsx          # Summary (additions, deletions)
 ```
 
-**Critical Dependencies (Linux):**
+**New Tauri Command:**
 
-```bash
-# WRONG: Tauri 1.x (BREAKS on Ubuntu 24.04)
-libwebkit2gtk-4.0-dev
+```rust
+// rulez-ui/src-tauri/src/commands/config.rs (ADD)
+use similar::{ChangeTag, TextDiff};
 
-# RIGHT: Tauri 2.0 (Works on Ubuntu 22.04+)
-libwebkit2gtk-4.1-dev
+#[derive(Debug, Serialize)]
+pub struct DiffHunk {
+    pub old_line: Option<usize>,
+    pub new_line: Option<usize>,
+    pub change_type: String,  // "add", "delete", "equal"
+    pub content: String,
+}
+
+/// Compare two config files and return diff hunks
+#[tauri::command]
+pub async fn diff_configs(
+    path1: String,
+    path2: String,
+) -> Result<Vec<DiffHunk>, String> {
+    let content1 = read_config(path1).await?;
+    let content2 = read_config(path2).await?;
+
+    let diff = TextDiff::from_lines(&content1, &content2);
+    let mut hunks = Vec::new();
+
+    for (idx, change) in diff.iter_all_changes().enumerate() {
+        let change_type = match change.tag() {
+            ChangeTag::Delete => "delete",
+            ChangeTag::Insert => "add",
+            ChangeTag::Equal => "equal",
+        };
+
+        hunks.push(DiffHunk {
+            old_line: change.old_index().map(|i| i + 1),
+            new_line: change.new_index().map(|i| i + 1),
+            change_type: change_type.to_string(),
+            content: change.to_string(),
+        });
+    }
+
+    Ok(hunks)
+}
 ```
 
-**Integration Pattern:**
+**Frontend Component (Using react-diff-viewer):**
 
-1. **Separate workflow:** Tauri builds don't block core CI
-2. **E2E first:** Playwright tests run in web mode (fast, no Tauri build)
-3. **Build matrix:** Multi-platform builds only if E2E passes
-4. **Explicit OS:** `ubuntu-22.04` (NOT `ubuntu-latest`) to ensure webkit2gtk-4.1 available
+```typescript
+// src/components/diff/ConfigDiff.tsx (NEW)
+import ReactDiffViewer from "react-diff-viewer";
+import { useConfigStore } from "@/stores/configStore";
 
-**E2E Testing Strategy:**
+export function ConfigDiff() {
+  const { globalConfig, projectConfig } = useConfigStore();
+  const [globalContent, setGlobalContent] = useState("");
+  const [projectContent, setProjectContent] = useState("");
 
-- **Fast path (every commit):** Playwright in web mode (mocks Tauri APIs, 1-2 min)
-- **Slow path (release branches):** Full Tauri build + WebDriver tests (5-10 min)
+  useEffect(() => {
+    async function loadConfigs() {
+      if (globalConfig?.path) {
+        const content = await readConfig(globalConfig.path);
+        setGlobalContent(content);
+      }
+      if (projectConfig?.path) {
+        const content = await readConfig(projectConfig.path);
+        setProjectContent(content);
+      }
+    }
+    loadConfigs();
+  }, [globalConfig, projectConfig]);
+
+  return (
+    <div className="h-full overflow-auto">
+      <div className="p-4 border-b">
+        <h2 className="text-lg font-semibold">Config Comparison</h2>
+        <p className="text-sm text-gray-600">
+          Global vs Project Configuration
+        </p>
+      </div>
+
+      <ReactDiffViewer
+        oldValue={globalContent}
+        newValue={projectContent}
+        splitView={true}
+        leftTitle="Global (~/.claude/hooks.yaml)"
+        rightTitle="Project (.claude/hooks.yaml)"
+        styles={{
+          variables: {
+            dark: {
+              diffViewerBackground: "#1A1A1A",
+              addedBackground: "#044B53",
+              removedBackground: "#5E1A1A",
+            },
+          },
+        }}
+      />
+    </div>
+  );
+}
+```
+
+**Integration with Sidebar:**
+
+```typescript
+// src/components/layout/Sidebar.tsx (MODIFY)
+export function Sidebar() {
+  const { globalConfig, projectConfig, setActiveFile } = useConfigStore();
+  const { setRightPanelTab } = useUIStore();
+
+  function showDiff() {
+    setRightPanelTab("diff");  // Switch to diff view
+  }
+
+  return (
+    <div className="w-64 border-r">
+      <div className="p-4">
+        <h3 className="font-semibold mb-2">Config Files</h3>
+
+        <FileItem
+          label="Global"
+          file={globalConfig}
+          onSelect={() => setActiveFile(globalConfig?.path)}
+        />
+
+        <FileItem
+          label="Project"
+          file={projectConfig}
+          onSelect={() => setActiveFile(projectConfig?.path)}
+        />
+
+        {/* NEW: Show diff button */}
+        {globalConfig?.exists && projectConfig?.exists && (
+          <button
+            onClick={showDiff}
+            className="mt-2 w-full px-3 py-2 text-sm border rounded hover:bg-gray-100"
+          >
+            Compare Configs
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+```
 
 **Modified Files:**
 
-- `.github/workflows/tauri-build.yml`: NEW (cross-platform builds)
-- No changes to `rulez-ui/` code (builds already work locally)
+- `rulez-ui/src/components/diff/*.tsx`: NEW (3 components)
+- `rulez-ui/src-tauri/src/commands/config.rs`: Add diff_configs command
+- `rulez-ui/src-tauri/Cargo.toml`: Add `similar = "2.4"` (diff algorithm)
+- `rulez-ui/package.json`: Add `react-diff-viewer`
+- `rulez-ui/src/stores/uiStore.ts`: Add "diff" to RightPanelTab
+- `rulez-ui/src/components/layout/Sidebar.tsx`: Add compare button
+
+**Performance:**
+
+```
+Diff computation:     ~5ms for typical config (50-100 lines)
+Rendering:            Virtual scrolling handles large diffs
+Memory:               ~200 bytes per diff hunk
+```
 
 ---
 
-## Component Interaction Diagram (v1.4)
+## v1.5 Component Architecture
+
+### Updated System Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                       v1.4 Component Interactions                       │
+│                       RuleZ UI v1.5 Architecture                         │
+├─────────────────────────────────────────────────────────────────────────┤
+│  Frontend (React 18 + TypeScript + Tailwind)                            │
+│                                                                           │
+│  ┌───────────────────────┐  ┌───────────────────────┐                   │
+│  │   Component Groups    │  │   State Management    │                   │
+│  ├───────────────────────┤  ├───────────────────────┤                   │
+│  │ layout/    (6)        │  │ configStore           │                   │
+│  │ editor/    (4)        │  │ editorStore           │                   │
+│  │ simulator/ (3)        │  │ uiStore               │                   │
+│  │ files/     (1)        │  │ logStore       ← NEW  │                   │
+│  │ ui/        (2)        │  └───────────────────────┘                   │
+│  │ logs/      (4) ← NEW  │                                               │
+│  │ settings/  (3) ← NEW  │  ┌───────────────────────┐                   │
+│  │ diff/      (3) ← NEW  │  │   Tauri Abstraction   │                   │
+│  └───────────────────────┘  ├───────────────────────┤                   │
+│                              │ isTauri() branching   │                   │
+│  Total: 26 components        │ Mock data fallbacks   │                   │
+│  (18 from M1 + 8 new)        └───────────────────────┘                   │
+├─────────────────────────────────────────────────────────────────────────┤
+│  Backend (Tauri 2.0 Rust Commands)                                       │
+│                                                                           │
+│  ┌─────────────────────┐  ┌─────────────────────┐  ┌─────────────────┐ │
+│  │  config.rs          │  │  debug.rs           │  │  logs.rs ← NEW  │ │
+│  ├─────────────────────┤  ├─────────────────────┤  ├─────────────────┤ │
+│  │ list_config_files   │  │ run_debug           │  │ read_logs       │ │
+│  │ read_config         │  │ validate_config     │  │ count_logs      │ │
+│  │ write_config        │  └─────────────────────┘  │ clear_logs      │ │
+│  │ watch_config ← NEW  │                            └─────────────────┘ │
+│  │ unwatch_config ← NEW│  ┌─────────────────────┐                       │
+│  │ diff_configs ← NEW  │  │  settings.rs ← NEW  │                       │
+│  └─────────────────────┘  ├─────────────────────┤                       │
+│                            │ load_settings       │                       │
+│                            │ save_settings       │                       │
+│                            └─────────────────────┘                       │
+├─────────────────────────────────────────────────────────────────────────┤
+│  Tauri Plugins                                                            │
+│                                                                           │
+│  • tauri-plugin-fs (file watching)                                        │
+│  • tauri-plugin-store (settings persistence)                              │
 └─────────────────────────────────────────────────────────────────────────┘
+```
 
-stdin (JSON event from Claude Code)
-    ↓
-main.rs::process_hook_event()
-    ↓
-    ├─> Parse as serde_json::Value
-    │       ↓
-    │   [NEW] validate_event_schema(&value)  ← Cached JSONSchema validator
-    │       ↓                                   ↓
-    │   Valid ✓                          Invalid ✗ (exit 1, config error)
-    │       ↓
-    ├─> Deserialize to Event struct (existing)
-    │       ↓
-    ├─> Config::load(event.cwd)  ← Unchanged
-    │       ↓
-    └─> hooks::process_event(event, config)  ← Unchanged
-            ↓
-        Response { continue_, context, reason }
-            ↓
-stdout (JSON) or exit 2 (stderr)
+### Data Flow: Log Viewer
 
-
-Debug CLI (v1.4)
+```
+User opens Logs tab
     ↓
-cli::debug::run(event_type, tool, command, path, prompt, verbose)  ← NEW: prompt param
+LogViewer component mounts
     ↓
-    ├─> Clear REGEX_CACHE  ← NEW: State isolation
-    │       ↓
-    ├─> SimEventType::from_str(event_type)
-    │   ├─> PreToolUse, PostToolUse (existing)
-    │   └─> UserPromptSubmit  ← NEW
+useLogStore.loadLogs()
+    ↓
+readLogs({ limit: 1000 }) [tauri.ts]
+    ├─> isTauri() === true?
+    │   ├─> YES: invoke("read_logs", { limit: 1000 })
+    │   │       ↓
+    │   │   Tauri Backend (commands/logs.rs)
+    │   │       ↓
+    │   │   Open ~/.claude/logs/rulez.log
+    │   │       ↓
+    │   │   BufReader::lines().take(1000)
+    │   │       ↓
+    │   │   Parse JSONL → Vec<LogEntry>
+    │   │       ↓
+    │   │   Return to frontend
+    │   │
+    │   └─> NO: mockReadLogs({ limit: 1000 })
     │           ↓
-    └─> build_event(..., prompt)  ← NEW: Uses prompt for UserPromptSubmit
-            ↓
-        Event { prompt: Some(text), ... }
-            ↓
-        hooks::process_event(event, config)  ← Same pipeline as production
-            ↓
-        Response (displayed to user)
-
-
-E2E Tests (v1.4)
+    │       Return sample data
     ↓
-setup_claude_code_event(config_name, command)
+Update logStore.entries
     ↓
-    ├─> setup_test_env() → tempfile::TempDir
-    │       ↓
-    ├─> canonicalize_path(temp_dir.path())  ← NEW: Resolve symlinks
-    │   (macOS: /var → /private/var, Windows: normalize backslashes)
-    │       ↓
-    ├─> Build event JSON with canonical cwd
-    │       ↓
-    └─> Command::cargo_bin("rulez")
-            .current_dir(temp_dir.path())  ← Now matches event.cwd
-            .write_stdin(event_json)
-            ↓
-        assert_eq!(output.status.code(), Some(2))  ← Validate blocking
+react-window virtualizes rendering (only ~20 visible rows)
+    ↓
+User sees log list (instant scroll for 100K+ entries)
+```
 
+### Data Flow: Settings Persistence
 
-Tauri CI (v1.4)
+```
+App initialization
     ↓
-.github/workflows/tauri-build.yml  ← NEW workflow
+useUIStore.initSettings()
     ↓
-    ├─> Job 1: test-e2e (web mode)
-    │       ↓
-    │   Playwright tests against Vite dev server
-    │   (no Tauri build, mocked Tauri APIs via isTauri())
-    │       ↓
-    │   Pass ✓ → Continue
-    │       ↓
-    └─> Job 2: build-tauri (multi-platform matrix)
-            ↓
-        ├─> ubuntu-22.04: Install webkit2gtk-4.1-dev  ← CRITICAL
-        ├─> macos-latest: No system deps needed
-        └─> windows-latest: No system deps needed
-                ↓
-            tauri-apps/tauri-action@v0
-                ↓
-            Upload artifacts (.dmg, .msi, .AppImage)
+loadSettings() [tauri.ts]
+    ↓
+invoke("load_settings")
+    ↓
+Tauri Backend (commands/settings.rs)
+    ↓
+Open Tauri Store (settings.json)
+    ↓
+store.get("user_settings") → UserSettings
+    ↓
+Return to frontend
+    ↓
+Update uiStore state
+    ↓
+UI renders with persisted theme/font/etc.
+
+---
+
+User changes theme
+    ↓
+useUIStore.setTheme("dark")
+    ↓
+Update local state
+    ↓
+saveSettings({ theme: "dark", ... }) [tauri.ts]
+    ↓
+invoke("save_settings", { settings })
+    ↓
+Tauri Backend (commands/settings.rs)
+    ↓
+store.set("user_settings", settings)
+store.save()  // Persisted to disk
+```
+
+### Data Flow: File Watching
+
+```
+User opens global config
+    ↓
+configStore.watchActiveFile()
+    ↓
+watchConfigFile(path, callback) [tauri.ts]
+    ↓
+invoke("watch_config_file", { path })
+    ↓
+Tauri Backend (commands/config.rs)
+    ↓
+app.fs_scope().watch(path, |event| {
+    app.emit("config-file-changed", path);
+})
+    ↓
+Frontend listens for "config-file-changed" event
+    ↓
+
+--- External change occurs (e.g., user edits in VS Code) ---
+
+Tauri fs watcher detects change
+    ↓
+Emit "config-file-changed" event
+    ↓
+Frontend callback fires
+    ↓
+readConfig(path) to reload content
+    ↓
+Update configStore.openFiles with new content
+    ↓
+Monaco editor re-renders with updated content
+    ↓
+Show toast: "Config file reloaded from disk"
 ```
 
 ---
 
-## New Components (v1.4)
+## Architectural Patterns (v1.5)
 
-| Component | File | Responsibility | Integrates With |
-|-----------|------|----------------|-----------------|
-| **Event Schema Validator** | `main.rs` (LazyLock static) | Validate event JSON against schema | `process_hook_event()` (pre-validation) |
-| **Event Schema Definition** | `schema/hook-event-schema.json` | JSON Schema for Event struct | Auto-generated via `schemars` |
-| **Path Canonicalizer** | `tests/common/mod.rs::canonicalize_path()` | Resolve symlinks, normalize paths | All E2E tests |
-| **Tauri CI Workflow** | `.github/workflows/tauri-build.yml` | Cross-platform desktop builds | Existing CI (parallel job) |
+### Pattern 1: Virtual Scrolling for Large Lists
 
-## Modified Components (v1.4)
+**What:** Render only visible items in a scrollable list, not the entire dataset.
 
-| Component | File | Changes | Breaking? |
-|-----------|------|---------|-----------|
-| **Event Parser** | `main.rs::process_hook_event()` | Add schema validation before deserialization | No (fail with exit 1 on invalid) |
-| **Debug CLI** | `cli/debug.rs::SimEventType` | Add `UserPromptSubmit` variant | No (additive) |
-| **Debug CLI** | `cli/debug.rs::run()` | Add `prompt` parameter, clear REGEX_CACHE | No (optional param) |
-| **CLI Args** | `main.rs::Commands::Debug` | Add `--prompt` flag | No (optional flag) |
-| **Event Model** | `models.rs::Event` | Add `#[derive(JsonSchema)]` | No (derive macro only) |
-| **E2E Test Setup** | `tests/e2e_*.rs::setup_claude_code_event()` | Use `canonicalize_path()` | No (internal test helper) |
+**When to use:** Lists with 1000+ items (log entries, rule lists, search results).
 
-## Unchanged Components (v1.4)
+**Trade-offs:**
+- **Pro:** Handles 100K+ items without performance degradation
+- **Pro:** Constant memory usage regardless of list size
+- **Con:** Requires fixed-height items (or dynamic measurement)
+- **Con:** Slightly more complex than naive `.map()` rendering
 
-**Core engine remains unchanged:**
+**Example:**
 
-- `hooks.rs::process_event()` — Rule evaluation logic
-- `config.rs::Config::load()` — Config loading and validation
-- `models.rs` — Type definitions (Event already has `prompt` field)
-- `logging.rs` — Audit trail
+```typescript
+import { FixedSizeList as List } from "react-window";
 
-**No modifications to production rule evaluation pipeline.**
+function LogViewer() {
+  const entries = useLogStore((state) => state.entries); // 50K entries
+
+  return (
+    <List
+      height={600}
+      itemCount={entries.length}
+      itemSize={40}
+      width="100%"
+    >
+      {({ index, style }) => (
+        <div style={style}>
+          {entries[index].message}
+        </div>
+      )}
+    </List>
+  );
+}
+```
 
 ---
 
-## Architectural Patterns (v1.4)
+### Pattern 2: Zustand Store Composition (Slices)
 
-### Pattern 1: Pre-Compiled Validators (Performance)
+**What:** Split large stores into focused slices, compose into single store or keep separate.
 
-**Problem:** Compiling JSON Schema on every event is slow (0.5-2ms per schema).
+**When to use:** When state domains are independent (logs, config, UI preferences).
 
-**Solution:** Pre-compile at startup, cache in `LazyLock<JSONSchema>`.
+**Trade-offs:**
+- **Pro:** Clear separation of concerns
+- **Pro:** Easier to test individual slices
+- **Con:** Multiple stores = multiple subscriptions (minimal overhead)
+- **Con:** Cross-slice dependencies require careful design
 
-**Implementation:**
+**Example:**
 
-```rust
-use std::sync::LazyLock;
-use jsonschema::JSONSchema;
+```typescript
+// APPROACH 1: Separate stores (v1.5 choice)
+const useConfigStore = create<ConfigState & ConfigActions>(...);
+const useLogStore = create<LogState & LogActions>(...);
+const useUIStore = create<UIState & UIActions>(...);
 
-static EVENT_SCHEMA_VALIDATOR: LazyLock<JSONSchema> = LazyLock::new(|| {
-    let schema = serde_json::from_str(include_str!("../schema/hook-event-schema.json"))
-        .expect("Failed to parse event schema");
-    JSONSchema::compile(&schema)
-        .expect("Failed to compile event schema")
+// Usage: Each component subscribes only to needed stores
+function LogViewer() {
+  const { entries } = useLogStore();  // Only re-renders on log changes
+  const { theme } = useUIStore();     // Only re-renders on theme changes
+}
+
+// APPROACH 2: Single store with slices (alternative)
+const useAppStore = create<AppState>((set, get) => ({
+  ...createConfigSlice(set, get),
+  ...createLogSlice(set, get),
+  ...createUISlice(set, get),
+}));
+```
+
+**Recommendation for v1.5:** Separate stores (logStore, configStore, uiStore) because:
+- Log state is completely independent of config/UI state
+- Prevents unnecessary re-renders (log updates don't trigger config components)
+- Matches M1 pattern (already has 3 separate stores)
+
+---
+
+### Pattern 3: Tauri Event Listeners for File Watching
+
+**What:** Use Tauri event system to notify frontend of backend changes.
+
+**When to use:** File watching, long-running tasks, background processes.
+
+**Trade-offs:**
+- **Pro:** Decouples backend from frontend (event-driven)
+- **Pro:** Supports multiple listeners for same event
+- **Con:** Requires cleanup (`unlisten()` on component unmount)
+- **Con:** Events are fire-and-forget (no return value)
+
+**Example:**
+
+```typescript
+useEffect(() => {
+  let unlisten: (() => void) | null = null;
+
+  async function setupWatcher() {
+    const { listen } = await import("@tauri-apps/api/event");
+
+    unlisten = await listen("config-file-changed", (event) => {
+      console.log("Config changed:", event.payload);
+      reloadConfig(event.payload);
+    });
+  }
+
+  setupWatcher();
+
+  // Cleanup on unmount
+  return () => {
+    if (unlisten) unlisten();
+  };
+}, []);
+```
+
+---
+
+### Pattern 4: Dual-Mode IPC with Mock Fallbacks (M1 Pattern)
+
+**What:** All Tauri commands have web-mode fallbacks for E2E testing.
+
+**When to use:** Always, to support Playwright tests without building Tauri app.
+
+**Trade-offs:**
+- **Pro:** E2E tests run in CI without full Tauri build (2 min vs 10 min)
+- **Pro:** Frontend developers can work without Rust toolchain
+- **Con:** Mock data must be kept in sync with real Tauri API
+- **Con:** Adds branching logic to every IPC call
+
+**Example:**
+
+```typescript
+// src/lib/tauri.ts
+export async function readLogs(params: ReadLogsParams): Promise<LogEntry[]> {
+  if (isTauri()) {
+    const { invoke } = await import("@tauri-apps/api/core");
+    return invoke<LogEntry[]>("read_logs", params);
+  }
+  return mockReadLogs(params);  // For Playwright tests
+}
+
+function mockReadLogs(params: ReadLogsParams): LogEntry[] {
+  // Return realistic sample data
+  return [
+    { timestamp: "2026-02-10T12:00:00Z", level: "info", ... },
+    // ...
+  ].slice(params.offset || 0, params.limit || 1000);
+}
+```
+
+---
+
+### Pattern 5: Error Boundaries for Graceful Degradation
+
+**What:** Wrap components in ErrorBoundary to catch rendering errors and show fallback UI.
+
+**When to use:** Around major feature areas (editor, logs, simulator).
+
+**Trade-offs:**
+- **Pro:** Prevents entire app crash from single component error
+- **Pro:** Better UX (show error, allow retry)
+- **Con:** Doesn't catch async errors (use try/catch in async code)
+- **Con:** Requires class component or `react-error-boundary` library
+
+**Example:**
+
+```typescript
+// Use react-error-boundary library (functional components)
+import { ErrorBoundary } from "react-error-boundary";
+
+function ErrorFallback({ error, resetErrorBoundary }) {
+  return (
+    <div className="p-4 border border-red-500 rounded">
+      <h2 className="text-lg font-semibold text-red-600">
+        Log Viewer Error
+      </h2>
+      <pre className="mt-2 text-sm">{error.message}</pre>
+      <button onClick={resetErrorBoundary} className="mt-4">
+        Try Again
+      </button>
+    </div>
+  );
+}
+
+export function LogViewerWithErrorBoundary() {
+  return (
+    <ErrorBoundary FallbackComponent={ErrorFallback}>
+      <LogViewer />
+    </ErrorBoundary>
+  );
+}
+```
+
+**Where to add in v1.5:**
+
+- Wrap `<LogViewer />` (JSONL parsing can fail)
+- Wrap `<ConfigDiff />` (diff algorithm can throw)
+- Wrap `<YamlEditor />` (Monaco can crash on malformed YAML)
+
+---
+
+## Anti-Patterns (v1.5)
+
+### Anti-Pattern 1: Reading Entire Log File into Memory
+
+**What people do:** Load all 100K log entries into state at once.
+
+**Why it's wrong:** Crashes browser with large log files (>10 MB).
+
+**Do this instead:**
+
+```typescript
+// WRONG: Load everything
+const allLogs = await readLogs({ limit: 999999 });  // ❌ 100K entries
+
+// RIGHT: Pagination + virtual scrolling
+const logs = await readLogs({ limit: 1000, offset: 0 });  // ✓ 1K entries
+// + use react-window to render only visible rows
+```
+
+---
+
+### Anti-Pattern 2: Polling for File Changes
+
+**What people do:** Use `setInterval()` to check if config file changed.
+
+**Why it's wrong:** Wastes CPU, battery, and has 1-5 second latency.
+
+**Do this instead:**
+
+```typescript
+// WRONG: Poll every second
+setInterval(async () => {
+  const newContent = await readConfig(path);
+  if (newContent !== oldContent) {
+    updateContent(newContent);
+  }
+}, 1000);  // ❌ Polls every second
+
+// RIGHT: Use Tauri file watcher
+watchConfigFile(path, () => {
+  reloadConfig(path);  // ✓ Triggered immediately on change (<50ms)
+});
+```
+
+---
+
+### Anti-Pattern 3: Storing Large Objects in Tauri Store
+
+**What people do:** Store entire config file content in settings.
+
+**Why it's wrong:** Tauri Store is for preferences (small data), not content (large data).
+
+**Do this instead:**
+
+```typescript
+// WRONG: Store file content
+await saveSettings({
+  theme: "dark",
+  lastConfigContent: "...(5000 lines of YAML)...",  // ❌ Too large
 });
 
-fn validate_event_schema(event: &serde_json::Value) -> Result<()> {
-    EVENT_SCHEMA_VALIDATOR.validate(event)  // ← 0.1ms, not 2ms
-        .map_err(|errors| /* format errors */)
-}
-```
-
-**Trade-offs:**
-- **Pro:** 20x faster validation (0.1ms vs 2ms)
-- **Pro:** Fail-fast on invalid schema at startup
-- **Con:** ~5-10 KB memory per compiled schema
-- **Con:** Must use `LazyLock` (standard library, no OnceCell)
-
-**When to use:** Always for validators that run multiple times. Lazy compilation only for one-off validation.
-
----
-
-### Pattern 2: State Isolation in Debug CLI
-
-**Problem:** Global state (REGEX_CACHE) leaks between debug invocations.
-
-**Solution:** Clear caches at start of debug command.
-
-**Implementation:**
-
-```rust
-pub async fn run(
-    event_type: String,
-    tool: Option<String>,
-    command: Option<String>,
-    path: Option<String>,
-    prompt: Option<String>,
-    verbose: bool,
-) -> Result<()> {
-    // CRITICAL: Clear global state before processing
-    {
-        use crate::hooks::REGEX_CACHE;
-        REGEX_CACHE.lock().unwrap().clear();
-    }
-
-    // Build isolated event (no shared state)
-    let event = build_event(event_type, tool, command, path, prompt);
-
-    // Load fresh config
-    let config = Config::load(None)?;
-
-    // Process with clean state
-    hooks::process_event(event, &debug_config).await
-}
-```
-
-**Trade-offs:**
-- **Pro:** Reproducible results (no cross-test contamination)
-- **Pro:** Matches production behavior (each event is independent)
-- **Con:** Slower (cache warm-up on every invocation)
-- **Con:** Doesn't test cache behavior (production has hot cache)
-
-**When to use:** Always in debug CLI. For production, keep caches warm for performance.
-
----
-
-### Pattern 3: Path Canonicalization for Cross-Platform Tests
-
-**Problem:** macOS symlinks and Windows path separators cause E2E test failures.
-
-**Solution:** Always canonicalize paths before comparison.
-
-**Implementation:**
-
-```rust
-use std::fs;
-use std::path::{Path, PathBuf};
-
-pub fn canonicalize_path<P: AsRef<Path>>(path: P) -> PathBuf {
-    fs::canonicalize(path.as_ref())
-        .unwrap_or_else(|_| path.as_ref().to_path_buf())  // Fallback if path doesn't exist
-}
-
-// Usage in tests
-let temp_dir = tempfile::tempdir()?;
-let canonical = canonicalize_path(temp_dir.path());  // /var → /private/var on macOS
-let cwd = canonical.to_string_lossy().to_string();
-```
-
-**Trade-offs:**
-- **Pro:** Tests pass on macOS, Linux, Windows
-- **Pro:** Handles symlinks transparently
-- **Con:** Extra `fs::canonicalize()` call (negligible in tests)
-- **Con:** Fails if path doesn't exist (use fallback)
-
-**When to use:** Always in E2E tests. Avoid in production (path must exist).
-
----
-
-## Anti-Patterns (v1.4)
-
-### Anti-Pattern 1: Compiling Schemas in the Hot Path
-
-**What people do:** Compile JSON schemas inside `process_event()` loop.
-
-**Why it's wrong:** 20x performance penalty, exceeds latency budget.
-
-**Do this instead:**
-
-```rust
-// WRONG: Compile on every event
-pub async fn process_event(event: Event, config: &Config) -> Response {
-    let schema = serde_json::from_str(schema_str)?;  // ❌ Parse JSON
-    let validator = JSONSchema::compile(&schema)?;   // ❌ Compile on every event
-    validator.validate(&event_json)?;
-}
-
-// RIGHT: Pre-compile at startup
-static VALIDATOR: LazyLock<JSONSchema> = LazyLock::new(|| {
-    JSONSchema::compile(&schema_json).expect("Schema compilation failed")
+// RIGHT: Store only file path reference
+await saveSettings({
+  theme: "dark",
+  lastOpenedConfigPath: "~/.claude/hooks.yaml",  // ✓ Small metadata
 });
-
-pub async fn process_event(event: Event, config: &Config) -> Response {
-    VALIDATOR.validate(&event_json)?;  // ✓ Use cached validator
-}
 ```
 
 ---
 
-### Anti-Pattern 2: Using `ubuntu-latest` for Tauri Builds
+### Anti-Pattern 4: Not Cleaning Up Event Listeners
 
-**What people do:** Use `runs-on: ubuntu-latest` in CI workflow.
+**What people do:** Register Tauri event listeners without `unlisten()` on unmount.
 
-**Why it's wrong:** GitHub updates `ubuntu-latest` to 24.04, which removed `libwebkit2gtk-4.0-dev`. Tauri 2.0 requires `webkit2gtk-4.1-dev`.
-
-**Do this instead:**
-
-```yaml
-# WRONG: Unpredictable OS version
-runs-on: ubuntu-latest  # ❌ May use 24.04 without webkit2gtk-4.1
-
-# RIGHT: Explicit version
-runs-on: ubuntu-22.04  # ✓ Stable, webkit2gtk-4.1 available
-```
-
----
-
-### Anti-Pattern 3: Sharing State Across Debug Invocations
-
-**What people do:** Reuse REGEX_CACHE across `rulez debug` invocations for performance.
-
-**Why it's wrong:** State leakage causes unreproducible bugs.
+**Why it's wrong:** Memory leaks, duplicate event handlers.
 
 **Do this instead:**
 
-```rust
-// WRONG: No state cleanup
-pub async fn run(...) {
-    let event = build_event(...);
-    hooks::process_event(event, &config).await  // ❌ REGEX_CACHE may contain stale patterns
-}
+```typescript
+// WRONG: No cleanup
+useEffect(() => {
+  listen("config-file-changed", handleChange);  // ❌ Leaks on unmount
+}, []);
 
-// RIGHT: Clear state before each invocation
-pub async fn run(...) {
-    REGEX_CACHE.lock().unwrap().clear();  // ✓ Isolation
-    let event = build_event(...);
-    hooks::process_event(event, &config).await
-}
+// RIGHT: Return cleanup function
+useEffect(() => {
+  let unlisten: (() => void) | null = null;
+
+  async function setup() {
+    unlisten = await listen("config-file-changed", handleChange);
+  }
+  setup();
+
+  return () => {
+    if (unlisten) unlisten();  // ✓ Cleanup
+  };
+}, []);
 ```
 
 ---
 
 ## Build Order (Recommended)
 
-**Dependencies:**
+### Dependencies
 
 ```
-Phase 1 (JSON Schema)  ──────────┐
-                                  ├─> (no dependencies)
-Phase 2 (Debug CLI)    ──────────┤
-                                  │
-Phase 3 (E2E Fixes)    ──────────┘
-    ↓ (binary stability required)
-Phase 4 (Tauri CI)
+Phase 1 (Log Viewer)  ─────────┐
+                                ├─> (no dependencies, pure additive)
+Phase 2 (Settings)     ─────────┤
+                                │
+Phase 3 (File Watching) ────────┤ (depends on configStore from M1)
+                                │
+Phase 4 (Config Diffing) ───────┘ (depends on readConfig from M1)
 ```
 
-**Recommended Order:**
+### Recommended Order
 
-1. **Phase 1: JSON Schema Integration** (2-3 days)
-   - Add `schemars` dependency
-   - Generate schema from `Event` struct
-   - Add `validate_event_schema()` to `main.rs`
-   - Test with valid and invalid events
+**Phase 1: Log Viewer** (3-4 days)
+- Add `logStore.ts` with loadLogs/clearLogs actions
+- Create `commands/logs.rs` with read_logs/count_logs/clear_logs
+- Build `LogViewer`, `LogEntry`, `LogFilterBar` components
+- Add `react-window` for virtual scrolling
+- Add "logs" tab to RightPanel
+- Test with large log files (10K+ entries)
 
-2. **Phase 2: Debug CLI UserPromptSubmit** (1-2 days)
-   - Add `UserPromptSubmit` to `SimEventType`
-   - Add `--prompt` flag
-   - Clear REGEX_CACHE in `run()`
-   - Test `rulez debug prompt --prompt "text"`
+**Phase 2: Settings Persistence** (2-3 days)
+- Add `tauri-plugin-store` to Cargo.toml
+- Create `commands/settings.rs` with load/save functions
+- Integrate with existing `uiStore` for theme/preferences
+- Build `SettingsPanel` component
+- Add settings menu to Header
+- Test persistence across app restarts
 
-3. **Phase 3: E2E Test Fixes** (2-3 days)
-   - Add `canonicalize_path()` helper
-   - Update all E2E tests
-   - Add Windows and macOS to CI matrix
-   - Verify tests pass on all platforms
+**Phase 3: File Watching** (2-3 days)
+- Add `tauri-plugin-fs` with watch feature
+- Add `watch_config_file` command to `config.rs`
+- Integrate with `configStore.watchActiveFile()`
+- Add toast notification on file reload
+- Test external file edits (VS Code, terminal)
+- Handle edge cases (file deleted, permission errors)
 
-4. **Phase 4: Tauri CI Setup** (1-2 days)
-   - Create `.github/workflows/tauri-build.yml`
-   - Pin `ubuntu-22.04`, install webkit2gtk-4.1
-   - Add E2E test job (Playwright)
-   - Verify builds succeed on all platforms
+**Phase 4: Config Diffing** (2 days)
+- Add `similar` crate for diff algorithm
+- Add `diff_configs` command to `config.rs`
+- Create `ConfigDiff`, `DiffView` components
+- Add `react-diff-viewer` for rendering
+- Add "Compare" button to Sidebar
+- Test with real global/project configs
 
-**Total Estimated Time:** 6-10 days (with parallelization: 4-6 days)
+**Total Estimated Time:** 9-12 days (with parallelization: 7-9 days)
 
-**Parallelization:** Phases 1 and 2 are independent. Phase 3 blocks Phase 4.
+**Parallelization:** Phases 1 and 2 are fully independent. Phases 3 and 4 depend on M1 scaffold but not on each other.
 
 ---
 
 ## Success Criteria
 
-**Phase 1: JSON Schema Integration**
-- [ ] `schemars` dependency added, schema generated
-- [ ] `validate_event_schema()` runs before rule evaluation
-- [ ] Invalid events exit with code 1 (not 2)
-- [ ] Benchmark shows <0.1ms validation overhead
+### Phase 1: Log Viewer
+- [ ] Loads 1000 log entries in <100ms
+- [ ] Virtual scrolling handles 50K+ entries without lag
+- [ ] Filter controls work (level, outcome, rule name)
+- [ ] Clear logs command empties rulez.log file
+- [ ] Dual-mode: Web fallback shows mock data
+- [ ] Logs tab appears in RightPanel
 
-**Phase 2: Debug CLI UserPromptSubmit**
-- [ ] `rulez debug UserPromptSubmit --prompt "text"` works
-- [ ] State isolation test passes (no cross-invocation leakage)
-- [ ] Help text shows UserPromptSubmit in event types
-- [ ] REGEX_CACHE cleared at start of `run()`
+### Phase 2: Settings Persistence
+- [ ] Settings survive app restart (theme, font, etc.)
+- [ ] Tauri Store creates settings.json in app data dir
+- [ ] SettingsPanel UI allows customization
+- [ ] rulez_binary_path setting allows custom binary location
+- [ ] Auto-save settings work with debouncing
 
-**Phase 3: E2E Test Fixes**
-- [ ] All E2E tests pass on macOS, Linux, Windows
-- [ ] CI matrix includes all three platforms
-- [ ] Tests use `canonicalize_path()` for all temp dirs
-- [ ] No symlink or path separator failures
+### Phase 3: File Watching
+- [ ] External config edits trigger reload (<1 second latency)
+- [ ] Toast notification shown on file reload
+- [ ] No memory leaks (unlisten() called on unmount)
+- [ ] Handles edge cases (file deleted, permission denied)
+- [ ] Watch command cleanup on file close
 
-**Phase 4: Tauri CI Setup**
-- [ ] CI builds Tauri app for macOS, Windows, Linux
-- [ ] Linux uses `ubuntu-22.04` with webkit2gtk-4.1
-- [ ] E2E tests run in web mode (Playwright)
-- [ ] Artifacts uploaded (.dmg, .msi, .AppImage)
+### Phase 4: Config Diffing
+- [ ] Side-by-side diff renders correctly
+- [ ] Diff stats show additions/deletions
+- [ ] Syntax highlighting in diff view
+- [ ] Compare button only shown when both configs exist
+- [ ] Handles configs with different line endings
 
-**Overall:**
-- [ ] No performance regression (<10ms p95 latency)
-- [ ] Binary size <5 MB (~2.2 MB + ~50 KB schema)
-- [ ] All CI jobs green (fmt, clippy, tests, coverage, E2E, Tauri)
+### Overall v1.5
+- [ ] No regressions in M1 features (editor, simulator)
+- [ ] All new features work in dual-mode (desktop + web)
+- [ ] E2E tests pass for new components
+- [ ] Bundle size increase <500 KB
+- [ ] Binary size increase <1 MB
+
+---
+
+## Modified/New Files Summary
+
+### New Rust Files
+- `rulez-ui/src-tauri/src/commands/logs.rs` (JSONL reader)
+- `rulez-ui/src-tauri/src/commands/settings.rs` (Tauri Store wrapper)
+
+### Modified Rust Files
+- `rulez-ui/src-tauri/src/commands/config.rs` (add watch/unwatch/diff commands)
+- `rulez-ui/src-tauri/src/commands/mod.rs` (register new modules)
+- `rulez-ui/src-tauri/src/main.rs` (register plugins and commands)
+- `rulez-ui/src-tauri/Cargo.toml` (add dependencies)
+
+### New Frontend Files
+- `rulez-ui/src/stores/logStore.ts`
+- `rulez-ui/src/components/logs/LogViewer.tsx`
+- `rulez-ui/src/components/logs/LogEntry.tsx`
+- `rulez-ui/src/components/logs/LogFilterBar.tsx`
+- `rulez-ui/src/components/logs/LogStats.tsx`
+- `rulez-ui/src/components/settings/SettingsPanel.tsx`
+- `rulez-ui/src/components/settings/Section.tsx`
+- `rulez-ui/src/components/settings/FilePathInput.tsx`
+- `rulez-ui/src/components/diff/ConfigDiff.tsx`
+- `rulez-ui/src/components/diff/DiffView.tsx`
+- `rulez-ui/src/components/diff/DiffStats.tsx`
+
+### Modified Frontend Files
+- `rulez-ui/src/lib/tauri.ts` (add log/settings/watch/diff functions)
+- `rulez-ui/src/stores/configStore.ts` (add file watching logic)
+- `rulez-ui/src/stores/uiStore.ts` (add settings persistence)
+- `rulez-ui/src/types/index.ts` (add LogEntry, UserSettings, DiffHunk types)
+- `rulez-ui/src/components/layout/RightPanel.tsx` (add logs tab)
+- `rulez-ui/src/components/layout/Sidebar.tsx` (add compare button)
+- `rulez-ui/package.json` (add dependencies)
+
+### Dependencies Added
+
+**Rust:**
+- `tauri-plugin-fs = { version = "2.0", features = ["watch"] }`
+- `tauri-plugin-store = "2.0"`
+- `similar = "2.4"` (text diffing)
+
+**JavaScript:**
+- `react-window` (virtual scrolling)
+- `react-diff-viewer` (diff UI)
+- `@tauri-apps/plugin-fs`
+- `@tauri-apps/plugin-store`
 
 ---
 
 ## Sources
 
-**JSON Schema (HIGH confidence):**
-- [schemars docs.rs](https://docs.rs/schemars) — API docs, Serde integration
-- [jsonschema docs.rs](https://docs.rs/jsonschema) — Validator performance notes
-- [JSON Schema Draft-07](https://json-schema.org/draft-07/json-schema-release-notes) — Spec
+**Tauri 2.0 File System (HIGH confidence):**
+- [File System Plugin](https://v2.tauri.app/plugin/file-system/) — watch() and watchImmediate() API
+- [Tauri Events](https://v2.tauri.app/develop/calling-rust/#events) — Event system for file watching
+- [Tauri Store Plugin](https://v2.tauri.app/plugin/store/) — Settings persistence
 
-**CLI Testing (HIGH confidence):**
-- [assert_cmd docs](https://docs.rs/assert_cmd) — Testing CLI apps
-- [Command Line Apps in Rust](https://rust-cli.github.io/book/tutorial/testing.html) — Testing patterns
-- [tempfile docs](https://docs.rs/tempfile) — Temporary directory handling
+**React Virtual Scrolling (HIGH confidence):**
+- [react-window](https://react-window.vercel.app/) — Virtual scrolling library
+- [Virtual Scrolling in React](https://medium.com/@swatikpl44/virtual-scrolling-in-react-6028f700da6b) — Best practices
 
-**Tauri 2.0 (HIGH confidence):**
-- [Tauri 2.0 Prerequisites](https://v2.tauri.app/start/prerequisites/) — System dependencies
-- [Tauri GitHub Actions](https://v2.tauri.app/distribute/pipelines/github/) — CI/CD guide
-- [tauri-apps/tauri-action](https://github.com/tauri-apps/tauri-action) — Official GitHub Action
+**Zustand Patterns (HIGH confidence):**
+- [Zustand Slices Pattern](https://zustand.docs.pmnd.rs/guides/slices-pattern) — Store composition
+- [Multiple Stores Discussion](https://github.com/pmndrs/zustand/discussions/2496) — When to split stores
+
+**React Error Boundaries (MEDIUM confidence):**
+- [react-error-boundary](https://github.com/bvaughn/react-error-boundary) — Library for error handling
+- [Error Boundaries Guide](https://refine.dev/blog/react-error-boundaries/) — Best practices (2026-01-15)
+
+**Diff Libraries (MEDIUM confidence):**
+- [react-diff-viewer](https://github.com/praneshr/react-diff-viewer) — GitHub-style diff component
+- [similar crate](https://docs.rs/similar) — Rust text diffing
 
 **Existing Codebase (HIGH confidence):**
-- `rulez/src/main.rs`, `rulez/src/hooks.rs`, `rulez/src/cli/debug.rs` — Code inspection
-- `rulez/tests/e2e_git_push_block.rs` — E2E test patterns
-- `.github/workflows/ci.yml` — Existing CI pipeline
+- `rulez-ui/src/stores/configStore.ts`, `rulez-ui/src/lib/tauri.ts` — M1 scaffold patterns
+- `rulez-ui/src-tauri/src/commands/config.rs` — Existing Tauri command structure
+- `rulez-ui/CLAUDE.md` — Dual-mode architecture documentation
 
 ---
 
 **Researched:** 2026-02-10
-**Next Review:** After Phase 1 implementation (validate schema compilation performance)
+**Next Review:** After Phase 1 implementation (validate virtual scrolling performance with real log files)

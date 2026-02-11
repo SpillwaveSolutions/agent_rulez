@@ -1,297 +1,270 @@
 # Project Research Summary
 
-**Project:** RuleZ v1.4 Stability & Polish
-**Domain:** Rust CLI Policy Engine - Infrastructure & Developer Experience
+**Project:** RuleZ UI Desktop App v1.5 Production Features
+**Domain:** Desktop Application - Policy Configuration Management (Tauri 2.0 + React 18)
 **Researched:** 2026-02-10
 **Confidence:** HIGH
 
 ## Executive Summary
 
-v1.4 is a **polish and stabilization milestone** focused on closing four specific gaps identified in v1.3 technical debt: JSON Schema validation for hook events, debug CLI parity for UserPromptSubmit events, cross-platform E2E test reliability, and Tauri 2.0 CI integration. Research shows these features are infrastructure improvements that enable better testing, validation, and cross-platform reliability without adding new user-facing policy features.
+RuleZ UI v1.5 transforms the validated M1 scaffold (Tauri 2.0 + React 18 + Monaco Editor) into a production-ready desktop application by adding four critical features: log viewing with virtual scrolling, settings persistence, live file watching, and configuration diffing. The research establishes that these additions follow well-documented patterns (TanStack Virtual for large lists, Tauri plugins for native features, Zustand for state) but introduces specific risks that must be addressed: Monaco bundle duplication (can cause 2.4 MB bloat), JSONL IPC bottlenecks (5-30 second freezes with large logs), and Linux inotify limits (silent failures with file watching).
 
-The recommended approach is **additive integration**: all four features enhance existing components without modifying the core rule evaluation engine. Add ONE new dependency (schemars 1.2.1 for schema generation), pre-compile validators for performance, isolate debug CLI state to prevent cross-invocation leakage, canonicalize paths in E2E tests for cross-platform compatibility, and use explicit Ubuntu 22.04 runners with webkit2gtk-4.1 for Tauri builds.
+The recommended approach builds incrementally on the M1 foundation using separate Zustand stores for each domain (logs, config, UI), implements streaming/pagination for log data, watches specific files rather than directories, and maintains the dual-mode architecture for E2E testing. Each new feature integrates cleanly with existing patterns — log viewer adds a new RightPanel tab, settings enhance existing uiStore, file watching extends configStore, and diff view reuses the read/write infrastructure.
 
-Key risks center on performance (schema validation must stay under 0.1ms per event), correctness (JSON Schema draft version compatibility), and CI reliability (webkit dependency hell, stale binary caches). All risks have well-documented mitigation strategies: pre-compile schemas at config load, require explicit `$schema` field with draft validation, clear caches in debug mode, use fs::canonicalize for paths, and pin CI runners with explicit webkit versions.
+Key risks center on performance (bundle size, serialization overhead, memory leaks) and cross-platform consistency (WebView differences, PATH separator handling, inotify limits). The research provides concrete prevention strategies: Vite deduplication for Monaco, streaming APIs with events for logs, polling fallbacks for file watching, auto-waiting selectors for E2E tests, and platform-aware path handling. All strategies are validated against 2026 documentation and real-world evidence from GitHub issues, Tauri discussions, and community patterns.
 
 ## Key Findings
 
 ### Recommended Stack
 
-v1.4 adds **ONE new dependency** to the existing validated stack: schemars 1.2.1 for automatic JSON Schema generation from Rust types. All other features reuse existing dependencies (jsonschema 0.41 for validation, tokio async stdin for debug CLI, Playwright for E2E tests, Tauri 2.0 for desktop app).
+Research identifies NEW libraries needed for v1.5 production features, all chosen for integration with the validated M1 scaffold (React 18.3.1, Tauri 2.0, Monaco 4.7.0, Zustand 5.0.3). The focus is on lightweight, well-maintained libraries that follow established patterns.
 
-**Core technologies (NEW in v1.4):**
-- **schemars 1.2.1**: JSON Schema generation from Rust structs — auto-generated schemas match serde serialization exactly, eliminates manual schema file maintenance, full serde compatibility via derive macros
-- **jsonschema 0.41** (existing): Runtime schema validation — 20-470x faster than alternatives, supports draft-07 and 2020-12, pre-compiled validators cache for performance
-- **tokio::io::stdin()** (existing): Async stdin for debug CLI — built-in since tokio 1.0, no new dependency needed, reuses existing async runtime
-- **Playwright 1.50** (existing): E2E testing in web mode — tests UI without Tauri build, works with Bun (basic support), fast feedback loop
-- **libwebkit2gtk-4.1-dev**: Tauri 2.0 Linux dependency — CRITICAL: version 4.1 (NOT 4.0), required for Ubuntu 22.04+, breaking change from Tauri 1.x
+**Core technologies:**
+- **@tanstack/react-virtual (^3.13.18):** Headless virtual scrolling for log viewer — lightweight (10-15kb), handles 100K+ rows at 60fps, variable-height row support for JSONL metadata. Chosen over react-window for flexibility with log entry complexity.
+- **tauri-plugin-fs-watch (2.0):** Cross-platform file watching via Tauri ecosystem — wraps notify crate (industry standard used by rust-analyzer, cargo-watch), integrates with Tauri permission system. Essential for live config reload without polling waste.
+- **tauri-plugin-store (2.0):** Secure settings persistence — native encrypted storage with file permissions, better than localStorage for desktop apps. Integrates with Zustand persist middleware for seamless state management.
+- **notify (^6.1.1):** Rust file watcher backend — cross-platform (Linux inotify, macOS FSEvents, Windows ReadDirectoryChangesW), efficient event debouncing. Already used by Tauri CLI internally.
+- **date-fns (^3.3.1):** Log timestamp formatting — 2kb gzipped vs 67kb moment.js, immutable API, TypeScript-native. For parsing JSONL timestamps in log viewer.
+- **react-joyride (^2.9.3):** Onboarding tours — mature (5.1k stars), accessible (WCAG 2.1), simpler API than Intro.js. For first-run experience.
+- **similar (2.4):** Rust diff algorithm for config comparison — used in git-diff, handles line-by-line comparison. Powers side-by-side config diff view.
 
-**Performance budget:** Schema validation adds <0.1ms per event (cached validator), stays within <10ms total processing budget. Binary size increases by ~50 KB (schemars compile-time only).
+**Critical decision: NO new Monaco dependency** — use built-in `registerCompletionItemProvider` API for YAML autocomplete instead of additional library. Prevents bundle bloat.
 
 ### Expected Features
 
-v1.4 delivers **infrastructure features** that improve correctness and developer experience, NOT new user-facing policy capabilities. These are table stakes for calling the milestone "Stability & Polish."
-
 **Must have (table stakes):**
-- **JSON Schema event validation**: Validate incoming hook events match Claude Code's schema before processing — fail-open mode for backwards compatibility, pre-compiled schemas for performance, support draft-07 and 2020-12
-- **Debug CLI UserPromptSubmit simulation**: Close testing gap for prompt_match rules — add `rulez debug prompt --prompt "text"` command, reuse existing event processing pipeline, clear state between invocations
-- **E2E test cross-platform reliability**: Tests must pass on Linux, macOS, Windows — canonicalize paths to resolve symlinks, fix broken pipe issues with wait_with_output(), CI matrix on all platforms
-- **Tauri 2.0 CI builds**: Multi-platform desktop app builds in GitHub Actions — webkit2gtk-4.1 on Linux, macOS and Windows native builds, E2E tests run first (fast), Tauri builds only if tests pass (slow)
+- **YAML autocomplete for RuleZ fields** — Users expect schema-driven completions (standard in VS Code, IntelliJ). Monaco's built-in API supports this without new dependencies.
+- **Inline validation with error tooltips** — Red squiggles and hover details are universal IDE patterns. Schema already exists; wire to Monaco's `setModelMarkers` API.
+- **Audit log viewer with filtering** — Policy management tools require audit trails (Microsoft Purview, Oracle Audit). Must handle 10K-100K entries efficiently with virtual scrolling.
+- **Import/export configurations** — Universal in config management (VS Code profiles, Visual Studio .vsconfig). Simple YAML file operations via Tauri.
+- **Binary path configuration** — Desktop apps calling CLI tools must allow custom paths (Git GUI, Docker Desktop). Settings panel with file picker.
+- **Error recovery for missing binary** — Graceful degradation when dependencies absent. Show actionable error with install instructions.
 
-**Should have (differentiators from minimal bug fix):**
-- **JSON Schema draft version validation**: Fail-closed on missing `$schema` field, reject unsupported drafts (draft-04/06), prevent breaking changes when schemas evolve
-- **Performance regression tests in CI**: Benchmark schema validation overhead, fail CI if p95 latency exceeds 10ms, guarantee performance budget maintained
-- **LRU regex cache**: Fix unbounded REGEX_CACHE growth from v1.3 tech debt, max 100 compiled regexes, evict least-recently-used
-- **Debug CLI correlation IDs**: Trace event flow for reproducibility, log correlation ID with every decision, support debugging complex event chains
+**Should have (competitive):**
+- **Rule correlation in audit viewer** — Click log entry → jump to rule definition in editor. Differentiator requiring YAML AST parsing with line numbers.
+- **Inline documentation on hover** — Monaco's hover provider showing field descriptions from schema. Reduces need for external docs.
+- **Template gallery with preview** — 10-15 pre-built rule templates (block dangerous ops, inject context). Accelerates onboarding (Scrut has 75+ templates; we target focused set).
+- **Config diff view** — Side-by-side comparison of global vs project configs. Common in network tools (SolarWinds, ManageEngine).
+- **First-run wizard** — Multi-step onboarding (binary setup, template selection, test). Critical for reducing time to first working rule (<10 minutes target).
 
-**Defer (v2+ scope creep):**
-- **New rule matchers or actions**: v1.4 is stability, NOT feature expansion — defer prompt injection prevention, new matchers to v1.5
-- **Interactive debug REPL mode**: Already exists in `rulez repl` — extend existing REPL with UserPromptSubmit support rather than duplicate
-- **Full Tauri E2E tests**: Too slow and brittle — test web mode with Playwright (Tauri commands have fallbacks), reserve full Tauri tests for manual QA
+**Defer (v2+):**
+- **Rule evaluation timeline** — Visual timeline showing which rules fired with timing. Requires CLI changes (not in scope for v1.5).
+- **Real-time multi-user editing** — "Google Docs for rules" creates extreme complexity, conflicts with file-based storage. Use Git for collaboration.
+- **Cloud sync/backup** — Adds infrastructure, privacy concerns. Document Git/Dropbox patterns instead.
+- **AI-powered rule generation** — Unpredictable output, LLM integration complexity. Comprehensive templates suffice.
 
 ### Architecture Approach
 
-All v1.4 features integrate as **additive layers** to existing components without breaking changes. JSON Schema validation adds a pre-processing step in main.rs before rule evaluation. Debug CLI extends the existing SimEventType enum with UserPromptSubmit variant. E2E tests add helper functions for path canonicalization. Tauri CI creates a new workflow file parallel to existing CI.
+v1.5 maintains the M1 dual-mode architecture (Tauri IPC with web fallbacks) while adding production features as clean extensions: new Zustand stores for isolated domains (logStore for audit data, separate from configStore/uiStore), new Tauri command modules (logs.rs, settings.rs), and new component groups (logs/, settings/, diff/). Zero breaking changes to M1 scaffold.
 
 **Major components:**
-1. **Event Schema Validator** (NEW in main.rs): Pre-compile JSON Schemas at startup using LazyLock, validate event JSON before deserialization, fail with exit code 1 on invalid events (not blocking code 2), log validation failures to audit trail
-2. **Debug CLI UserPromptSubmit** (EXTEND cli/debug.rs): Add UserPromptSubmit to SimEventType enum, add --prompt flag to CLI args, clear REGEX_CACHE at start of run() for state isolation, reuse existing process_event() pipeline
-3. **Path Canonicalizer** (NEW in tests/common/mod.rs): Helper function using fs::canonicalize() to resolve symlinks and normalize separators, handles macOS /var to /private/var symlink, cross-platform PathBuf operations
-4. **Tauri CI Workflow** (NEW .github/workflows/tauri-build.yml): E2E tests in web mode (fast, runs on every PR), Tauri builds in matrix (slow, multi-platform), explicit ubuntu-22.04 with webkit2gtk-4.1, artifact uploads for releases only
+1. **Log Viewer (logs/)** — Virtual scrolling list displaying JSONL audit logs via TanStack Virtual. Integrates as new RightPanel tab. Streams data in 1000-entry chunks via Tauri events to avoid IPC bottleneck (critical: loading 100K entries as single JSON serialization causes 5-30 second freeze). Backed by new logStore with filter state (level, outcome, rule names, date range).
 
-**Integration points preserved:**
-- Core rule evaluation engine (hooks.rs) UNCHANGED — no modifications to process_event() logic
-- Config loading (config.rs) UNCHANGED — schemas compiled after config load, not during
-- Event models (models.rs) ADD JsonSchema derive — automatic schema generation, no manual fields
-- Audit logging (logging.rs) UNCHANGED — schema validation failures logged like other events
+2. **Settings Persistence (settings/)** — Tauri Store plugin wrapping native encrypted storage. Integrates with existing uiStore via persist middleware. Stores theme, editor font size, auto-save preferences, custom binary path. Settings UI accessible from header menu. Storage location platform-specific (macOS: ~/Library/Application Support, Linux: ~/.config, Windows: AppData/Roaming).
+
+3. **File Watching (enhanced configStore)** — notify crate via tauri-plugin-fs watches specific config files (NOT directories to avoid Linux inotify exhaustion). Emits Tauri events on change, triggers reload in configStore. Includes polling fallback for Linux when inotify limit hit. Shows toast notification on external edits. Cleanup via unlisten() on file close to prevent memory leaks.
+
+4. **Config Diffing (diff/)** — Uses similar crate for text diffing, Monaco diff editor for rendering. Compares global (~/.claude/hooks.yaml) vs project (.claude/hooks.yaml) side-by-side with color-coded changes. "Compare" button in sidebar when both configs exist. Diff computation ~5ms for typical config (50-100 lines).
+
+**Key architectural pattern: Streaming over bulk loading** — All large data (logs, potentially large configs) use pagination/streaming instead of single IPC invoke to avoid JSON serialization bottleneck. Example: read_logs_page(offset, limit) instead of read_all_logs().
 
 ### Critical Pitfalls
 
-Research identified six critical pitfalls specific to v1.4's infrastructure features. All have well-documented prevention strategies.
+1. **Monaco bundle duplication (CRITICAL - Performance)** — Bundling monaco-yaml separately causes 2+ MB of duplicate monaco-editor code, 3-5 second load times, and non-functional autocomplete. Prevention: Configure Vite to deduplicate with alias (`'monaco-editor': 'monaco-editor/esm/vs/editor/editor.api'`), use vite-plugin-monaco-editor, verify with `bun why monaco-editor` showing single instance. Detection: Bundle size >2 MB, error "Unexpected usage at EditorSimpleWorker.loadForeignModule". Phase 1 MUST configure this.
 
-1. **JSON Schema draft version incompatibility**: Breaking changes between draft-07, draft-2019-09, and draft-2020-12 cause silent validation failures — PREVENT: Require explicit `$schema` field in all schemas, reject unsupported drafts with clear error messages, pin jsonschema crate version to prevent breaking updates, document only draft-07 and 2020-12 supported
-2. **Schema validation performance in hot path**: Compiling schemas on every event adds 0.5-2ms overhead, exceeds <10ms budget with 100+ rules — PREVENT: Pre-compile schemas at config load using OnceCell or LazyLock, cache compiled validators in Rule struct, fail config load on schema compilation errors, add performance regression tests to CI with criterion benchmarks
-3. **Debug CLI state contamination across invocations**: Global REGEX_CACHE and static memory leak state between rulez debug calls, causes unreproducible bugs — PREVENT: Clear REGEX_CACHE at start of debug run(), implement LRU cache with max 100 entries to fix v1.3 unbounded growth, use correlation IDs for debug tracing, add state isolation test to verify no cross-invocation leakage
-4. **E2E test path resolution across platforms**: macOS /var symlinks, Windows backslash separators, tempfile cleanup races cause CI failures — PREVENT: Use fs::canonicalize() before path comparison, PathBuf for all path operations (not string concatenation), explicit drop(temp_dir) at test end, CI matrix on ubuntu/macos/windows
-5. **Tauri 2.0 webkit version conflict in CI**: Ubuntu 24.04 removed libwebkit2gtk-4.0-dev, Tauri 2.0 requires 4.1 — PREVENT: Use explicit ubuntu-22.04 runner (NOT ubuntu-latest), install libwebkit2gtk-4.1-dev (NOT 4.0), document minimum OS requirements (Ubuntu 22.04+, Debian 12+)
-6. **GitHub Actions cache invalidation on binary rename**: cch to rulez rename left stale binaries in ~/.cargo/bin/, tests execute wrong code — PREVENT: Explicit cache cleanup with versioned keys, always use cargo run --bin rulez in CI (not bare binary name), validate binary with which rulez before tests, add binary artifact validation step
+2. **JSONL IPC bottleneck (CRITICAL - Performance)** — Loading 100K line JSONL logs (10 MB) via single Tauri invoke causes 5-30 second freeze due to JSON serialization (10 MB file → 20 MB Vec<LogEntry> → 30 MB JSON → 60 MB JS objects). Prevention: Implement streaming with pagination (read_logs_page with 1000 entry chunks), use Tauri events for streaming (emit log-chunk), add TanStack Virtual for rendering. Phase 2 MUST implement streaming.
+
+3. **Linux inotify exhaustion (CRITICAL - Production)** — Watching directories with >8192 files exhausts Linux inotify limit (fs.inotify.max_user_watches), causing silent file watching failures. Works on macOS/Windows (different mechanisms). Prevention: Watch specific files NOT directories (RecursiveMode::NonRecursive), add polling fallback, check limits at startup, show warning if watch fails with ENOSPC. Phase 3 MUST use file-specific watches.
+
+4. **Playwright E2E flakiness (HIGH - Test reliability)** — Monaco's async module loading causes "element not found" errors in CI due to WebView timing differences (WKWebView 200ms, WebView2 1200ms, WebKitGTK 800ms). Prevention: Replace all `waitForTimeout()` with auto-waiting selectors (`page.waitForSelector('.monaco-editor .view-lines')`), add custom Monaco matchers, serialize test runs in CI (`--workers=1`). Phase 4 MUST eliminate timeouts.
+
+5. **Windows PATH separator issues (HIGH - Correctness)** — Using Unix `:` separator breaks binary detection on Windows (uses `;`). Prevention: Use `path.delimiter` (platform-aware), check for .exe/.cmd extensions on Windows, use `which` library for cross-platform path resolution. Phase 5 MUST test on Windows.
 
 ## Implications for Roadmap
 
-Based on research, v1.4 should be structured as **four independent phases** that can be developed in parallel (Phases 1-2), then integrated and validated (Phase 3), and finally deployed to CI (Phase 4).
+Based on research, the following phase structure addresses feature dependencies, mitigates pitfalls, and builds incrementally on M1 scaffold:
 
-### Phase 1: JSON Schema Validation
-**Rationale:** Core correctness feature with highest complexity — validating event structure before processing prevents downstream bugs. Must be first to establish schema patterns for other phases.
-
-**Delivers:**
-- schemars 1.2.1 dependency added
-- Event struct has JsonSchema derive macro
-- Pre-compiled schema validators cached in LazyLock
-- validate_event_schema() called in main.rs before process_event()
-- Draft version validation (draft-07 and 2020-12 only)
-- Fail-open mode with warnings for invalid events
-
-**Addresses (from FEATURES.md):**
-- JSON Schema event validation (table stakes)
-- Pre-compiled schema caching (table stakes)
-- Fail-open validation mode (table stakes)
-- JSON Schema draft version validation (differentiator)
-
-**Avoids (from PITFALLS.md):**
-- Pitfall 1: JSON Schema draft version incompatibility (require `$schema` field)
-- Pitfall 2: Schema validation performance (pre-compile at config load)
-- Pitfall 7: allOf misuse with serde flatten (document in guidelines)
-
-**Research flag:** Standard patterns (schemars derive macros well-documented, jsonschema crate widely used) — skip research-phase during planning.
-
----
-
-### Phase 2: Debug CLI UserPromptSubmit
-**Rationale:** Independent feature that closes v1.3 testing gap — can be developed in parallel with Phase 1. Low complexity, reuses existing infrastructure.
+### Phase 1: Monaco Editor Enhancements (YAML Autocomplete)
+**Rationale:** Foundation for all editor-based features. Must configure Monaco bundle properly BEFORE other features add complexity. Schema-driven autocomplete is table stakes (users expect this from VS Code experience).
 
 **Delivers:**
-- UserPromptSubmit added to SimEventType enum
-- --prompt flag added to debug CLI args
-- REGEX_CACHE cleared at start of run() for state isolation
-- LRU cache replaces unbounded HashMap (fixes v1.3 tech debt)
-- rulez debug prompt --prompt "text" command works
+- JSON Schema integration with monaco-yaml
+- Custom completion provider for RuleZ-specific fields (inject_inline, enabled_when, etc.)
+- Inline validation error markers
+- Hover documentation for YAML fields
 
-**Uses (from STACK.md):**
-- tokio::io::stdin() for async multiline input (existing dependency)
-- lru crate for bounded regex cache (new dependency, optional)
+**Addresses:** YAML autocomplete (must-have), inline validation (must-have), inline documentation (competitive)
 
-**Implements (from ARCHITECTURE.md):**
-- Debug CLI extension pattern (additive enum variant)
-- State isolation pattern (clear caches between invocations)
-- Correlation ID pattern (optional, for tracing)
+**Avoids:** Pitfall #1 (Monaco bundle duplication) — MUST configure Vite deduplication, verify bundle size <1.5 MB
 
-**Avoids (from PITFALLS.md):**
-- Pitfall 3: Debug CLI state contamination (clear REGEX_CACHE)
-- Pitfall 9: Debug CLI flag proliferation (use subcommands, not flags)
+**Research flag:** Standard pattern (Monaco API well-documented), skip phase-specific research
 
-**Research flag:** Standard patterns (tokio stdin well-documented, CLI testing with assert_cmd established) — skip research-phase during planning.
-
----
-
-### Phase 3: E2E Test Stabilization
-**Rationale:** Must come after Phases 1-2 to validate schema validation and debug CLI work correctly. Blocks Phase 4 (Tauri CI depends on E2E tests passing).
+### Phase 2: Audit Log Viewer with Virtual Scrolling
+**Rationale:** Independent from editor features, provides critical visibility into rule behavior. Must implement streaming/pagination from start to avoid refactoring later.
 
 **Delivers:**
-- canonicalize_path() helper in tests/common/mod.rs
-- All E2E tests use canonical paths in setup
-- Broken pipe fixes (use wait_with_output() instead of spawn() + wait())
-- CI matrix includes ubuntu-latest, macos-latest, windows-latest
-- Binary artifact validation (check which rulez before tests)
-- Symlink resolution tests (Unix-only, validates fs::canonicalize)
+- JSONL log parser with pagination (1000 entries/chunk)
+- Virtual scrolling via TanStack Virtual (handles 100K+ entries)
+- Filter controls (level, outcome, rule name, date range)
+- Log stats display (total entries, time range)
+- "Logs" tab in RightPanel
 
-**Addresses (from FEATURES.md):**
-- E2E test cross-platform paths (table stakes)
-- E2E test broken pipe fixes (table stakes)
-- Binary artifact validation (table stakes, prevents stale cache issues)
-- Cross-platform CI matrix (differentiator)
+**Addresses:** Audit log viewer (must-have), filtering (must-have)
 
-**Avoids (from PITFALLS.md):**
-- Pitfall 4: E2E test tempfile path resolution (fs::canonicalize)
-- Pitfall 6: GitHub Actions cache staleness (validate binary name)
-- Pitfall 8: Broken pipe on Linux (use wait_with_output)
+**Avoids:** Pitfall #2 (JSONL IPC bottleneck) — MUST implement streaming with events, not bulk loading
 
-**Research flag:** Standard patterns (assert_cmd well-documented, cross-platform testing established) — skip research-phase during planning.
+**Research flag:** Standard pattern (virtual scrolling well-documented), skip phase-specific research
 
----
-
-### Phase 4: Tauri CI Integration
-**Rationale:** Final phase, depends on Phase 3 (E2E tests must pass to validate build artifacts). Slowest phase (5-10 min CI builds), only run on release branches.
+### Phase 3: Settings Persistence and File Watching
+**Rationale:** These features work together (settings store custom binary path, file watching uses it). Both extend existing stores (uiStore, configStore) without new infrastructure.
 
 **Delivers:**
-- .github/workflows/tauri-build.yml (new workflow file)
-- E2E test job runs first in web mode (fast, uses Playwright)
-- Tauri build job only runs if E2E tests pass (slow, multi-platform matrix)
-- Linux uses ubuntu-22.04 with libwebkit2gtk-4.1-dev
-- macOS and Windows native builds
-- Artifacts uploaded for .dmg, .msi, .AppImage
+- Tauri Store plugin integration
+- Settings persistence (theme, font, auto-save, binary path)
+- File watcher for config files (specific files, not directories)
+- Live config reload on external edits
+- Toast notifications for file changes
+- Settings UI panel
 
-**Addresses (from FEATURES.md):**
-- Tauri 2.0 webkit dependency (table stakes)
-- Tauri 2.0 CI matrix builds (table stakes)
-- E2E tests run before builds (differentiator, fail-fast pattern)
+**Addresses:** Binary path config (must-have), error recovery (must-have), theme persistence (table stakes)
 
-**Avoids (from PITFALLS.md):**
-- Pitfall 5: Tauri webkit version conflict (use webkit2gtk-4.1, explicit ubuntu-22.04)
-- Pitfall 6: Stale cache artifacts (validate binary before upload)
+**Avoids:** Pitfall #3 (inotify exhaustion) — watch specific files, add polling fallback; Pitfall #6 (memory leaks) — cleanup listeners in useEffect
 
-**Research flag:** Standard patterns (Tauri GitHub Actions official, webkit2gtk-4.1 requirement documented) — skip research-phase during planning.
+**Research flag:** Moderate complexity (file watching cross-platform nuances) — consider `/gsd:research-phase` for Linux inotify handling
 
----
+### Phase 4: Configuration Diffing
+**Rationale:** Builds on existing file reading infrastructure. Simple addition using Monaco's built-in diff editor.
+
+**Delivers:**
+- Side-by-side config diff view (global vs project)
+- Diff stats (additions, deletions, modifications)
+- "Compare" button in sidebar
+- Color-coded change highlighting
+
+**Addresses:** Config diff view (competitive)
+
+**Avoids:** No critical pitfalls — straightforward Monaco API usage
+
+**Research flag:** Standard pattern (Monaco diff editor documented), skip phase-specific research
+
+### Phase 5: Template Gallery and First-Run Experience
+**Rationale:** Onboarding features come after core functionality works. Templates provide fast path to first working rule.
+
+**Delivers:**
+- 10-15 pre-built rule templates
+- Template preview with live YAML
+- First-run wizard (binary detection, template selection, test)
+- Onboarding tour with react-joyride
+- Template insertion into editor
+
+**Addresses:** Template gallery (competitive), first-run wizard (competitive), snippets (should-have)
+
+**Avoids:** Pitfall #5 (Windows PATH) — test binary detection on all platforms
+
+**Research flag:** Standard pattern (joyride well-documented), skip phase-specific research
+
+### Phase 6: E2E Test Stabilization
+**Rationale:** Critical for CI reliability before distribution. Must eliminate flakiness before production release.
+
+**Delivers:**
+- Remove all `waitForTimeout()` calls
+- Add auto-waiting selectors for Monaco
+- Custom Playwright matchers for Monaco state
+- Consistent WebView in CI (ubuntu-22.04)
+- Test retry logic for known-flaky interactions
+- 100% pass rate over 10 runs
+
+**Addresses:** Test reliability (internal quality)
+
+**Avoids:** Pitfall #4 (E2E flakiness) — MUST replace timeouts with auto-waiting
+
+**Research flag:** Requires phase-specific research (`/gsd:research-phase`) — Monaco async loading timing, WebView differences need deeper investigation
+
+### Phase 7: Cross-Platform Polish and Distribution
+**Rationale:** Final phase ensures consistent experience across platforms and sets up deployment.
+
+**Delivers:**
+- WebView rendering normalization (scrollbars, fonts)
+- Windows binary path handling
+- Linux inotify limit documentation
+- Tauri updater plugin setup (requires code signing)
+- Platform-specific CI testing (macOS, Windows, Linux)
+- Binary path detection fallbacks
+
+**Addresses:** Cross-platform consistency, distribution
+
+**Avoids:** Pitfall #5 (Windows PATH), Pitfall #9 (WebView differences)
+
+**Research flag:** Moderate complexity (code signing costs, platform differences) — consider `/gsd:research-phase` for auto-updater setup
 
 ### Phase Ordering Rationale
 
-**Parallel development (Phases 1-2):**
-- JSON Schema integration and debug CLI have no dependencies
-- Can be developed simultaneously by different developers
-- Both enhance validation/testing infrastructure
-
-**Sequential validation (Phase 3):**
-- E2E tests validate Phases 1-2 work correctly on all platforms
-- Must pass before Tauri builds are useful (Phase 4)
-- Blocks deployment to CI
-
-**Final integration (Phase 4):**
-- Tauri builds only after E2E tests pass (fail-fast)
-- Slowest phase, runs only on release branches
-- Validates entire stack works on all platforms
-
-**Critical path:** Phase 1 OR Phase 2 → Phase 3 → Phase 4 (total: 6-10 days estimated)
+- **Phase 1 first:** Monaco configuration must be correct before adding features that depend on it. Bundle size regression would be costly to fix later.
+- **Phase 2-3 parallel possible:** Log viewer and settings/file-watching are independent domains with separate Zustand stores. Can be developed concurrently.
+- **Phase 4 after 3:** Config diff uses file reading infrastructure validated in file watching.
+- **Phase 5 after 1-4:** Onboarding depends on core features working (editor, logs, settings).
+- **Phase 6 before 7:** Must have stable tests before distribution to avoid shipping flaky builds.
+- **Phase 7 last:** Polish and distribution depend on all features complete.
 
 ### Research Flags
 
-**Phases with standard patterns (skip research-phase):**
-- **Phase 1 (JSON Schema)**: schemars and jsonschema crates have extensive official documentation, derive macros well-established pattern
-- **Phase 2 (Debug CLI)**: tokio stdin built-in feature, CLI testing with assert_cmd widely documented
-- **Phase 3 (E2E Tests)**: Cross-platform testing patterns well-established, fs::canonicalize standard library
-- **Phase 4 (Tauri CI)**: Official Tauri GitHub Actions, webkit2gtk-4.1 requirement explicitly documented
+**Phases likely needing deeper research during planning:**
+- **Phase 3 (File Watching):** Linux inotify limits, cross-platform differences, resource exhaustion patterns need investigation beyond general docs
+- **Phase 6 (E2E Stabilization):** Monaco async loading timing, WebView rendering differences, Playwright with Tauri needs platform-specific research
+- **Phase 7 (Distribution):** Code signing costs ($300-500/year for certificates), auto-updater security, platform-specific packaging
 
-**No phases need deeper research during planning.** All features use well-documented patterns with HIGH confidence sources.
+**Phases with standard patterns (skip research-phase):**
+- **Phase 1 (Monaco):** Well-documented Monaco API, Vite deduplication is established pattern
+- **Phase 2 (Logs):** TanStack Virtual has comprehensive docs, JSONL parsing is straightforward
+- **Phase 4 (Diff):** Monaco diff editor API well-documented, similar crate usage clear
+- **Phase 5 (Onboarding):** react-joyride has clear examples, template patterns standard
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | schemars and jsonschema official docs verified, tokio stdin built-in, Tauri 2.0 docs explicit about webkit2gtk-4.1 |
-| Features | HIGH | v1.3 tech debt items well-documented, feature scope clearly defined as stability (not expansion) |
-| Architecture | HIGH | Integration points identified via code inspection, additive patterns preserve existing engine |
-| Pitfalls | HIGH | All six critical pitfalls have documented real-world evidence (GitHub issues, official migration guides) |
+| Stack | HIGH | All libraries verified in 2026 docs with active maintenance. TanStack Virtual 3.13.18, Tauri plugins 2.0, notify 6.1.1 all confirmed. Version compatibility validated. |
+| Features | MEDIUM | Feature expectations based on VS Code (HIGH), policy management tools (MEDIUM), competitor analysis (MEDIUM). Some features (rule correlation, timeline) less validated. |
+| Architecture | HIGH | Integration patterns follow existing M1 scaffold (proven working). Dual-mode maintained, Zustand store separation clear, Tauri IPC patterns established. |
+| Pitfalls | HIGH | All critical pitfalls sourced from GitHub issues, Tauri discussions, real production failures. Prevention strategies verified in 2026 documentation. |
 
 **Overall confidence:** HIGH
 
+Research is comprehensive with verified sources. Main uncertainty is feature prioritization (what users value most) rather than technical implementation. Architecture and stack choices follow proven patterns.
+
 ### Gaps to Address
 
-**Performance validation required:**
-- Benchmark schema validation overhead with 100+ rules (target: <0.1ms per event)
-- Verify total processing latency stays under 10ms with criterion regression tests
-- Validate binary size stays under 5 MB (currently 2.2 MB + 50 KB schemars = 2.25 MB)
+**During planning:**
+- **Binary detection edge cases:** Handle Rust installed via rustup vs package manager vs manual. Research suggests ~/.cargo/bin, but Windows scoop/chocolatey installs may differ. Validate during Phase 5 with Windows CI.
+- **Log volume limits:** Research covers 100K lines, but what happens at 1M+ lines? Consider lazy loading with backend indexing if users report issues post-launch.
+- **Monaco schema validation performance:** Schema complexity may slow down validation on large files. Monitor in Phase 1; consider debouncing if users report lag.
 
-**Cross-platform testing required:**
-- Run E2E tests on Windows in CI (currently only tested on macOS and Linux locally)
-- Validate Tauri builds succeed on all platforms in matrix (ubuntu-22.04, macos-latest, windows-latest)
-- Test symlink resolution explicitly on macOS (/var → /private/var)
-
-**CI cache behavior:**
-- Verify stale binary detection works (which rulez validation step)
-- Test cache invalidation after binary rename (versioned cache keys)
-- Validate webkit2gtk-4.1 installation on ubuntu-22.04 and ubuntu-24.04
-
-**All gaps are validation tasks during implementation, NOT research gaps.** The approach is clear, execution needs verification.
+**During implementation:**
+- **File watching debounce timing:** Research suggests 500ms, but optimal timing depends on user editing patterns. Make configurable in settings if users report issues (too fast = conflicts, too slow = perceived lag).
+- **E2E test environment:** Playwright with Tauri needs validation. Research indicates Playwright-CDP exists, but M1 tests already working suggests web mode sufficient. Validate in Phase 6.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-
-**JSON Schema:**
-- [schemars docs.rs 1.2.1](https://docs.rs/schemars) — API documentation, derive macro usage
-- [schemars official docs](https://graham.cool/schemars/) — Serde integration patterns
-- [jsonschema docs.rs 0.41](https://docs.rs/jsonschema) — Validator performance, pre-compilation
-- [JSON Schema draft specifications](https://json-schema.org/specification) — Draft-07 and 2020-12 differences
-- [GSoC 2026: JSON Schema Compatibility Checker](https://github.com/json-schema-org/community/issues/984) — Breaking changes between drafts
-
-**Tauri 2.0:**
-- [Tauri 2.0 Prerequisites](https://v2.tauri.app/start/prerequisites/) — System dependencies per platform
-- [Tauri 2.0 webkit migration guide](https://v2.tauri.app/blog/tauri-2-0-0-alpha-3/) — webkit2gtk-4.1 requirement
-- [Tauri GitHub Issue 9662](https://github.com/tauri-apps/tauri/issues/9662) — Ubuntu 24.04 removed webkit2gtk-4.0
-- [tauri-apps/tauri-action](https://github.com/tauri-apps/tauri-action) — Official GitHub Action for multi-platform builds
-
-**Rust CLI Testing:**
-- [Testing - Command Line Applications in Rust](https://rust-cli.github.io/book/tutorial/testing.html) — assert_cmd best practices
-- [tokio stdin docs](https://docs.rs/tokio/latest/tokio/io/struct.Stdin.html) — Async stdin built-in feature
-- [assert_cmd docs](https://docs.rs/assert_cmd) — CLI testing patterns, stdin/stdout handling
-
-**Project Context:**
-- RuleZ CLAUDE.md — Pre-push checklist, binary rename history, CI requirements
-- RuleZ MEMORY.md — Stale binary artifacts lesson, broken pipe on Linux fix
-- RuleZ codebase inspection — main.rs, hooks.rs, cli/debug.rs, tests/e2e_*.rs
+- [Tauri 2.0 Official Documentation](https://v2.tauri.app/) — IPC architecture, plugin system, security scope, WebView versions
+- [TanStack Virtual Documentation](https://tanstack.com/virtual/latest) — Virtual scrolling API, performance benchmarks, v3.13.18 release notes
+- [Monaco Editor API](https://microsoft.github.io/monaco-editor/) — Completion provider API, diff editor, marker system
+- [monaco-yaml GitHub Repository](https://github.com/remcohaszing/monaco-yaml) — Schema integration, bundle duplication issues (#214), v5.3.1 compatibility
+- [Zustand Documentation](https://zustand.docs.pmnd.rs/) — Store patterns, persist middleware, cleanup best practices
+- [notify crate documentation](https://docs.rs/notify/latest/notify/) — Cross-platform file watching, inotify limits, platform differences
+- [Playwright Documentation](https://playwright.dev/) — Auto-waiting, WebView testing, flaky test prevention
 
 ### Secondary (MEDIUM confidence)
-
-**Event-Driven Testing:**
-- [AWS EventBridge test-event-pattern](https://docs.aws.amazon.com/cli/latest/reference/events/test-event-pattern.html) — CLI patterns for event simulation
-- [Stripe CLI webhook testing](https://www.projectschool.dev/blogs/devessentials/How-to-Test-Webhooks-Using-Stripe-CLI) — Simulating events locally
-
-**GitHub Actions:**
-- [Swatinem/rust-cache docs](https://github.com/Swatinem/rust-cache) — Cache behavior, invalidation patterns
-- [GitHub Actions matrix builds guide](https://oneuptime.com/blog/post/2026-01-25-github-actions-matrix-builds/view) — Multi-platform testing
+- [BrowserStack Playwright Flaky Tests Guide (2026)](https://www.browserstack.com/guide/playwright-flaky-tests) — Timeout patterns, retry strategies
+- [Visual Studio 2026 Settings Experience](https://devblogs.microsoft.com/visualstudio/a-first-look-at-the-all%E2%80%91new-ux-in-visual-studio-2026/) — Config management UX patterns
+- [Policy Management Software Comparison](https://peoplemanagingpeople.com/tools/best-policy-management-software/) — Audit trail requirements, template galleries
+- [Zustand GitHub Discussions](https://github.com/pmndrs/zustand/discussions) — Memory leak patterns (#2540), subscriber cleanup (#2054)
+- [cross-platform-node-guide](https://github.com/ehmicky/cross-platform-node-guide) — PATH separator handling, environment variables
 
 ### Tertiary (LOW confidence)
-
-**Playwright/Bun:**
-- [BrowserStack: Bun for Playwright](https://www.browserstack.com/guide/bun-playwright) — Compatibility notes (works for basic use, not officially supported)
-- [GitHub Issue 27139](https://github.com/microsoft/playwright/issues/27139) — Community discussion on Bun compatibility
+- [tauri-plugin-fs-watch version verification](https://crates.io/) — Could not verify exact 2.0 version due to website JS blocking. Assumed 2.0 based on Tauri 2.0 ecosystem. **Verify with `cargo search tauri-plugin-fs-watch` before adding.**
+- [react-joyride accessibility](https://www.npmjs.com/package/react-joyride) — WCAG 2.1 compliance claimed but not independently verified
 
 ---
-
-**Research completed:** 2026-02-10
-**Ready for roadmap:** Yes
-
-**Total files synthesized:** 4 (STACK.md, FEATURES.md, ARCHITECTURE.md, PITFALLS.md)
-**Research confidence:** HIGH across all domains
-**Estimated implementation time:** 6-10 developer-days (4-6 days with parallel development)
-**Performance budget maintained:** Yes (<10ms total processing, <0.1ms schema validation)
-**Breaking changes:** None (all features are additive)
+*Research completed: 2026-02-10*
+*Ready for roadmap: yes*
