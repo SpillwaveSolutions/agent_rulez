@@ -1,63 +1,56 @@
-# Living Memory
-
-**Last Updated:** 2026-02-08
-**Current Phase:** Not started (defining requirements)
-**Current Plan:** —
-
----
+# Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-08)
+See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** LLMs do not enforce policy. LLMs are subject to policy.
-**Current focus:** v1.3 Advanced Matching & Validation
-
----
+**Current focus:** v1.5 RuleZ UI
 
 ## Current Position
 
+Milestone: v1.5 RuleZ UI
 Phase: Not started (defining requirements)
-Plan: —
+Current Plan: —
 Status: Defining requirements
-Last activity: 2026-02-08 — Milestone v1.3 started
+Last activity: 2026-02-10 — Milestone v1.5 started
 
-Progress: ░░░░░░░░░░ 0%
+Progress: ░░░░░░░░░░░░░░░░░░░░ 0%
 
----
+## Performance Metrics
 
-## v1.3 Target Features
+**Velocity (all milestones):**
+- Total plans completed: 25 (6 v1.2 + 10 v1.3 + 9 v1.4)
+- Average duration: ~5min per plan (Phases 4-10)
+- Total execution time: 137min across v1.4
 
-| Feature | Description | Status |
-|---------|-------------|--------|
-| `prompt_match` | Match rules against user prompt text | Not started |
-| `require_fields` | Validate required fields in tool input | Not started |
-| Inline scripts | Write validator scripts in YAML | Not started |
+**v1.4 Phase Summary:**
 
----
+| Phase | Plans | Duration | Verification |
+|-------|-------|----------|-------------|
+| 7 - JSON Schema Validation | 2/2 | 15min | 10/10 PASSED |
+| 8 - Debug CLI Enhancements | 2/2 | 28min | 8/8 PASSED |
+| 9 - E2E Test Stabilization | 3/3 | 16min | 16/16 PASSED |
+| 10 - Tauri CI Integration | 2/2 | 2min | 9/9 PASSED |
 
-## Key Decisions (Carried from v1.2)
+## Accumulated Context
 
-1. **Binary renamed to `rulez`** (was `cch`)
-2. **RuleZ Core is P1** - UI is P3
-3. **Execution precedence:** inject_inline > inject_command > inject > run
-4. **Fail-open semantics:** Command failures log warning but don't block
-5. **evalexpr 13.1** for expression evaluation (lightweight, no deps)
-6. **Underscore syntax** for variable names (env_CI, not env.CI)
-7. **Fail-closed for enabled_when:** Invalid expressions disable the rule
-8. **build_operator_tree** for syntax validation (parse without evaluate)
+### Decisions
 
----
+All v1.4 decisions archived to PROJECT.md Key Decisions table and milestones/v1.4-ROADMAP.md.
 
-## Context for Next Session
+### Pending Todos
 
-Starting v1.3 milestone with three features:
-- prompt_match matcher
-- require_fields action
-- Inline script blocks
+0 pending
 
-Next: Define requirements, create roadmap, then plan phases.
+### Blockers/Concerns
 
----
+None active.
 
-*State file for GSD workflow continuity*
+## Session Continuity
+
+Last session: 2026-02-10
+Stopped at: v1.4 milestone archived
+Resume file: None
+
+Next action: Research → Requirements → Roadmap for v1.5

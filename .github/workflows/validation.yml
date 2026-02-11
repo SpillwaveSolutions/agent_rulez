@@ -271,9 +271,15 @@ jobs:
           VERSION=$(grep '^version' rulez/Cargo.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
           
           cat > validation-report/VALIDATION_REPORT.md << 'REPORT_HEADER'
+<<<<<<< HEAD
           # CCH Validation Report
           
           **Product:** Claude Context Hooks (CCH)
+=======
+          # RuleZ Validation Report
+
+          **Product:** RuleZ (AI Policy Engine)
+>>>>>>> bc6e5da510358ec5b9a121c5b4c5e210630f4952
           **Version:** VERSION_PLACEHOLDER
           **Date:** DATE_PLACEHOLDER
           **Workflow Run:** RUN_ID_PLACEHOLDER
@@ -283,7 +289,11 @@ jobs:
           ## Executive Summary
           
           This report documents the Installation Qualification (IQ), Operational Qualification (OQ),
+<<<<<<< HEAD
           and Performance Qualification (PQ) validation results for CCH.
+=======
+          and Performance Qualification (PQ) validation results for RuleZ.
+>>>>>>> bc6e5da510358ec5b9a121c5b4c5e210630f4952
           
           ## Validation Results
           
@@ -334,7 +344,11 @@ jobs:
           
           # Conclusion
           if [[ "${{ needs.oq.result }}" == "success" && "${{ needs.pq.result }}" == "success" ]]; then
+<<<<<<< HEAD
             sed -i "s/CONCLUSION_PLACEHOLDER/All validation phases completed successfully. CCH is qualified for release./" validation-report/VALIDATION_REPORT.md
+=======
+            sed -i "s/CONCLUSION_PLACEHOLDER/All validation phases completed successfully. RuleZ is qualified for release./" validation-report/VALIDATION_REPORT.md
+>>>>>>> bc6e5da510358ec5b9a121c5b4c5e210630f4952
           else
             sed -i "s/CONCLUSION_PLACEHOLDER/One or more validation phases failed. Review failures before release./" validation-report/VALIDATION_REPORT.md
           fi

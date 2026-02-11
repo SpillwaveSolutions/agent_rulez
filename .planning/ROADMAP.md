@@ -1,17 +1,16 @@
 # RuleZ Core Roadmap
 
-**Current Focus:** Planning next milestone
+**Current Focus:** All milestones complete — run `/gsd:new-milestone` for next
 
 ---
 
 ## Milestones
 
 - ✅ **v1.2 P2 Features** — Phases 1-3 (shipped 2026-02-07) — [Archive](milestones/v1.2-ROADMAP.md)
-- 📋 **v1.3 (Planned)** — TBD
+- ✅ **v1.3 Advanced Matching & Validation** — Phases 4-6 (shipped 2026-02-10) — [Archive](milestones/v1.3-ROADMAP.md)
+- ✅ **v1.4 Stability & Polish** — Phases 7-10 (shipped 2026-02-10) — [Archive](milestones/v1.4-ROADMAP.md)
 
 ---
-
-## Completed: v1.2 P2 Features
 
 <details>
 <summary>✅ v1.2 P2 Features (Phases 1-3) — SHIPPED 2026-02-07</summary>
@@ -24,25 +23,28 @@ See [v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md) for full details.
 
 </details>
 
----
+<details>
+<summary>✅ v1.3 Advanced Matching & Validation (Phases 4-6) — SHIPPED 2026-02-10</summary>
 
-## Future Phases (Post v1.2)
+- [x] Phase 4: Prompt Matching (4/4 plans) — regex intent routing with AND/OR logic
+- [x] Phase 5: Field Validation (3/3 plans) — fail-closed field existence and type checks
+- [x] Phase 6: Inline Script Blocks (3/3 plans) — evalexpr expressions and shell scripts in YAML
 
-### Phase 4: prompt_match Matcher
-- Match against user prompt text
-- Enables prompt-based routing
+See [v1.3-ROADMAP.md](milestones/v1.3-ROADMAP.md) for full details.
 
-### Phase 5: require_fields Action
-- Validate required fields exist in tool input
-- Block if fields missing
+</details>
 
-### Phase 6: Inline Script Blocks
-- Write validator scripts directly in YAML
-- No separate script files needed
+<details>
+<summary>✅ v1.4 Stability & Polish (Phases 7-10) — SHIPPED 2026-02-10</summary>
 
-### Phase 7: RuleZ UI (Lower Priority)
-- M2-M8 from previous roadmap
-- Only if there's user demand
+- [x] Phase 7: JSON Schema Validation (2/2 plans) — fail-open schema validation with <0.1ms overhead
+- [x] Phase 8: Debug CLI Enhancements (2/2 plans) — UserPromptSubmit support, LRU regex cache
+- [x] Phase 9: E2E Test Stabilization (3/3 plans) — canonical paths, symlink tests, CI matrix
+- [x] Phase 10: Tauri CI Integration (2/2 plans) — E2E gate + multi-platform desktop builds
+
+See [v1.4-ROADMAP.md](milestones/v1.4-ROADMAP.md) for full details.
+
+</details>
 
 ---
 
@@ -53,10 +55,14 @@ See [v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md) for full details.
 | 1. Inline Content Injection | v1.2 | 1/1 | ✅ Complete | 2026-02-06 |
 | 2. Command-Based Context | v1.2 | 2/2 | ✅ Complete | 2026-02-06 |
 | 3. Conditional Rule Activation | v1.2 | 3/3 | ✅ Complete | 2026-02-07 |
-| 4. prompt_match | v1.3 | 0/? | Not started | - |
-| 5. require_fields | v1.3 | 0/? | Not started | - |
-| 6. Inline Script Blocks | v1.3 | 0/? | Not started | - |
+| 4. Prompt Matching | v1.3 | 4/4 | ✅ Complete | 2026-02-09 |
+| 5. Field Validation | v1.3 | 3/3 | ✅ Complete | 2026-02-09 |
+| 6. Inline Script Blocks | v1.3 | 3/3 | ✅ Complete | 2026-02-09 |
+| 7. JSON Schema Validation | v1.4 | 2/2 | ✅ Complete | 2026-02-10 |
+| 8. Debug CLI Enhancements | v1.4 | 2/2 | ✅ Complete | 2026-02-10 |
+| 9. E2E Test Stabilization | v1.4 | 3/3 | ✅ Complete | 2026-02-10 |
+| 10. Tauri CI Integration | v1.4 | 2/2 | ✅ Complete | 2026-02-10 |
 
 ---
 
-*Created 2026-02-06 - Updated 2026-02-07 after v1.2 milestone*
+*Created 2026-02-06 — Updated 2026-02-10 v1.4 Milestone complete*

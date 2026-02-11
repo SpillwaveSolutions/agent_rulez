@@ -44,7 +44,11 @@ done
 DATE=$(date +%Y-%m-%d)
 TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 EVIDENCE_DIR="$PROJECT_ROOT/docs/validation/iq/$DATE"
+<<<<<<< HEAD
 VERSION=$(grep '^version' "$PROJECT_ROOT/rulez/Cargo.toml" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+=======
+VERSION=$(grep '^version' "$PROJECT_ROOT/cch_cli/Cargo.toml" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+>>>>>>> bc6e5da510358ec5b9a121c5b4c5e210630f4952
 
 echo -e "${BLUE}========================================${NC}"
 echo -e "${BLUE}CCH IQ Evidence Collection${NC}"
@@ -104,27 +108,45 @@ echo -e "${BLUE}Verifying binary functionality...${NC}"
     echo "## Version"
     echo '```'
     if [[ "$BUILD_MODE" == "release" ]]; then
+<<<<<<< HEAD
         ./target/release/rulez --version
     else
         ./target/debug/rulez --version
+=======
+        ./target/release/cch --version
+    else
+        ./target/debug/cch --version
+>>>>>>> bc6e5da510358ec5b9a121c5b4c5e210630f4952
     fi
     echo '```'
     echo ""
     echo "## Help"
     echo '```'
     if [[ "$BUILD_MODE" == "release" ]]; then
+<<<<<<< HEAD
         ./target/release/rulez --help
     else
         ./target/debug/rulez --help
+=======
+        ./target/release/cch --help
+    else
+        ./target/debug/cch --help
+>>>>>>> bc6e5da510358ec5b9a121c5b4c5e210630f4952
     fi
     echo '```'
     echo ""
     echo "## Validate (no config)"
     echo '```'
     if [[ "$BUILD_MODE" == "release" ]]; then
+<<<<<<< HEAD
         ./target/release/rulez validate 2>&1 || true
     else
         ./target/debug/rulez validate 2>&1 || true
+=======
+        ./target/release/cch validate 2>&1 || true
+    else
+        ./target/debug/cch validate 2>&1 || true
+>>>>>>> bc6e5da510358ec5b9a121c5b4c5e210630f4952
     fi
     echo '```'
 } > "$EVIDENCE_DIR/binary-verification.md"

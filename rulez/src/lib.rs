@@ -1,4 +1,4 @@
-//! Claude Code Hooks (CCH) - High-performance policy engine for development workflows
+//! RuleZ - High-performance AI policy engine for development workflows
 //!
 //! This crate provides a policy engine that executes user-configured YAML rules
 //! to control Claude Code behavior. It does NOT have built-in blocking or injection

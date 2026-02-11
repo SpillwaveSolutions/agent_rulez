@@ -1,6 +1,10 @@
 # E2E Tests for RuleZ UI
 #
+<<<<<<< HEAD
 # Runs Playwright E2E tests on push to main/develop when rulez_ui changes.
+=======
+# Runs Playwright E2E tests on push to main/develop when rulez-ui changes.
+>>>>>>> bc6e5da510358ec5b9a121c5b4c5e210630f4952
 # Uses Bun for package management and Playwright for browser automation.
 
 name: E2E Tests
@@ -9,18 +13,30 @@ on:
   push:
     branches: [main, develop]
     paths:
+<<<<<<< HEAD
       - 'rulez_ui/**'
+=======
+      - 'rulez-ui/**'
+>>>>>>> bc6e5da510358ec5b9a121c5b4c5e210630f4952
       - '.github/workflows/e2e.yml'
   pull_request:
     branches: [main, develop]
     paths:
+<<<<<<< HEAD
       - 'rulez_ui/**'
+=======
+      - 'rulez-ui/**'
+>>>>>>> bc6e5da510358ec5b9a121c5b4c5e210630f4952
       - '.github/workflows/e2e.yml'
   workflow_dispatch:
 
 defaults:
   run:
+<<<<<<< HEAD
     working-directory: rulez_ui
+=======
+    working-directory: rulez-ui
+>>>>>>> bc6e5da510358ec5b9a121c5b4c5e210630f4952
 
 jobs:
   e2e-tests:
@@ -53,7 +69,11 @@ jobs:
         if: always()
         with:
           name: playwright-report
+<<<<<<< HEAD
           path: rulez_ui/playwright-report/
+=======
+          path: rulez-ui/playwright-report/
+>>>>>>> bc6e5da510358ec5b9a121c5b4c5e210630f4952
           retention-days: 30
 
       - name: Upload test artifacts
@@ -61,13 +81,21 @@ jobs:
         if: failure()
         with:
           name: test-results
+<<<<<<< HEAD
           path: rulez_ui/test-results/
+=======
+          path: rulez-ui/test-results/
+>>>>>>> bc6e5da510358ec5b9a121c5b4c5e210630f4952
           retention-days: 7
 
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()
         with:
+<<<<<<< HEAD
           files: rulez_ui/test-results/junit.xml
+=======
+          files: rulez-ui/test-results/junit.xml
+>>>>>>> bc6e5da510358ec5b9a121c5b4c5e210630f4952
           comment_mode: off
           check_name: E2E Test Results

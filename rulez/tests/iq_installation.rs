@@ -34,7 +34,7 @@ fn test_binary_exists_and_runs() {
     );
     let _ = evidence.save(&evidence_dir());
 
-    result.stdout(predicate::str::contains("Claude Code Hooks"));
+    result.stdout(predicate::str::contains("RuleZ"));
 }
 
 /// Test that --version returns the correct version
@@ -49,13 +49,13 @@ fn test_version_output() {
         .assert()
         .success();
 
-    // Version should contain "cch" and a semver pattern
+    // Version should contain "rulez" and a semver pattern
     result.stdout(
-        predicate::str::contains("cch").and(predicate::str::is_match(r"\d+\.\d+\.\d+").unwrap()),
+        predicate::str::contains("rulez").and(predicate::str::is_match(r"\d+\.\d+\.\d+").unwrap()),
     );
 
     evidence.pass(
-        "Version output contains expected format (cch x.y.z)",
+        "Version output contains expected format (rulez x.y.z)",
         timer.elapsed_ms(),
     );
     let _ = evidence.save(&evidence_dir());

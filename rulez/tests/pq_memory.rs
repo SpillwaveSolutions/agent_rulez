@@ -112,7 +112,7 @@ fn test_pq_memory_baseline() {
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()
-        .expect("spawn rulez");
+        .expect("spawn cch");
 
     let pid = child.id();
 
@@ -204,7 +204,7 @@ fn test_pq_memory_under_load() {
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .spawn()
-            .expect("spawn rulez");
+            .expect("spawn cch");
 
         // Write event
         if let Some(mut stdin) = child.stdin.take() {
@@ -290,7 +290,7 @@ fn test_pq_memory_stability() {
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .spawn()
-            .expect("spawn rulez");
+            .expect("spawn cch");
 
         if let Some(mut stdin) = child.stdin.take() {
             use std::io::Write;
@@ -313,7 +313,7 @@ fn test_pq_memory_stability() {
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .spawn()
-            .expect("spawn rulez");
+            .expect("spawn cch");
 
         if let Some(mut stdin) = child.stdin.take() {
             use std::io::Write;
@@ -331,7 +331,7 @@ fn test_pq_memory_stability() {
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .spawn()
-            .expect("spawn rulez");
+            .expect("spawn cch");
 
         if let Some(mut stdin) = child.stdin.take() {
             use std::io::Write;

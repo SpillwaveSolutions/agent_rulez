@@ -27,6 +27,9 @@ tracing-subscriber.workspace = true
 chrono.workspace = true
 dirs.workspace = true
 evalexpr = "13.1"
+schemars.workspace = true
+jsonschema.workspace = true
+lru.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
