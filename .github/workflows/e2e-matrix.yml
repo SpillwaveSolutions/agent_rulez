@@ -93,3 +93,12 @@ jobs:
           reporter: java-junit
           fail-on-error: true
 
+      - name: Comment test results on PR
+        uses: daun/playwright-report-comment@v3
+        if: github.event_name == 'pull_request'
+        with:
+          report-path: rulez_ui/playwright-report/
+          comment-title: 'Playwright Test Results (${{ matrix.os }}, ${{ matrix.browser }})'
+          include-summary: true
+          include-report-link: true
+
