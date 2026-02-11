@@ -1,4 +1,4 @@
-# Release workflow for CCH (Claude Code Hooks)
+# Release workflow for RuleZ (AI Policy Engine)
 #
 # This workflow creates cross-platform releases when a tag is pushed.
 # It builds binaries for:
@@ -31,26 +31,26 @@ jobs:
           # Linux
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            artifact_name: cch
-            asset_name: cch-linux-x86_64
+            artifact_name: rulez
+            asset_name: rulez-linux-x86_64
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
-            artifact_name: cch
-            asset_name: cch-linux-aarch64
+            artifact_name: rulez
+            asset_name: rulez-linux-aarch64
           # macOS
           - os: macos-latest
             target: x86_64-apple-darwin
-            artifact_name: cch
-            asset_name: cch-macos-x86_64
+            artifact_name: rulez
+            asset_name: rulez-macos-x86_64
           - os: macos-latest
             target: aarch64-apple-darwin
-            artifact_name: cch
-            asset_name: cch-macos-aarch64
+            artifact_name: rulez
+            asset_name: rulez-macos-aarch64
           # Windows
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            artifact_name: cch.exe
-            asset_name: cch-windows-x86_64.exe
+            artifact_name: rulez.exe
+            asset_name: rulez-windows-x86_64.exe
 
     steps:
       - uses: actions/checkout@v4
