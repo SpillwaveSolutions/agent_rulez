@@ -83,3 +83,13 @@ jobs:
           name: playwright-report-${{ matrix.os }}-${{ matrix.browser }}
           path: rulez_ui/playwright-report/
           retention-days: 30
+
+      - name: Publish test results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Playwright Tests (${{ matrix.os }}, ${{ matrix.browser }})
+          path: rulez_ui/test-results/junit.xml
+          reporter: java-junit
+          fail-on-error: true
+
