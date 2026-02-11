@@ -3,8 +3,9 @@ use evalexpr::{
     ContextWithMutableFunctions, ContextWithMutableVariables, DefaultNumericTypes, Function,
     HashMapContext, Value, eval_boolean_with_context,
 };
+use lru::LruCache;
 use regex::{Regex, RegexBuilder};
-use std::collections::HashMap;
+use std::num::NonZeroUsize;
 use std::path::Path;
 use std::sync::{LazyLock, Mutex};
 
@@ -25,24 +26,29 @@ use crate::models::{
 // Regex Caching for Performance
 // =============================================================================
 
-/// Global cache for compiled regex patterns
+/// Maximum number of compiled regex patterns to cache.
+/// 100 covers typical config sizes while bounding memory.
+const REGEX_CACHE_MAX_SIZE: usize = 100;
+
+/// Global regex cache with LRU eviction.
 /// Key format: "pattern:case_insensitive" (e.g., "foo:true" or "bar:false")
 ///
-/// NOTE: This cache is unbounded. Since patterns come from config files
-/// (not user input), the cache size is bounded by the number of unique
-/// patterns across all loaded rules. For typical configs this is <100 patterns.
-/// If this becomes a concern in long-running services with dynamic configs,
-/// consider adding LRU eviction or size caps in a future phase.
-pub static REGEX_CACHE: LazyLock<Mutex<HashMap<String, Regex>>> =
-    LazyLock::new(|| Mutex::new(HashMap::new()));
+/// Patterns are compiled once and reused. When the cache reaches
+/// REGEX_CACHE_MAX_SIZE (100 entries), the least-recently-used pattern is evicted.
+/// This bounds memory usage while maintaining excellent hit rates for typical configs.
+///
+/// The cache is public to allow the debug CLI to clear it between invocations,
+/// ensuring clean test isolation.
+pub static REGEX_CACHE: LazyLock<Mutex<LruCache<String, Regex>>> =
+    LazyLock::new(|| Mutex::new(LruCache::new(NonZeroUsize::new(REGEX_CACHE_MAX_SIZE).unwrap())));
 
 /// Get or compile a regex pattern with caching
 fn get_or_compile_regex(pattern: &str, case_insensitive: bool) -> Result<Regex> {
     let cache_key = format!("{}:{}", pattern, case_insensitive);
 
-    // Try to get from cache
+    // Try to get from cache (LruCache::get updates LRU order)
     {
-        let cache = REGEX_CACHE.lock().unwrap();
+        let mut cache = REGEX_CACHE.lock().unwrap();
         if let Some(regex) = cache.get(&cache_key) {
             return Ok(regex.clone());
         }
@@ -58,8 +64,9 @@ fn get_or_compile_regex(pattern: &str, case_insensitive: bool) -> Result<Regex> 
         Regex::new(pattern).with_context(|| format!("Invalid regex pattern: {}", pattern))?
     };
 
+    // Insert into LRU cache (automatically evicts LRU entry if at capacity)
     let mut cache = REGEX_CACHE.lock().unwrap();
-    cache.insert(cache_key, regex.clone());
+    cache.put(cache_key, regex.clone());
     Ok(regex)
 }
 
