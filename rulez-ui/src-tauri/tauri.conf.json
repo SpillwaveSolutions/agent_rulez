@@ -13,11 +13,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-<<<<<<< HEAD
-        "title": "RuleZ UI - CCH Configuration Editor",
-=======
         "title": "RuleZ UI - Agent RuleZ Configuration Editor",
->>>>>>> bc6e5da510358ec5b9a121c5b4c5e210630f4952
         "width": 1280,
         "height": 800,
         "minWidth": 800,
@@ -50,13 +46,8 @@
       "open": true,
       "scope": [
         {
-<<<<<<< HEAD
-          "name": "cch",
-          "cmd": "cch",
-=======
           "name": "rulez",
           "cmd": "rulez",
->>>>>>> bc6e5da510358ec5b9a121c5b4c5e210630f4952
           "args": true
         }
       ]

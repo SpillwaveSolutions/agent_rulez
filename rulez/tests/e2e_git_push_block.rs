@@ -22,24 +22,16 @@ use std::fs;
 
 #[path = "common/mod.rs"]
 mod common;
-<<<<<<< HEAD
-use common::{CchResponse, TestEvidence, Timer, evidence_dir, fixture_path, setup_test_env};
-=======
 use common::{
     CchResponse, TestEvidence, Timer, canonicalize_path, evidence_dir, fixture_path, setup_test_env,
 };
->>>>>>> bc6e5da510358ec5b9a121c5b4c5e210630f4952
 
 /// Helper: create a test environment and return (temp_dir, event_json)
 /// The event JSON uses `hook_event_name` and has `cwd` set to the temp dir path.
 fn setup_claude_code_event(config_name: &str, command: &str) -> (tempfile::TempDir, String) {
     let temp_dir = setup_test_env(config_name);
-<<<<<<< HEAD
-    let cwd = temp_dir.path().to_string_lossy().to_string();
-=======
     let canonical_path = canonicalize_path(temp_dir.path());
     let cwd = canonical_path.to_string_lossy().to_string();
->>>>>>> bc6e5da510358ec5b9a121c5b4c5e210630f4952
 
     let event = serde_json::json!({
         "hook_event_name": "PreToolUse",
@@ -104,11 +96,8 @@ fn test_e2e_git_push_blocked_exit_code_2() {
         timer.elapsed_ms(),
     );
     let _ = evidence.save(&evidence_dir());
-<<<<<<< HEAD
-=======
 
     drop(temp_dir);
->>>>>>> bc6e5da510358ec5b9a121c5b4c5e210630f4952
 }
 
 // ==========================================================================
@@ -159,12 +148,9 @@ fn test_e2e_cwd_based_config_loading_exit_code_2() {
         timer.elapsed_ms(),
     );
     let _ = evidence.save(&evidence_dir());
-<<<<<<< HEAD
-=======
 
     drop(temp_dir);
     drop(wrong_dir);
->>>>>>> bc6e5da510358ec5b9a121c5b4c5e210630f4952
 }
 
 // ==========================================================================
@@ -202,11 +188,8 @@ fn test_e2e_git_status_allowed_exit_code_0() {
         timer.elapsed_ms(),
     );
     let _ = evidence.save(&evidence_dir());
-<<<<<<< HEAD
-=======
 
     drop(temp_dir);
->>>>>>> bc6e5da510358ec5b9a121c5b4c5e210630f4952
 }
 
 // ==========================================================================
@@ -364,12 +347,9 @@ fn test_e2e_output_format_claude_code_protocol() {
         timer.elapsed_ms(),
     );
     let _ = evidence.save(&evidence_dir());
-<<<<<<< HEAD
-=======
 
     drop(temp_dir);
     drop(temp_dir2);
->>>>>>> bc6e5da510358ec5b9a121c5b4c5e210630f4952
 }
 
 // ==========================================================================
@@ -382,13 +362,9 @@ fn test_e2e_no_config_allows_all() {
     let mut evidence = TestEvidence::new("e2e_no_config_allows", "E2E");
 
     let empty_dir = tempfile::tempdir().expect("create empty dir");
-<<<<<<< HEAD
-    let cwd = empty_dir.path().to_string_lossy().to_string();
-=======
     let cwd = canonicalize_path(empty_dir.path())
         .to_string_lossy()
         .to_string();
->>>>>>> bc6e5da510358ec5b9a121c5b4c5e210630f4952
 
     let event = serde_json::json!({
         "hook_event_name": "PreToolUse",
@@ -418,11 +394,8 @@ fn test_e2e_no_config_allows_all() {
 
     evidence.pass("No config = exit 0, all allowed", timer.elapsed_ms());
     let _ = evidence.save(&evidence_dir());
-<<<<<<< HEAD
-=======
 
     drop(empty_dir);
->>>>>>> bc6e5da510358ec5b9a121c5b4c5e210630f4952
 }
 
 // ==========================================================================
@@ -467,9 +440,6 @@ fn test_e2e_cwd_git_push_variants_from_wrong_dir() {
         timer.elapsed_ms(),
     );
     let _ = evidence.save(&evidence_dir());
-<<<<<<< HEAD
-=======
 
     drop(wrong_dir);
->>>>>>> bc6e5da510358ec5b9a121c5b4c5e210630f4952
 }
