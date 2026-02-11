@@ -49,6 +49,17 @@ jobs:
         with:
           bun-version: latest
 
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/ms-playwright
+            ~/AppData/Local/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('rulez_ui/package.json') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+
       - name: Install dependencies
         run: bun install
 
