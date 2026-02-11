@@ -33,7 +33,7 @@ use crate::models::{
 /// patterns across all loaded rules. For typical configs this is <100 patterns.
 /// If this becomes a concern in long-running services with dynamic configs,
 /// consider adding LRU eviction or size caps in a future phase.
-static REGEX_CACHE: LazyLock<Mutex<HashMap<String, Regex>>> =
+pub static REGEX_CACHE: LazyLock<Mutex<HashMap<String, Regex>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
 /// Get or compile a regex pattern with caching
