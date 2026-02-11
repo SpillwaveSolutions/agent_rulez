@@ -22,13 +22,14 @@ use std::fs;
 
 #[path = "common/mod.rs"]
 mod common;
-use common::{CchResponse, TestEvidence, Timer, evidence_dir, fixture_path, setup_test_env};
+use common::{CchResponse, TestEvidence, Timer, canonicalize_path, evidence_dir, fixture_path, setup_test_env};
 
 /// Helper: create a test environment and return (temp_dir, event_json)
 /// The event JSON uses `hook_event_name` and has `cwd` set to the temp dir path.
 fn setup_claude_code_event(config_name: &str, command: &str) -> (tempfile::TempDir, String) {
     let temp_dir = setup_test_env(config_name);
-    let cwd = temp_dir.path().to_string_lossy().to_string();
+    let canonical_path = canonicalize_path(temp_dir.path());
+    let cwd = canonical_path.to_string_lossy().to_string();
 
     let event = serde_json::json!({
         "hook_event_name": "PreToolUse",
@@ -349,7 +350,7 @@ fn test_e2e_no_config_allows_all() {
     let mut evidence = TestEvidence::new("e2e_no_config_allows", "E2E");
 
     let empty_dir = tempfile::tempdir().expect("create empty dir");
-    let cwd = empty_dir.path().to_string_lossy().to_string();
+    let cwd = canonicalize_path(empty_dir.path()).to_string_lossy().to_string();
 
     let event = serde_json::json!({
         "hook_event_name": "PreToolUse",
