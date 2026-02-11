@@ -104,7 +104,7 @@ echo -e "${BLUE}Verifying binary functionality...${NC}"
     echo "## Version"
     echo '```'
     if [[ "$BUILD_MODE" == "release" ]]; then
-        ./target/release/cch --version
+        ./target/release/rulez --version
     else
         ./target/debug/cch --version
     fi
@@ -113,7 +113,7 @@ echo -e "${BLUE}Verifying binary functionality...${NC}"
     echo "## Help"
     echo '```'
     if [[ "$BUILD_MODE" == "release" ]]; then
-        ./target/release/cch --help
+        ./target/release/rulez --help
     else
         ./target/debug/cch --help
     fi
@@ -122,7 +122,7 @@ echo -e "${BLUE}Verifying binary functionality...${NC}"
     echo "## Validate (no config)"
     echo '```'
     if [[ "$BUILD_MODE" == "release" ]]; then
-        ./target/release/cch validate 2>&1 || true
+        ./target/release/rulez validate 2>&1 || true
     else
         ./target/debug/cch validate 2>&1 || true
     fi

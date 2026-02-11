@@ -895,10 +895,18 @@ async fn execute_inject_command(command_str: &str, rule: &Rule, config: &Config)
         .map(|m| m.timeout)
         .unwrap_or(config.settings.script_timeout);
 
-    // Use shell to execute (enables pipes, redirects, etc.)
-    let mut command = Command::new("sh");
-    command.arg("-c");
-    command.arg(command_str);
+    // Use platform-specific shell to execute (enables pipes, redirects, etc.)
+    let mut command = if cfg!(target_os = "windows") {
+        let mut cmd = Command::new("cmd");
+        cmd.arg("/C");
+        cmd.arg(command_str);
+        cmd
+    } else {
+        let mut cmd = Command::new("sh");
+        cmd.arg("-c");
+        cmd.arg(command_str);
+        cmd
+    };
     command.stdout(std::process::Stdio::piped());
     command.stderr(std::process::Stdio::piped());
     // No stdin - don't pipe it (causes hangs)

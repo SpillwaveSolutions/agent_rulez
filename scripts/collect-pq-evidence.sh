@@ -74,7 +74,7 @@ cargo build $CARGO_FLAGS 2>&1 | tee "$EVIDENCE_DIR/build.log"
 if [[ "$BUILD_MODE" == "release" ]]; then
     BINARY="$PROJECT_ROOT/target/release/cch"
 else
-    BINARY="$PROJECT_ROOT/target/debug/cch"
+    BINARY="$PROJECT_ROOT/target/debug/rulez"
 fi
 
 # Collect binary info
