@@ -1,9 +1,60 @@
 # Changelog
 
-All notable changes to Claude Context Hooks (CCH) will be documented in this file.
+All notable changes to RuleZ (AI Policy Engine) will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.5.0] - 2026-02-10
+
+### Renamed
+
+- **Project renamed from CCH (Claude Context Hooks) to RuleZ** — binary, configs, logs, and all references updated
+- Binary: `cch` -> `rulez`
+- Log file: `cch.log` -> `rulez.log`
+- Release assets: `cch-*` -> `rulez-*`
+
+### Added
+
+#### v1.2 — Inline Content & Conditional Rules
+- **`inject_inline`** — Embed context directly in YAML rules without external files
+- **`inject_command`** — Generate dynamic context via shell commands at evaluation time
+- **`enabled_when`** — Conditional rule activation with evalexpr expressions (e.g., `event_type == "PreToolUse"`)
+
+#### v1.3 — Advanced Matching & Validation
+- **`prompt_match`** — Regex intent routing against prompt text with case-insensitive, anchored, AND/OR logic
+- **`require_fields` / `field_types`** — Fail-closed field existence and type validation with dot-notation paths
+- **`validate_expr`** — Inline evalexpr expressions with `get_field()` / `has_field()` custom functions
+- **`inline_script`** — Shell scripts embedded in YAML with configurable timeout protection
+
+#### v1.4 — Stability & Polish
+- **JSON Schema validation** — Fail-open schema validation for hook event payloads (<0.1ms overhead via LazyLock pre-compiled validators)
+- **Debug CLI UserPromptSubmit support** — Debug command now handles prompt-submit events
+- **LRU regex cache** (100 entries) — Replaces unbounded HashMap to prevent memory growth
+- **Cross-platform E2E tests** — Path canonicalization for macOS symlinks, CI matrix (ubuntu, macOS, Windows)
+- **Tauri CI build pipeline** — E2E gate before desktop builds, multi-platform Tauri packaging
+
+#### RuleZ UI (Desktop App)
+- Tauri 2.0 desktop app scaffold with React 18, TypeScript 5.7+, Tailwind CSS 4
+- 18 React components, 3 Zustand stores, Monaco YAML editor with schema validation
+- Dual-mode architecture (Tauri desktop + web browser fallback)
+- Playwright E2E tests with Page Object Model (56 tests)
+- `task run-app` command for launching the desktop app
+
+### Fixed
+
+- **Broken pipe in inline scripts** — `Stdio::null()` for stdout/stderr when only checking exit code (Linux CI fix)
+- **Zombie process reaping** — Timeout path now calls `child.kill()` + `child.wait()`
+- **Stale binary artifacts** — Cleaned up old `cch` binaries after rename
+- **E2E test strict mode** — Added `data-testid` attributes for Playwright strict selector compliance
+- **Merge conflict resolution** — Fixed 12 files with leftover conflict markers from concurrent PRs
+
+### Changed
+
+- 634 tests passing (up from 64 in v1.0.0)
+- <3ms rule processing latency maintained across all new features
+- Monorepo structure: `rulez/` (core), `mastering-hooks/` (skill), `rulez-ui/` (desktop app)
+- Release workflow updated: asset names now use `rulez-*` prefix
 
 ## [1.1.0] - 2026-01-28
 
