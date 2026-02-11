@@ -17,7 +17,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Repository Structure
 
 ```
-rulez-plugin/
+agent_rulez/
 ├── rulez/                 # Core binary (Rust)
 │   ├── src/
 │   │   ├── cli/          # CLI subcommands

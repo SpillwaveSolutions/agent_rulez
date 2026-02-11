@@ -1,6 +1,6 @@
 # RuleZ UI
 
-Desktop application for visual CCH (Claude Context Hooks) configuration editing.
+Desktop application for visual Agent RuleZ configuration editing.
 
 ## Features
 
@@ -32,7 +32,7 @@ Desktop application for visual CCH (Claude Context Hooks) configuration editing.
 ### Installation
 
 ```bash
-cd rulez_ui
+cd rulez-ui
 bun install
 ```
 
@@ -67,7 +67,7 @@ bun run build:tauri
 
 RuleZ UI supports two modes:
 
-1. **Desktop Mode** (Primary) - Full Tauri integration with native file access and CCH binary execution
+1. **Desktop Mode** (Primary) - Full Tauri integration with native file access and RuleZ binary execution
 2. **Web Mode** (Testing) - Browser-based with mock data for Playwright E2E testing
 
 The `src/lib/tauri.ts` module provides the abstraction layer that detects the runtime environment and uses the appropriate implementation.
@@ -75,7 +75,7 @@ The `src/lib/tauri.ts` module provides the abstraction layer that detects the ru
 ### Directory Structure
 
 ```
-rulez_ui/
+rulez-ui/
 ├── src/                      # React frontend
 │   ├── components/           # UI components
 │   │   ├── editor/          # YamlEditor, ValidationPanel
@@ -101,7 +101,7 @@ rulez_ui/
 - [ ] M3: Schema Validation (JSON Schema, inline errors)
 - [ ] M4: File Operations (read/write, global + project)
 - [ ] M5: Rule Tree View (visual tree, navigation)
-- [ ] M6: Debug Simulator (event form, CCH integration)
+- [ ] M6: Debug Simulator (event form, RuleZ integration)
 - [ ] M7: Theming (dark/light, system preference)
 - [ ] M8: Playwright Tests (E2E suite, CI)
 
