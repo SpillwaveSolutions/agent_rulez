@@ -1,6 +1,6 @@
 # RuleZ Core Roadmap
 
-**Current Focus:** v1.4 Stability & Polish (Phases 7-10)
+**Current Focus:** v1.4 Stability & Polish (Phases 7-10) — COMPLETE
 
 ---
 
@@ -8,7 +8,7 @@
 
 - ✅ **v1.2 P2 Features** — Phases 1-3 (shipped 2026-02-07) — [Archive](milestones/v1.2-ROADMAP.md)
 - ✅ **v1.3 Advanced Matching & Validation** — Phases 4-6 (shipped 2026-02-10) — [Archive](milestones/v1.3-ROADMAP.md)
-- 🚧 **v1.4 Stability & Polish** — Phases 7-10 (active)
+- ✅ **v1.4 Stability & Polish** — Phases 7-10 (shipped 2026-02-10)
 
 ---
 
@@ -130,6 +130,13 @@ Plans:
 - Explicit tempfile cleanup with drop(temp_dir) at test end
 - Symlink resolution tests (Unix-only, validates canonicalization)
 
+**Plans:** 3 plans
+
+Plans:
+- [x] 09-01-PLAN.md — Add canonicalize_path() helper, update E2E tests to use canonical paths
+- [x] 09-02-PLAN.md — Create cross-platform CI matrix workflow with binary validation
+- [x] 09-03-PLAN.md — Add symlink resolution E2E tests and explicit tempdir cleanup
+
 ### Phase 10: Tauri CI Integration
 
 **Goal:** Build Tauri desktop app for all platforms in CI and upload release artifacts.
@@ -153,6 +160,12 @@ Plans:
 - Upload artifacts for .dmg, .msi, .AppImage (release branches only)
 - Fix e2e.yml workflow directory mismatch (rulez_ui -> rulez-ui)
 
+**Plans:** 2 plans
+
+Plans:
+- [x] 10-01-PLAN.md — Fix rulez_ui → rulez-ui directory mismatch in e2e.yml
+- [x] 10-02-PLAN.md — Create Tauri CI build workflow with E2E gate and multi-platform matrix
+
 ---
 
 ## Progress
@@ -167,9 +180,9 @@ Plans:
 | 6. Inline Script Blocks | v1.3 | 3/3 | ✅ Complete | 2026-02-09 |
 | 7. JSON Schema Validation | v1.4 | 2/2 | ✅ Complete | 2026-02-10 |
 | 8. Debug CLI Enhancements | v1.4 | 2/2 | ✅ Complete | 2026-02-10 |
-| 9. E2E Test Stabilization | v1.4 | 0/? | 🔄 Planning | — |
-| 10. Tauri CI Integration | v1.4 | 0/? | 🔄 Planning | — |
+| 9. E2E Test Stabilization | v1.4 | 3/3 | ✅ Complete | 2026-02-10 |
+| 10. Tauri CI Integration | v1.4 | 2/2 | ✅ Complete | 2026-02-10 |
 
 ---
 
-*Created 2026-02-06 — Updated 2026-02-10 Phases 7-8 complete*
+*Created 2026-02-06 — Updated 2026-02-10 v1.4 Milestone complete (Phases 7-10)*
