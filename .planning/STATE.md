@@ -11,9 +11,9 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 
 Milestone: v1.4 Stability & Polish
 Phase: 09 — E2E Test Stabilization (1/3 plans complete)
-Current Plan: 09-02 (in progress)
-Status: Phase 09 Plan 02 complete
-Last activity: 2026-02-10 — Completed Phase 09 Plan 02 (E2E Cross-Platform Matrix)
+Current Plan: 09-02 (next)
+Status: Phase 09 Plan 01 complete
+Last activity: 2026-02-10 — Completed Phase 09 Plan 01 (E2E Path Canonicalization)
 
 Progress: ████████████░░░░░░░░ 52%
 
@@ -22,7 +22,7 @@ Progress: ████████████░░░░░░░░ 52%
 **Velocity:**
 - Total plans completed: 23 (6 v1.2 + 10 v1.3 + 7 v1.4)
 - Average duration: ~6min (Phases 4-9)
-- Total execution time: 120min (Phase 4: 61min, Phase 5: 21min, Phase 6: 18min, Phase 7: 7min, Phase 8: 12min, Phase 9: 1min)
+- Total execution time: 123min (Phase 4: 61min, Phase 5: 21min, Phase 6: 18min, Phase 7: 7min, Phase 8: 12min, Phase 9: 4min)
 
 **Phase 7 Progress:**
 | Plan | Duration | Tasks | Files | Status |
@@ -39,7 +39,7 @@ Progress: ████████████░░░░░░░░ 52%
 **Phase 9 Progress:**
 | Plan | Duration | Tasks | Files | Status |
 |------|----------|-------|-------|--------|
-| 09-02 | 1min | 1 | 1 (1 new) | Complete |
+| 09-01 | 4min | 2 | 2 | Complete |
 
 ## Verification Results
 
@@ -52,10 +52,9 @@ Progress: ████████████░░░░░░░░ 52%
 
 ### Decisions
 
-**Phase 9 - E2E Test Stabilization (09-02):**
-- Matrix runs on ubuntu-latest, macos-latest, windows-latest with fail-fast: false
-- Binary validation checks for rulez binary and warns about stale cch binaries
-- No changes to ci.yml (Fast CI already runs cargo test including E2E on ubuntu)
+**Phase 9 - E2E Test Stabilization (09-01):**
+- Use canonicalize_path() wrapper with fallback instead of raw fs::canonicalize()
+- Apply canonicalization at event JSON creation time to match binary's internal canonicalization
 
 **Phase 8 - Debug CLI Enhancements (08-02):**
 - Replace unbounded HashMap REGEX_CACHE with LRU cache (100 entry cap)
@@ -93,7 +92,7 @@ None active.
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Completed Phase 09 Plan 02 (E2E Cross-Platform Matrix)
+Stopped at: Completed Phase 09 Plan 01 (E2E Path Canonicalization)
 Resume file: None
 
-Next action: `/gsd:execute-phase 09` to continue with 09-03, or move to Phase 10 (Tauri CI Integration)
+Next action: `/gsd:execute-phase 09` to continue with 09-02 (E2E Cross-Platform Matrix)
