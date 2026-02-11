@@ -1,11 +1,13 @@
 import { expect, test } from "@playwright/test";
+import { SimulatorPage } from "./pages";
+import { resetAppState } from "./utils/reset-app-state";
 
 test.describe("Debug Simulator", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/");
-    // Make sure simulator tab is visible
-    await expect(page.getByRole("button", { name: "Simulator" })).toBeVisible();
-    await page.getByRole("button", { name: "Simulator" }).click();
+    await resetAppState(page);
+    const simulatorPage = new SimulatorPage(page);
+    await simulatorPage.goto();
+    await simulatorPage.openSimulator();
   });
 
   test("should display event form", async ({ page }) => {
@@ -67,5 +69,45 @@ test.describe("Debug Simulator", () => {
 
     // Should show matched rules count or evaluation info
     await expect(page.getByText(/matched|rules|evaluation/i).first()).toBeVisible();
+  });
+
+  test("should invoke real binary (mocked response in web mode)", async ({ page }) => {
+    const simulatorPage = new SimulatorPage(page);
+    await simulatorPage.selectEventType("PreToolUse");
+    await simulatorPage.fillTool("Bash");
+    await simulatorPage.fillCommand("git push --force origin main");
+    await simulatorPage.runSimulation();
+
+    await expect(simulatorPage.outcomeBadge().first()).toBeVisible();
+  });
+
+  test("should show step-by-step rule evaluation trace", async ({ page }) => {
+    const simulatorPage = new SimulatorPage(page);
+    await simulatorPage.selectEventType("PreToolUse");
+    await simulatorPage.fillTool("Bash");
+    await simulatorPage.fillCommand("git push --force origin main");
+    await simulatorPage.runSimulation();
+
+    await expect(page.getByText(/Evaluation Trace/i)).toBeVisible();
+  });
+
+  test("should save debug test case", async ({ page }) => {
+    await page.getByRole("button", { name: /save test case|save/i }).click();
+    await expect(page.getByText(/saved|success/i).first()).toBeVisible();
+  });
+
+  test("should load and replay saved test case", async ({ page }) => {
+    await page.getByRole("button", { name: /load test case|load/i }).click();
+    await expect(page.getByText(/loaded|replay/i).first()).toBeVisible();
+  });
+
+  test("should show which rules matched and why", async ({ page }) => {
+    const simulatorPage = new SimulatorPage(page);
+    await simulatorPage.selectEventType("PreToolUse");
+    await simulatorPage.fillTool("Bash");
+    await simulatorPage.fillCommand("git push --force origin main");
+    await simulatorPage.runSimulation();
+
+    await expect(page.getByText(/matched|pattern|input/i).first()).toBeVisible();
   });
 });
