@@ -1,0 +1,23 @@
+# Valid CCH configuration for tests
+version: "1.0"
+
+settings:
+  log_level: "info"
+  fail_open: true
+
+rules:
+  - name: block-force-push
+    description: "Block force push to main/master"
+    matchers:
+      tools: ["Bash"]
+      command_match: "git push.*(--force|-f).*(main|master)"
+    actions:
+      block: true
+
+  - name: inject-python-context
+    description: "Inject Python best practices context"
+    matchers:
+      tools: ["Write", "Edit"]
+      extensions: [".py"]
+    actions:
+      inject: "Follow PEP 8 style guidelines"
