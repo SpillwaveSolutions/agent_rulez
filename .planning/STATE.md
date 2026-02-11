@@ -10,10 +10,10 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Milestone: v1.4 Stability & Polish
-Phase: 8 — Debug CLI Enhancements (1/2 plans complete)
-Current Plan: 08-02
-Status: Plan 08-01 complete, plan 08-02 ready for execution
-Last activity: 2026-02-10 — Completed 08-01 (Debug prompt command and state isolation)
+Phase: 8 — Debug CLI Enhancements (2/2 plans complete)
+Current Plan: PHASE_COMPLETE
+Status: Phase 08 complete
+Last activity: 2026-02-10 — Completed 08-02 (LRU regex cache with TDD)
 
 Progress: ████░░░░░░░░░░░░░░░░ 20%
 
@@ -34,11 +34,16 @@ Progress: ████░░░░░░░░░░░░░░░░ 20%
 | Plan | Duration | Tasks | Files | Status |
 |------|----------|-------|-------|--------|
 | 08-01 | 12min | 2 | 2 | Complete |
-| 08-02 | - | - | - | Pending |
+| 08-02 | 16min | 1 | 3 | Complete |
 
 ## Accumulated Context
 
 ### Decisions
+
+**Phase 8 - Debug CLI Enhancements (08-02):**
+- Replace unbounded HashMap REGEX_CACHE with LRU cache (100 entry cap)
+- Use lock-based test isolation to prevent parallel test interference
+- Test LRU behavior directly with cache.put()/get() rather than through helper functions
 
 **Phase 8 - Debug CLI Enhancements (08-01):**
 - Export REGEX_CACHE from hooks module for debug CLI state isolation
@@ -65,7 +70,7 @@ None active.
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Completed phase 8 plan 01 (Debug CLI enhancements)
+Stopped at: Completed phase 8 plan 02 (LRU regex cache)
 Resume file: None
 
-Next action: `/gsd:execute-plan 7 2` (complete phase 7) or `/gsd:execute-plan 8 2` (complete phase 8)
+Next action: `/gsd:execute-plan 7 2` (complete phase 7) or start next phase
