@@ -5228,35 +5228,50 @@ mod tests {
 
     #[test]
     fn test_regex_cache_get_refreshes_entry() {
-        // Clear cache to start fresh
-        REGEX_CACHE.lock().unwrap().clear();
+        // Lock cache for entire test to prevent parallel test interference
+        let mut cache = REGEX_CACHE.lock().unwrap();
+        cache.clear();
 
-        // Insert patterns A, B, C (use test-specific prefix)
-        get_or_compile_regex("refresh_test_A", false).expect("Failed to compile A");
-        get_or_compile_regex("refresh_test_B", false).expect("Failed to compile B");
-        get_or_compile_regex("refresh_test_C", false).expect("Failed to compile C");
+        // Insert patterns A, B, C directly
+        let key_a = "refresh_test_A:false".to_string();
+        let key_b = "refresh_test_B:false".to_string();
+        let key_c = "refresh_test_C:false".to_string();
+        cache.put(key_a.clone(), Regex::new("refresh_test_A").unwrap());
+        cache.put(key_b.clone(), Regex::new("refresh_test_B").unwrap());
+        cache.put(key_c.clone(), Regex::new("refresh_test_C").unwrap());
 
         // Access pattern A again (refreshes it in LRU order)
-        get_or_compile_regex("refresh_test_A", false).expect("Failed to re-access A");
+        assert!(cache.get(&key_a).is_some(), "Pattern A should be in cache");
 
         // Insert 97 more patterns to reach 100 total (A, B, C + 97 = 100)
         for i in 0..97 {
-            let pattern = format!("refresh_test_{}", i);
-            get_or_compile_regex(&pattern, false).expect("Failed to compile pattern");
+            let key = format!("refresh_test_{}:false", i);
+            let regex = Regex::new(&format!("refresh_test_{}", i)).unwrap();
+            cache.put(key, regex);
         }
 
         // Cache should be at 100
-        assert_eq!(regex_cache_len(), 100, "Cache should be at capacity");
+        assert_eq!(cache.len(), 100, "Cache should be at capacity");
 
-        // Insert one more pattern (should evict pattern_B, the least recently used)
-        get_or_compile_regex("refresh_test_FINAL", false).expect("Failed to compile FINAL");
+        // Insert one more pattern (should evict B, the least recently used)
+        cache.put(
+            "refresh_test_FINAL:false".to_string(),
+            Regex::new("refresh_test_FINAL").unwrap(),
+        );
 
         // Cache should still be at 100
-        assert_eq!(regex_cache_len(), 100, "Cache should remain at 100");
+        assert_eq!(cache.len(), 100, "Cache should remain at 100");
 
-        // Pattern A should still be in cache (it was refreshed)
-        // We can verify this by checking if accessing it doesn't change the cache state
-        // This is difficult to verify directly with HashMap, but with LRU it should work
-        // For now, just verify the cache is at expected size
+        // Pattern A should still be in cache (it was refreshed via get)
+        assert!(
+            cache.get(&key_a).is_some(),
+            "Pattern A should still be in cache (was refreshed)"
+        );
+
+        // Pattern B should have been evicted (least recently used)
+        assert!(
+            cache.peek(&key_b).is_none(),
+            "Pattern B should have been evicted"
+        );
     }
 }
