@@ -8,7 +8,7 @@
 
 | Component | Location | Priority | Status |
 |-----------|----------|----------|--------|
-| **RuleZ Core** | `rulez/` | P1 - Primary | v1.3.0 Shipped, v1.4 Active |
+| **RuleZ Core** | `rulez/` | P1 - Primary | v1.4 Shipped |
 | **Mastering Hooks** | `mastering-hooks/` | P2 - Secondary | Complete (skill) |
 | **RuleZ UI** | `rulez-ui/` | P3 - Tertiary | M1 Complete |
 
@@ -32,11 +32,11 @@ RuleZ positions itself as comparable to:
 
 ## Current State
 
-### RuleZ Core (v1.3.0)
-- Policy engine with blocking, injection, validation, inline scripting
+### RuleZ Core (v1.4)
+- Policy engine with blocking, injection, validation, inline scripting, schema validation
 - CLI: init, install, uninstall, validate, logs, explain, debug, repl
-- 605 tests, <3ms latency, comprehensive logging
-- 22,339 LOC Rust
+- 634 tests, <3ms latency, comprehensive logging
+- ~23,600 LOC Rust
 - **v1.2 Features:**
   - `inject_inline` - Embed context directly in YAML
   - `inject_command` - Dynamic context via shell commands
@@ -46,6 +46,12 @@ RuleZ positions itself as comparable to:
   - `require_fields` / `field_types` - Fail-closed field validation with dot-notation paths
   - `validate_expr` - Inline evalexpr expressions with get_field() / has_field()
   - `inline_script` - Shell scripts in YAML with timeout protection
+- **v1.4 Features:**
+  - JSON Schema validation (fail-open, <0.1ms overhead)
+  - Debug CLI UserPromptSubmit support with LRU regex cache
+  - Cross-platform E2E test stabilization (macOS symlinks, Windows paths)
+  - CI matrix for E2E tests (ubuntu, macOS, Windows)
+  - Tauri CI build pipeline with E2E gate
 
 ### Mastering Hooks (Complete)
 - Claude Code skill for RuleZ mastery
@@ -80,15 +86,16 @@ RuleZ positions itself as comparable to:
 - ✓ SCRIPT-05: Timeout protection for scripts — v1.3
 - ✓ SCRIPT-06: Config-time script validation — v1.3
 
-### Active — v1.4 Stability & Polish
+- ✓ REQ-SCHEMA-01..06: JSON Schema validation for hook event payloads — v1.4
+- ✓ REQ-DEBUG-01..05: Debug CLI enhancements (UserPromptSubmit, LRU cache, state isolation) — v1.4
+- ✓ REQ-E2E-01..05: E2E test stabilization (canonical paths, symlink resolution, explicit cleanup) — v1.4
+- ✓ REQ-TAURI-01..06: Tauri CI build pipeline with E2E gate — v1.4
+- ✓ REQ-PERF-01..02: Performance quality gates (<0.1ms schema validation) — v1.4
+- ✓ REQ-COMPAT-01..02: Cross-platform compatibility (CI matrix) — v1.4
 
-- [ ] REQ-SCHEMA-01..06: JSON Schema validation for hook event payloads
-- [ ] REQ-DEBUG-01..05: Debug CLI enhancements (UserPromptSubmit, improved output)
-- [ ] REQ-E2E-01..05: E2E test suite fixes (CI-green across all platforms)
-- [ ] REQ-TAURI-01..06: Tauri UI build and CI integration
-- [ ] REQ-PERF-01..02, REQ-COMPAT-01..02: Cross-cutting quality gates
+### Active
 
-See [REQUIREMENTS.md](REQUIREMENTS.md) for full requirement details.
+(No active requirements — run `/gsd:new-milestone` to define next milestone)
 
 ### Out of Scope
 
@@ -125,7 +132,11 @@ See [REQUIREMENTS.md](REQUIREMENTS.md) for full requirement details.
 | Dot notation for field paths | User-friendly, RFC 6901 conversion | ✓ Good |
 | validate_expr / inline_script mutual exclusion | Simpler mental model | ✓ Good |
 | Defer script sandboxing to v1.5+ | Cross-platform complexity, not in v1.4 scope | ⚠️ Revisit |
-| Unbounded regex cache | Short-lived CLI, low risk | ⚠️ Revisit |
+| LRU regex cache (100 entries) | Replaced unbounded HashMap, prevents memory growth | ✓ Good |
+| Fail-open schema validation | Log warnings but continue processing for robustness | ✓ Good |
+| LazyLock pre-compiled validators | <0.1ms validation overhead at runtime | ✓ Good |
+| ubuntu-22.04 for Tauri builds | webkit2gtk-4.1 requirement, ubuntu-latest may break | ✓ Good |
+| E2E gate before Tauri builds | Fast feedback (2-3min) prevents expensive failed builds | ✓ Good |
 
 ## Quality Gates
 
@@ -144,6 +155,6 @@ See [REQUIREMENTS.md](REQUIREMENTS.md) for full requirement details.
 
 ---
 
-*Last updated: 2026-02-10 after v1.4 milestone started*
+*Last updated: 2026-02-10 after v1.4 milestone shipped*
 *Reorganized as monorepo on 2026-02-06*
 *Renamed from CCH to RuleZ*

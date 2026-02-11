@@ -5,111 +5,39 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** LLMs do not enforce policy. LLMs are subject to policy.
-**Current focus:** v1.4 Stability & Polish
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-Milestone: v1.4 Stability & Polish
-Phase: 10 — Tauri CI Integration (2/2 plans complete)
+Milestone: v1.4 Stability & Polish — SHIPPED
+Phase: All complete (10 phases across 3 milestones)
 Current Plan: MILESTONE_COMPLETE
-Status: All 4 phases (7-10) verified complete
-Last activity: 2026-02-10 — Verified Phase 9 (16/16) and Phase 10 (9/9)
+Status: v1.4 archived, ready for next milestone
+Last activity: 2026-02-10 — v1.4 milestone archived
 
 Progress: ████████████████████ 100%
 
 ## Performance Metrics
 
-**Velocity:**
-- Total plans completed: 27 (6 v1.2 + 10 v1.3 + 11 v1.4)
-- Average duration: ~5min (Phases 4-10)
-- Total execution time: 137min (Phase 4: 61min, Phase 5: 21min, Phase 6: 18min, Phase 7: 7min, Phase 8: 12min, Phase 9: 16min, Phase 10: 2min)
+**Velocity (all milestones):**
+- Total plans completed: 25 (6 v1.2 + 10 v1.3 + 9 v1.4)
+- Average duration: ~5min per plan (Phases 4-10)
+- Total execution time: 137min across v1.4
 
-**Phase 7 Progress:**
-| Plan | Duration | Tasks | Files | Status |
-|------|----------|-------|-------|--------|
-| 07-01 | 7min | 2 | 5 (1 new) | Complete |
-| 07-02 | 8min | 2 | 2 (1 new) | Complete |
+**v1.4 Phase Summary:**
 
-**Phase 8 Progress:**
-| Plan | Duration | Tasks | Files | Status |
-|------|----------|-------|-------|--------|
-| 08-01 | 12min | 2 | 2 | Complete |
-| 08-02 | 16min | 1 | 3 | Complete |
-
-**Phase 9 Progress:**
-| Plan | Duration | Tasks | Files | Status |
-|------|----------|-------|-------|--------|
-| 09-01 | 4min | 2 | 2 | Complete |
-| 09-02 | 6min | 2 | 1 | Complete |
-| 09-03 | 6min | 2 | 2 (1 new) | Complete |
-
-**Phase 10 Progress:**
-| Plan | Duration | Tasks | Files | Status |
-|------|----------|-------|-------|--------|
-| 10-01 | <1min | 1 | 1 | Complete |
-| 10-02 | 1min | 1 | 1 (1 new) | Complete |
-
-## Verification Results
-
-| Phase | Score | Status |
-|-------|-------|--------|
-| 7 - JSON Schema Validation | 10/10 must-haves | PASSED |
-| 8 - Debug CLI Enhancements | 8/8 must-haves | PASSED |
-| 9 - E2E Test Stabilization | 16/16 must-haves | PASSED |
-| 10 - Tauri CI Integration | 9/9 must-haves | PASSED |
+| Phase | Plans | Duration | Verification |
+|-------|-------|----------|-------------|
+| 7 - JSON Schema Validation | 2/2 | 15min | 10/10 PASSED |
+| 8 - Debug CLI Enhancements | 2/2 | 28min | 8/8 PASSED |
+| 9 - E2E Test Stabilization | 3/3 | 16min | 16/16 PASSED |
+| 10 - Tauri CI Integration | 2/2 | 2min | 9/9 PASSED |
 
 ## Accumulated Context
 
 ### Decisions
 
-**Phase 10 - Tauri CI Integration (10-02):**
-- E2E tests run FIRST in web mode (2-3min) before any Tauri builds start
-- Linux builds use explicit ubuntu-22.04 with libwebkit2gtk-4.1-dev (NOT ubuntu-latest or webkit 4.0)
-- Matrix uses fail-fast: false to allow all platform builds to complete for diagnostics
-- Rust cache targets rulez-ui/src-tauri workspace for faster incremental builds
-- Auto-release on version tags using conditional expressions in tauri-action parameters
-
-**Phase 10 - Tauri CI Integration (10-01):**
-- All rulez_ui references replaced with rulez-ui to match actual directory name
-
-**Phase 9 - E2E Test Stabilization (09-03):**
-- Import std::os::unix::fs::symlink inside #[cfg(unix)] test function body (not at module level) to avoid compilation errors on non-Unix platforms
-- Use explicit drop() for single temp_dirs, rely on loop scope drop for loop-created temp_dirs
-- Symlink tests validate both blocking and allowing behavior to ensure config resolution works correctly
-
-**Phase 9 - E2E Test Stabilization (09-02):**
-- Run E2E tests on both ubuntu-latest and macos-latest in GitHub Actions
-- Symlink tests (#[cfg(unix)]) automatically skipped on Windows
-- Matrix strategy enables parallel cross-platform validation
-
-**Phase 9 - E2E Test Stabilization (09-01):**
-- Use canonicalize_path() wrapper with fallback instead of raw fs::canonicalize()
-- Apply canonicalization at event JSON creation time to match binary's internal canonicalization
-
-**Phase 8 - Debug CLI Enhancements (08-02):**
-- Replace unbounded HashMap REGEX_CACHE with LRU cache (100 entry cap)
-- Use lock-based test isolation to prevent parallel test interference
-- Test LRU behavior directly with cache.put()/get() rather than through helper functions
-
-**Phase 8 - Debug CLI Enhancements (08-01):**
-- Export REGEX_CACHE from hooks module for debug CLI state isolation
-- Clear REGEX_CACHE at start of each debug invocation for clean test runs
-- Maintain comprehensive integration test coverage for all debug event types
-
-**Phase 7 - JSON Schema Validation (07-02):**
-- Performance test allows 2s wall-clock time (not 100ms) to account for process spawn overhead
-- Tracing logger outputs to stdout, not stderr - tests check stdout for error messages
-- Binary size test is ignored by default (requires release build)
-- Test names accurately reflect behavior: fail-open schema validation vs fail-closed serde deserialization
-
-**Phase 7 - JSON Schema Validation (07-01):**
-- Schema validation is fail-open: logs warnings but continues processing
-- Serde deserialization is fail-closed: missing required fields are fatal
-- Schema is auto-generated from Event struct using schemars 1.2
-- Pre-compile validator at startup using LazyLock for <0.1ms validation time
-- Three-phase event processing: parse JSON -> validate schema (fail-open) -> deserialize Event (fail-closed)
-
-All historical decisions logged in PROJECT.md Key Decisions table.
+All v1.4 decisions archived to PROJECT.md Key Decisions table and milestones/v1.4-ROADMAP.md.
 
 ### Pending Todos
 
@@ -121,8 +49,8 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-02-11
-Stopped at: Completed Phase 10 (Tauri CI Integration)
+Last session: 2026-02-10
+Stopped at: v1.4 milestone archived
 Resume file: None
 
-Next action: `/gsd:complete-milestone` — v1.4 Stability & Polish complete
+Next action: `/gsd:new-milestone` — define next milestone

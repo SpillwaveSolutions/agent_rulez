@@ -63,3 +63,37 @@
 
 ---
 
+
+## v1.4 Stability & Polish (Shipped: 2026-02-10)
+
+**Delivered:** Infrastructure hardening — JSON Schema validation, debug CLI parity, cross-platform E2E reliability, and Tauri 2.0 CI automation.
+
+**Phases completed:** 7-10 (9 plans total)
+
+**Key accomplishments:**
+
+- Added JSON Schema validation with fail-open mode (<0.1ms overhead via LazyLock pre-compiled validators)
+- Debug CLI now supports UserPromptSubmit events with LRU-cached regex (100 entry cap, state isolation)
+- Cross-platform E2E path canonicalization fixing macOS /var → /private/var symlink issues
+- CI matrix workflow for E2E tests across ubuntu, macOS, and Windows with binary artifact validation
+- Tauri CI build pipeline with E2E gate (web mode) and multi-platform desktop builds (.dmg, .msi, .AppImage)
+- Fixed e2e.yml directory mismatch (rulez_ui → rulez-ui) enabling Playwright E2E tests
+
+**Stats:**
+
+- 14 files created/modified
+- +1,293 / -61 lines
+- 4 phases, 9 plans
+- 634 tests passing (up from 605)
+- 1 day execution (2026-02-10)
+
+**Git range:** `feat(07-01)` → `docs(10-02)`
+
+**Tech debt resolved from v1.3:**
+- Regex cache now bounded (LRU 100 entries) — was unbounded HashMap
+- Debug CLI now supports all event types including UserPromptSubmit
+
+**What's next:** `/gsd:new-milestone` for next milestone planning
+
+---
+
