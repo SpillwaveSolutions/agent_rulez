@@ -1,0 +1,77 @@
+# Windows E2E Tests for RuleZ Core (manual trigger only)
+#
+# Separated from e2e-matrix.yml because inline_script tests require
+# bash shebangs which Windows cannot execute natively. Run manually
+# to validate Windows compatibility when needed.
+
+name: E2E Tests - Windows
+
+on:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  e2e-windows:
+    name: E2E (windows-latest)
+    runs-on: windows-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build binary
+        run: cargo build --bin rulez
+
+      - name: Validate binary artifact
+        shell: pwsh
+        run: |
+          $binaryPath = "target\debug\rulez.exe"
+
+          if (-not (Test-Path $binaryPath)) {
+            Write-Error "Binary not found at $binaryPath"
+            exit 1
+          }
+
+          $version = & ".\$binaryPath" --version 2>&1
+          if ($version -notmatch "rulez") {
+            Write-Error "Binary version check failed — may be stale 'cch' binary"
+            exit 1
+          }
+
+          if (Test-Path "target\debug\cch.exe") {
+            Write-Warning "Stale 'cch.exe' binary found in target\debug\"
+          }
+
+          Write-Host "Binary validation passed: $binaryPath"
+
+      - name: Run all tests
+        run: cargo test --tests --all-features --workspace
+
+      - name: Upload test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-evidence-windows
+          path: rulez/target/test-evidence/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Upload failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failure-logs-windows
+          path: |
+            rulez/target/test-evidence/
+          retention-days: 14
+          if-no-files-found: ignore

@@ -1,4 +1,4 @@
-//! CCH Debug Command - Simulate and debug hook events
+//! RuleZ Debug Command - Simulate and debug hook events
 //!
 //! Allows testing rules without invoking Claude Code.
 
@@ -18,6 +18,7 @@ pub enum SimEventType {
     PostToolUse,
     SessionStart,
     PermissionRequest,
+    UserPromptSubmit,
 }
 
 impl SimEventType {
@@ -27,6 +28,7 @@ impl SimEventType {
             SimEventType::PostToolUse => ModelEventType::PostToolUse,
             SimEventType::SessionStart => ModelEventType::SessionStart,
             SimEventType::PermissionRequest => ModelEventType::PermissionRequest,
+            SimEventType::UserPromptSubmit => ModelEventType::UserPromptSubmit,
         }
     }
 
@@ -36,6 +38,9 @@ impl SimEventType {
             "posttooluse" | "post" | "post-tool-use" => Some(SimEventType::PostToolUse),
             "sessionstart" | "session" | "start" => Some(SimEventType::SessionStart),
             "permissionrequest" | "permission" | "perm" => Some(SimEventType::PermissionRequest),
+            "userpromptsubmit" | "prompt" | "user-prompt" | "user-prompt-submit" => {
+                Some(SimEventType::UserPromptSubmit)
+            }
             _ => None,
         }
     }
@@ -47,14 +52,21 @@ pub async fn run(
     tool: Option<String>,
     command: Option<String>,
     path: Option<String>,
+    prompt: Option<String>,
     verbose: bool,
 ) -> Result<()> {
+    // Clear regex cache for state isolation between debug invocations
+    {
+        use crate::hooks::REGEX_CACHE;
+        REGEX_CACHE.lock().unwrap().clear();
+    }
+
     let event_type = SimEventType::from_str(&event_type).context(format!(
-        "Unknown event type: '{}'\nValid types: PreToolUse, PostToolUse, SessionStart, PermissionRequest",
+        "Unknown event type: '{}'\nValid types: PreToolUse, PostToolUse, SessionStart, PermissionRequest, UserPromptSubmit",
         event_type
     ))?;
 
-    println!("CCH Debug Mode");
+    println!("RuleZ Debug Mode");
     println!("{}", "=".repeat(60));
     println!();
 
@@ -64,7 +76,13 @@ pub async fn run(
     println!();
 
     // Build simulated event
-    let event = build_event(event_type, tool.clone(), command.clone(), path.clone());
+    let event = build_event(
+        event_type,
+        tool.clone(),
+        command.clone(),
+        path.clone(),
+        prompt.clone(),
+    );
     let event_json = serde_json::to_string_pretty(&event)?;
 
     println!("Simulated Event:");
@@ -74,12 +92,29 @@ pub async fn run(
 
     // Process the event with debug enabled
     let debug_config = DebugConfig::new(true, config.settings.debug_logs);
+    let start = std::time::Instant::now();
     let response = hooks::process_event(event, &debug_config).await?;
+    let elapsed = start.elapsed();
     let response_json = serde_json::to_string_pretty(&response)?;
 
     println!("Response:");
     println!("{}", "-".repeat(40));
     println!("{}", response_json);
+    println!();
+
+    // Show performance metrics
+    println!("Performance:");
+    println!("{}", "-".repeat(40));
+    let rule_count = response
+        .timing
+        .as_ref()
+        .map(|t| t.rules_evaluated)
+        .unwrap_or(0);
+    println!(
+        "Processed in {}ms ({} rules evaluated)",
+        elapsed.as_millis(),
+        rule_count
+    );
     println!();
 
     // Show rule evaluation summary
@@ -112,50 +147,58 @@ fn build_event(
     tool: Option<String>,
     command: Option<String>,
     path: Option<String>,
+    prompt: Option<String>,
 ) -> Event {
-    let tool_name = tool.unwrap_or_else(|| "Bash".to_string());
     let session_id = format!("debug-{}", uuid_simple());
 
-    let tool_input = match tool_name.as_str() {
-        "Bash" => {
-            let cmd = command.unwrap_or_else(|| "echo 'test'".to_string());
-            json!({
-                "command": cmd,
-                "description": "Debug simulated command"
-            })
-        }
-        "Write" | "Edit" | "Read" => {
-            let file_path = path.unwrap_or_else(|| "src/main.rs".to_string());
-            json!({
-                "file_path": file_path,
-                "content": "// Simulated content"
-            })
-        }
-        "Glob" | "Grep" => {
-            let pattern = command.unwrap_or_else(|| "*.rs".to_string());
-            json!({
-                "pattern": pattern,
-                "path": path.unwrap_or_else(|| ".".to_string())
-            })
-        }
-        _ => {
-            json!({
-                "description": "Simulated tool input"
-            })
-        }
+    // For UserPromptSubmit events, tool/tool_input are optional (not defaulting to Bash)
+    let (tool_name, tool_input) = if matches!(event_type, SimEventType::UserPromptSubmit) {
+        (tool, None)
+    } else {
+        let tool_name = tool.unwrap_or_else(|| "Bash".to_string());
+        let tool_input = match tool_name.as_str() {
+            "Bash" => {
+                let cmd = command.unwrap_or_else(|| "echo 'test'".to_string());
+                json!({
+                    "command": cmd,
+                    "description": "Debug simulated command"
+                })
+            }
+            "Write" | "Edit" | "Read" => {
+                let file_path = path.unwrap_or_else(|| "src/main.rs".to_string());
+                json!({
+                    "file_path": file_path,
+                    "content": "// Simulated content"
+                })
+            }
+            "Glob" | "Grep" => {
+                let pattern = command.unwrap_or_else(|| "*.rs".to_string());
+                json!({
+                    "pattern": pattern,
+                    "path": path.unwrap_or_else(|| ".".to_string())
+                })
+            }
+            _ => {
+                json!({
+                    "description": "Simulated tool input"
+                })
+            }
+        };
+        (Some(tool_name), Some(tool_input))
     };
 
     Event {
         hook_event_name: event_type.as_model_event_type(),
         session_id,
-        tool_name: Some(tool_name),
-        tool_input: Some(tool_input),
+        tool_name,
+        tool_input,
         timestamp: Utc::now(),
         user_id: None,
         transcript_path: None,
         cwd: None,
         permission_mode: None,
         tool_use_id: None,
+        prompt,
     }
 }
 
@@ -189,7 +232,7 @@ fn uuid_simple() -> String {
 
 /// Interactive debug mode
 pub async fn interactive() -> Result<()> {
-    println!("CCH Interactive Debug Mode");
+    println!("RuleZ Interactive Debug Mode");
     println!("{}", "=".repeat(60));
     println!("Enter events as JSON or use shortcuts:");
     println!("  bash <command>    - Simulate Bash tool");
@@ -202,7 +245,7 @@ pub async fn interactive() -> Result<()> {
     let mut stdout = std::io::stdout();
 
     loop {
-        print!("cch> ");
+        print!("rulez> ");
         stdout.flush()?;
 
         let mut input = String::new();
@@ -228,6 +271,7 @@ pub async fn interactive() -> Result<()> {
                     Some("Bash".to_string()),
                     Some(cmd),
                     None,
+                    None,
                     false,
                 )
                 .await?;
@@ -239,6 +283,7 @@ pub async fn interactive() -> Result<()> {
                     Some("Write".to_string()),
                     None,
                     Some(path),
+                    None,
                     false,
                 )
                 .await?;
@@ -250,6 +295,7 @@ pub async fn interactive() -> Result<()> {
                     Some("Read".to_string()),
                     None,
                     Some(path),
+                    None,
                     false,
                 )
                 .await?;

@@ -17,7 +17,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Repository Structure
 
 ```
-rulez-plugin/
+agent_rulez/
 ├── rulez/                 # Core binary (Rust)
 │   ├── src/
 │   │   ├── cli/          # CLI subcommands
@@ -92,6 +92,30 @@ rulez repl              # Interactive debug mode
 - Global config: `~/.claude/hooks.yaml`
 - Project config: `.claude/hooks.yaml`
 - Logs: `~/.claude/logs/rulez.log`
+
+## Pre-Push Checklist
+
+**CRITICAL: Always run the FULL CI pipeline locally before pushing or creating PRs. ALL steps must pass.**
+
+```bash
+# 1. Format check
+cargo fmt --all --check
+
+# 2. Clippy (CI uses -D warnings — all warnings are errors)
+cargo clippy --all-targets --all-features --workspace -- -D warnings
+
+# 3. Full test suite (remove stale binaries first if binary was renamed)
+cargo test --tests --all-features --workspace
+
+# 4. Code coverage (runs ALL tests including e2e — catches pipe/process bugs)
+cargo llvm-cov --all-features --workspace --no-report
+```
+
+**Why this matters:**
+- Tests may pass locally due to stale build artifacts (e.g., old binary names in `target/`) that don't exist on CI.
+- The code coverage step (`cargo llvm-cov`) runs tests with instrumentation that can surface pipe, process, and concurrency bugs that `cargo test` alone does not.
+- If `cargo llvm-cov` is not installed: `cargo install cargo-llvm-cov`
+- **Do NOT push if any step fails.**
 
 ## Exit Codes
 

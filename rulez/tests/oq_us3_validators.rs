@@ -54,7 +54,7 @@ fn test_us3_validator_blocks_console_log() {
     let event = read_fixture("events/console-log-write-event.json");
 
     // Run CCH with the event
-    let output = Command::cargo_bin("cch")
+    let output = Command::cargo_bin("rulez")
         .expect("binary exists")
         .current_dir(temp_dir.path())
         .write_stdin(event)
@@ -131,7 +131,7 @@ fn test_us3_validator_allows_clean_code() {
     }"#;
 
     // Run CCH with the event
-    let result = Command::cargo_bin("cch")
+    let result = Command::cargo_bin("rulez")
         .expect("binary exists")
         .current_dir(temp_dir.path())
         .write_stdin(event)
@@ -216,7 +216,7 @@ print("Done")
     }"#;
 
     // Run CCH with the event - should complete due to fail_open
-    let result = Command::cargo_bin("cch")
+    let result = Command::cargo_bin("rulez")
         .expect("binary exists")
         .current_dir(temp_dir.path())
         .write_stdin(event)

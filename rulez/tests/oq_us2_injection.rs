@@ -46,7 +46,7 @@ fn test_us2_cdk_context_injection() {
     let event = read_fixture("events/cdk-file-edit-event.json");
 
     // Run CCH with the event
-    let result = Command::cargo_bin("cch")
+    let result = Command::cargo_bin("rulez")
         .expect("binary exists")
         .current_dir(temp_dir.path())
         .write_stdin(event)
@@ -98,7 +98,7 @@ fn test_us2_non_matching_no_injection() {
     }"#;
 
     // Run CCH with the event
-    let result = Command::cargo_bin("cch")
+    let result = Command::cargo_bin("rulez")
         .expect("binary exists")
         .current_dir(temp_dir.path())
         .write_stdin(event)
@@ -158,7 +158,7 @@ fn test_us2_extension_based_injection() {
     }"#;
 
     // Run CCH with the event
-    let result = Command::cargo_bin("cch")
+    let result = Command::cargo_bin("rulez")
         .expect("binary exists")
         .current_dir(temp_dir.path())
         .write_stdin(event)

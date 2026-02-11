@@ -8,10 +8,11 @@ mod config;
 mod hooks;
 mod logging;
 mod models;
+mod schema;
 
 #[derive(Parser)]
-#[command(name = "cch")]
-#[command(about = "Claude Code Hooks - High-performance policy engine")]
+#[command(name = "rulez")]
+#[command(about = "RuleZ - High-performance AI policy engine")]
 #[command(version = env!("CARGO_PKG_VERSION"))]
 struct Cli {
     /// Enable debug logging with full event and rule details
@@ -24,7 +25,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Initialize CCH configuration in current project
+    /// Initialize RuleZ configuration in current project
     Init {
         /// Overwrite existing configuration
         #[arg(short, long)]
@@ -33,16 +34,16 @@ enum Commands {
         #[arg(long)]
         with_examples: bool,
     },
-    /// Install CCH hook into Claude Code settings
+    /// Install RuleZ hook into Claude Code settings
     Install {
         /// Install globally instead of project-local
         #[arg(short, long)]
         global: bool,
-        /// Path to CCH binary (auto-detected if not specified)
+        /// Path to RuleZ binary (auto-detected if not specified)
         #[arg(short, long)]
         binary: Option<String>,
     },
-    /// Uninstall CCH hook from Claude Code settings
+    /// Uninstall RuleZ hook from Claude Code settings
     Uninstall {
         /// Uninstall from global settings instead of project-local
         #[arg(short, long)]
@@ -50,7 +51,7 @@ enum Commands {
     },
     /// Simulate an event to test rules
     Debug {
-        /// Event type: PreToolUse, PostToolUse, SessionStart, PermissionRequest
+        /// Event type: PreToolUse, PostToolUse, SessionStart, PermissionRequest, UserPromptSubmit
         event_type: String,
         /// Tool name (e.g., Bash, Write, Read)
         #[arg(short, long)]
@@ -61,6 +62,9 @@ enum Commands {
         /// File path (for Write/Edit/Read)
         #[arg(short, long)]
         path: Option<String>,
+        /// User prompt text (for UserPromptSubmit events)
+        #[arg(long)]
+        prompt: Option<String>,
         /// Show verbose rule evaluation
         #[arg(short, long)]
         verbose: bool,
@@ -88,7 +92,7 @@ enum Commands {
         #[arg(long)]
         decision: Option<String>,
     },
-    /// Explain rules or events (use 'cch explain --help' for subcommands)
+    /// Explain rules or events (use 'rulez explain --help' for subcommands)
     Explain {
         #[command(subcommand)]
         subcommand: Option<ExplainSubcommand>,
@@ -165,9 +169,10 @@ async fn main() -> Result<()> {
             tool,
             command,
             path,
+            prompt,
             verbose,
         }) => {
-            cli::debug::run(event_type, tool, command, path, verbose).await?;
+            cli::debug::run(event_type, tool, command, path, prompt, verbose).await?;
         }
         Some(Commands::Repl) => {
             cli::debug::interactive().await?;
@@ -206,12 +211,12 @@ async fn main() -> Result<()> {
                     if let Some(id) = event_id {
                         cli::explain::run(id).await?;
                     } else {
-                        println!("Usage: cch explain <event_id>");
-                        println!("       cch explain rule <rule_name>");
-                        println!("       cch explain rules");
-                        println!("       cch explain event <event_id>");
+                        println!("Usage: rulez explain <event_id>");
+                        println!("       rulez explain rule <rule_name>");
+                        println!("       rulez explain rules");
+                        println!("       rulez explain event <event_id>");
                         println!();
-                        println!("Use 'cch explain --help' for more information.");
+                        println!("Use 'rulez explain --help' for more information.");
                     }
                 }
             }
@@ -234,8 +239,25 @@ async fn process_hook_event(cli: &Cli, _config: &config::Config) -> Result<()> {
         std::process::exit(1);
     }
 
-    let event: models::Event = serde_json::from_str(&buffer).map_err(|e| {
-        error!("Failed to parse hook event: {}", e);
+    // Step 1: Parse as raw JSON Value first (REQ-SCHEMA-05)
+    // Malformed JSON (syntax errors) -> exit code 1 (config error)
+    let event_value: serde_json::Value = serde_json::from_str(&buffer).map_err(|e| {
+        error!("Failed to parse hook event JSON: {}", e);
+        std::process::exit(1);
+    })?;
+
+    // Step 2: Validate against Event schema (REQ-SCHEMA-04: fail-open)
+    // Schema deviations (extra fields, wrong optional types) log a warning
+    // but continue processing. This does NOT catch missing required fields --
+    // that is handled by serde deserialization below.
+    schema::validate_event_schema(&event_value);
+
+    // Step 3: Deserialize to strongly-typed Event struct (fail-closed)
+    // Missing required fields (hook_event_name, session_id) are fatal because
+    // the Event struct cannot be constructed without them. This is intentional:
+    // fail-open applies to schema validation, not to type construction.
+    let event: models::Event = serde_json::from_value(event_value).map_err(|e| {
+        error!("Failed to deserialize hook event: {}", e);
         e
     })?;
 
@@ -258,7 +280,7 @@ async fn process_hook_event(cli: &Cli, _config: &config::Config) -> Result<()> {
         let reason = response
             .reason
             .as_deref()
-            .unwrap_or("Blocked by CCH policy");
+            .unwrap_or("Blocked by RuleZ policy");
         eprintln!("{}", reason);
         std::process::exit(2);
     }

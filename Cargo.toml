@@ -32,6 +32,7 @@ clap = { version = "4.0", features = ["derive"] }
 
 # Patterns
 regex = "1.10"
+lru = "0.12"
 
 # Async (minimal features for performance)
 tokio = { version = "1.0", features = ["process", "time", "fs", "io-std", "io-util", "rt", "macros"] }
@@ -49,6 +50,10 @@ chrono = { version = "0.4", features = ["serde"] }
 
 # System
 dirs = "5.0"
+
+# JSON Schema
+schemars = { version = "1.2", features = ["derive"] }
+jsonschema = "0.28"
 
 # Testing (used as dev-dependencies in member crates)
 tempfile = "3.24"

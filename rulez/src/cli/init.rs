@@ -1,4 +1,4 @@
-//! CCH Init Command - Initialize hooks configuration
+//! RuleZ Init Command - Initialize hooks configuration
 //!
 //! Creates the default hooks.yaml configuration file and supporting directories.
 
@@ -7,7 +7,7 @@ use std::fs;
 use std::path::Path;
 
 /// Default hooks.yaml template with commented examples
-const DEFAULT_HOOKS_YAML: &str = r#"# CCH Configuration
+const DEFAULT_HOOKS_YAML: &str = r#"# RuleZ Configuration
 # Location: .claude/hooks.yaml
 # Documentation: https://github.com/SpillwaveSolutions/code_agent_context_hooks
 
@@ -142,7 +142,7 @@ pub async fn run(force: bool, with_examples: bool) -> Result<()> {
         return Ok(());
     }
 
-    println!("Initializing CCH configuration...\n");
+    println!("Initializing RuleZ configuration...\n");
 
     // Create .claude directory
     if !hooks_dir.exists() {
@@ -160,12 +160,12 @@ pub async fn run(force: bool, with_examples: bool) -> Result<()> {
     }
 
     println!("\n{}", "=".repeat(60));
-    println!("CCH initialized successfully!");
+    println!("RuleZ initialized successfully!");
     println!("{}", "=".repeat(60));
     println!("\nNext steps:");
     println!("  1. Review and customize .claude/hooks.yaml");
-    println!("  2. Run 'cch validate' to check configuration");
-    println!("  3. Run 'cch install' to register with Claude Code");
+    println!("  2. Run 'rulez validate' to check configuration");
+    println!("  3. Run 'rulez install' to register with Claude Code");
     println!("\nDocumentation:");
     println!("  https://github.com/SpillwaveSolutions/code_agent_context_hooks");
 

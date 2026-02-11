@@ -22,13 +22,16 @@ use std::fs;
 
 #[path = "common/mod.rs"]
 mod common;
-use common::{CchResponse, TestEvidence, Timer, evidence_dir, fixture_path, setup_test_env};
+use common::{
+    CchResponse, TestEvidence, Timer, canonicalize_path, evidence_dir, fixture_path, setup_test_env,
+};
 
 /// Helper: create a test environment and return (temp_dir, event_json)
 /// The event JSON uses `hook_event_name` and has `cwd` set to the temp dir path.
 fn setup_claude_code_event(config_name: &str, command: &str) -> (tempfile::TempDir, String) {
     let temp_dir = setup_test_env(config_name);
-    let cwd = temp_dir.path().to_string_lossy().to_string();
+    let canonical_path = canonicalize_path(temp_dir.path());
+    let cwd = canonical_path.to_string_lossy().to_string();
 
     let event = serde_json::json!({
         "hook_event_name": "PreToolUse",
@@ -60,7 +63,7 @@ fn test_e2e_git_push_blocked_exit_code_2() {
 
     let (temp_dir, event_json) = setup_claude_code_event("block-all-push.yaml", "git push");
 
-    let output = Command::cargo_bin("cch")
+    let output = Command::cargo_bin("rulez")
         .expect("binary exists")
         .current_dir(temp_dir.path())
         .write_stdin(event_json)
@@ -93,6 +96,8 @@ fn test_e2e_git_push_blocked_exit_code_2() {
         timer.elapsed_ms(),
     );
     let _ = evidence.save(&evidence_dir());
+
+    drop(temp_dir);
 }
 
 // ==========================================================================
@@ -113,7 +118,7 @@ fn test_e2e_cwd_based_config_loading_exit_code_2() {
     let wrong_dir = tempfile::tempdir().expect("create wrong dir");
 
     // Run CCH from the WRONG directory, but with cwd pointing to the project
-    let output = Command::cargo_bin("cch")
+    let output = Command::cargo_bin("rulez")
         .expect("binary exists")
         .current_dir(wrong_dir.path()) // <-- WRONG dir, no hooks.yaml here
         .write_stdin(event_json)
@@ -143,6 +148,9 @@ fn test_e2e_cwd_based_config_loading_exit_code_2() {
         timer.elapsed_ms(),
     );
     let _ = evidence.save(&evidence_dir());
+
+    drop(temp_dir);
+    drop(wrong_dir);
 }
 
 // ==========================================================================
@@ -157,7 +165,7 @@ fn test_e2e_git_status_allowed_exit_code_0() {
 
     let (temp_dir, event_json) = setup_claude_code_event("block-all-push.yaml", "git status");
 
-    let output = Command::cargo_bin("cch")
+    let output = Command::cargo_bin("rulez")
         .expect("binary exists")
         .current_dir(temp_dir.path())
         .write_stdin(event_json)
@@ -180,6 +188,8 @@ fn test_e2e_git_status_allowed_exit_code_0() {
         timer.elapsed_ms(),
     );
     let _ = evidence.save(&evidence_dir());
+
+    drop(temp_dir);
 }
 
 // ==========================================================================
@@ -205,7 +215,7 @@ fn test_e2e_git_push_variants_exit_code_2() {
     for cmd in &push_commands {
         let (temp_dir, event_json) = setup_claude_code_event("block-all-push.yaml", cmd);
 
-        let output = Command::cargo_bin("cch")
+        let output = Command::cargo_bin("rulez")
             .expect("binary exists")
             .current_dir(temp_dir.path())
             .write_stdin(event_json)
@@ -251,7 +261,7 @@ fn test_e2e_non_push_git_commands_exit_code_0() {
     for cmd in &safe_commands {
         let (temp_dir, event_json) = setup_claude_code_event("block-all-push.yaml", cmd);
 
-        let output = Command::cargo_bin("cch")
+        let output = Command::cargo_bin("rulez")
             .expect("binary exists")
             .current_dir(temp_dir.path())
             .write_stdin(event_json)
@@ -289,7 +299,7 @@ fn test_e2e_output_format_claude_code_protocol() {
     // === Blocked response ===
     let (temp_dir, event_json) = setup_claude_code_event("block-all-push.yaml", "git push");
 
-    let blocked_output = Command::cargo_bin("cch")
+    let blocked_output = Command::cargo_bin("rulez")
         .expect("binary exists")
         .current_dir(temp_dir.path())
         .write_stdin(event_json)
@@ -308,7 +318,7 @@ fn test_e2e_output_format_claude_code_protocol() {
     // === Allowed response ===
     let (temp_dir2, event_json2) = setup_claude_code_event("block-all-push.yaml", "git status");
 
-    let allowed_output = Command::cargo_bin("cch")
+    let allowed_output = Command::cargo_bin("rulez")
         .expect("binary exists")
         .current_dir(temp_dir2.path())
         .write_stdin(event_json2)
@@ -337,6 +347,9 @@ fn test_e2e_output_format_claude_code_protocol() {
         timer.elapsed_ms(),
     );
     let _ = evidence.save(&evidence_dir());
+
+    drop(temp_dir);
+    drop(temp_dir2);
 }
 
 // ==========================================================================
@@ -349,7 +362,9 @@ fn test_e2e_no_config_allows_all() {
     let mut evidence = TestEvidence::new("e2e_no_config_allows", "E2E");
 
     let empty_dir = tempfile::tempdir().expect("create empty dir");
-    let cwd = empty_dir.path().to_string_lossy().to_string();
+    let cwd = canonicalize_path(empty_dir.path())
+        .to_string_lossy()
+        .to_string();
 
     let event = serde_json::json!({
         "hook_event_name": "PreToolUse",
@@ -359,7 +374,7 @@ fn test_e2e_no_config_allows_all() {
         "cwd": cwd
     });
 
-    let output = Command::cargo_bin("cch")
+    let output = Command::cargo_bin("rulez")
         .expect("binary exists")
         .current_dir(empty_dir.path())
         .write_stdin(serde_json::to_string(&event).unwrap())
@@ -379,6 +394,8 @@ fn test_e2e_no_config_allows_all() {
 
     evidence.pass("No config = exit 0, all allowed", timer.elapsed_ms());
     let _ = evidence.save(&evidence_dir());
+
+    drop(empty_dir);
 }
 
 // ==========================================================================
@@ -401,7 +418,7 @@ fn test_e2e_cwd_git_push_variants_from_wrong_dir() {
     for cmd in &push_commands {
         let (_temp_dir, event_json) = setup_claude_code_event("block-all-push.yaml", cmd);
 
-        let output = Command::cargo_bin("cch")
+        let output = Command::cargo_bin("rulez")
             .expect("binary exists")
             .current_dir(wrong_dir.path())
             .write_stdin(event_json)
@@ -423,4 +440,6 @@ fn test_e2e_cwd_git_push_variants_from_wrong_dir() {
         timer.elapsed_ms(),
     );
     let _ = evidence.save(&evidence_dir());
+
+    drop(wrong_dir);
 }

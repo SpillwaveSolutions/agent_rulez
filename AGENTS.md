@@ -39,7 +39,7 @@ git checkout develop && git pull origin develop
 git checkout -b feature/<name>
 
 # 3. Make changes, run pre-commit checks
-cd cch_cli && cargo fmt && cargo clippy --all-targets --all-features -- -D warnings && cargo test
+cargo fmt --all --check && cargo clippy --all-targets --all-features --workspace -- -D warnings && cargo test --tests --all-features --workspace
 
 # 4. Push and create PR targeting develop
 git push -u origin feature/<name>
@@ -66,10 +66,19 @@ git checkout main && git checkout -b hotfix/<issue>
 
 ### Pre-Commit Checks (MANDATORY)
 ```bash
-cd cch_cli && cargo fmt && cargo clippy --all-targets --all-features -- -D warnings && cargo test
+cargo fmt --all --check && cargo clippy --all-targets --all-features --workspace -- -D warnings && cargo test --tests --all-features --workspace
 ```
 
 **NEVER commit if any check fails.** Fix all issues first.
+
+### Pre-Push Checks (MANDATORY — before push or PR)
+```bash
+# Code coverage runs ALL tests including e2e with instrumentation.
+# This catches pipe, process, and concurrency bugs that cargo test alone misses.
+cargo llvm-cov --all-features --workspace --no-report
+```
+
+**NEVER push if code coverage tests fail.** The CI code coverage step WILL fail on the same bugs.
 
 ### CI Tiers
 | Target | CI Level | Time | What Runs |

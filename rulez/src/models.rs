@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 // =============================================================================
@@ -124,6 +125,169 @@ impl std::fmt::Display for TrustLevel {
             TrustLevel::Untrusted => write!(f, "untrusted"),
         }
     }
+}
+
+// =============================================================================
+// Phase 4: Prompt Matching Types
+// =============================================================================
+
+/// Pattern matching mode for multiple prompt patterns
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum MatchMode {
+    /// Match if ANY pattern matches (OR logic) - default
+    #[default]
+    Any,
+    /// Match if ALL patterns match (AND logic)
+    All,
+}
+
+impl std::fmt::Display for MatchMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MatchMode::Any => write!(f, "any"),
+            MatchMode::All => write!(f, "all"),
+        }
+    }
+}
+
+/// Anchor position for prompt pattern matching
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum Anchor {
+    /// Pattern must match at start of prompt (^ prefix)
+    Start,
+    /// Pattern must match at end of prompt ($ suffix)
+    End,
+    /// Pattern can match anywhere in prompt (default)
+    Contains,
+}
+
+impl std::fmt::Display for Anchor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Anchor::Start => write!(f, "start"),
+            Anchor::End => write!(f, "end"),
+            Anchor::Contains => write!(f, "contains"),
+        }
+    }
+}
+
+/// Prompt text pattern matching configuration
+///
+/// Supports two YAML formats:
+/// ```yaml
+/// # Simple array syntax (ANY mode, case-sensitive)
+/// prompt_match: ["pattern1", "pattern2"]
+///
+/// # Complex object syntax with options
+/// prompt_match:
+///   patterns: ["pattern1", "pattern2"]
+///   mode: all
+///   case_insensitive: true
+///   anchor: start
+/// ```
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(untagged)]
+pub enum PromptMatch {
+    /// Simple array syntax: ["pattern1", "pattern2"]
+    /// Uses ANY mode and case-sensitive matching
+    Simple(Vec<String>),
+
+    /// Complex object syntax with options
+    Complex {
+        /// Patterns to match against prompt text
+        patterns: Vec<String>,
+        /// Match mode: any (OR) or all (AND)
+        #[serde(default)]
+        mode: MatchMode,
+        /// Enable case-insensitive matching
+        #[serde(default)]
+        case_insensitive: bool,
+        /// Anchor position for patterns
+        #[serde(skip_serializing_if = "Option::is_none")]
+        anchor: Option<Anchor>,
+    },
+}
+
+#[allow(dead_code)] // Methods will be used in Phase 4 Plan 2 (matching logic)
+impl PromptMatch {
+    /// Get patterns regardless of variant
+    pub fn patterns(&self) -> &[String] {
+        match self {
+            PromptMatch::Simple(patterns) | PromptMatch::Complex { patterns, .. } => patterns,
+        }
+    }
+
+    /// Get match mode (defaults to Any for Simple variant)
+    pub fn mode(&self) -> MatchMode {
+        match self {
+            PromptMatch::Simple(_) => MatchMode::Any,
+            PromptMatch::Complex { mode, .. } => *mode,
+        }
+    }
+
+    /// Get case sensitivity setting (defaults to false for Simple variant)
+    pub fn case_insensitive(&self) -> bool {
+        match self {
+            PromptMatch::Simple(_) => false,
+            PromptMatch::Complex {
+                case_insensitive, ..
+            } => *case_insensitive,
+        }
+    }
+
+    /// Get anchor setting (defaults to None/Contains for Simple variant)
+    pub fn anchor(&self) -> Option<Anchor> {
+        match self {
+            PromptMatch::Simple(_) => None,
+            PromptMatch::Complex { anchor, .. } => *anchor,
+        }
+    }
+
+    /// Expand shorthand patterns into full regex patterns
+    ///
+    /// Supported shorthands:
+    /// - `contains_word:word` -> `\bword\b`
+    /// - `not:pattern` -> negative match (handled in matching logic)
+    pub fn expand_pattern(pattern: &str) -> String {
+        // Handle 'contains_word:' shorthand
+        if let Some(word) = pattern.strip_prefix("contains_word:") {
+            return format!(r"\b{}\b", regex::escape(word.trim()));
+        }
+
+        // No shorthand - return as-is
+        pattern.to_string()
+    }
+
+    /// Apply anchor to pattern
+    pub fn apply_anchor(pattern: &str, anchor: Option<Anchor>) -> String {
+        match anchor {
+            Some(Anchor::Start) => format!("^{}", pattern),
+            Some(Anchor::End) => format!("{}$", pattern),
+            Some(Anchor::Contains) | None => pattern.to_string(),
+        }
+    }
+}
+
+// =============================================================================
+// Phase 5: Field Validation Utilities
+// =============================================================================
+
+/// Convert dot-notation field path to JSON Pointer format (RFC 6901)
+///
+/// Examples:
+/// - "file_path" -> "/file_path"
+/// - "user.name" -> "/user/name"
+/// - "input.user.address.city" -> "/input/user/address/city"
+///
+/// Handles RFC 6901 escaping: ~ becomes ~0, / becomes ~1
+pub fn dot_to_pointer(field_path: &str) -> String {
+    let escaped_segments: Vec<String> = field_path
+        .split('.')
+        .map(|segment| segment.replace('~', "~0").replace('/', "~1"))
+        .collect();
+    format!("/{}", escaped_segments.join("/"))
 }
 
 /// Extended run action configuration supporting trust levels
@@ -273,6 +437,22 @@ pub struct Matchers {
     /// Regex pattern for command matching
     #[serde(skip_serializing_if = "Option::is_none")]
     pub command_match: Option<String>,
+
+    /// Prompt text pattern matching for UserPromptSubmit events
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prompt_match: Option<PromptMatch>,
+
+    /// Required field paths that must exist in tool_input JSON
+    /// Dot notation for nested fields: ["file_path", "input.user.name"]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub require_fields: Option<Vec<String>>,
+
+    /// Expected types for fields in tool_input JSON
+    /// Keys are field paths (dot notation), values are type specifiers
+    /// Supported types: string, number, boolean, array, object, any
+    /// Implicitly requires field existence (field_types implies require_fields)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub field_types: Option<std::collections::HashMap<String, String>>,
 }
 
 /// Actions to take when rule matches
@@ -312,6 +492,36 @@ pub struct Actions {
     /// Regex pattern for conditional blocking
     #[serde(skip_serializing_if = "Option::is_none")]
     pub block_if_match: Option<String>,
+
+    /// Evalexpr expression for validation (returns boolean)
+    ///
+    /// When present, the expression is evaluated at hook processing time.
+    /// - True = validation passes (allow operation)
+    /// - False = validation fails (block operation)
+    ///
+    /// Example YAML usage:
+    /// ```yaml
+    /// actions:
+    ///   validate_expr: 'has_field("name") && len(prompt) > 10'
+    /// ```
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub validate_expr: Option<String>,
+
+    /// Inline shell script for validation
+    ///
+    /// When present, the script is executed with event JSON on stdin.
+    /// - Exit code 0 = validation passes (allow operation)
+    /// - Non-zero exit code = validation fails (block operation)
+    ///
+    /// Example YAML usage:
+    /// ```yaml
+    /// actions:
+    ///   inline_script: |
+    ///     #!/bin/bash
+    ///     jq -e '.tool == "Write"' > /dev/null
+    /// ```
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub inline_script: Option<String>,
 }
 
 impl Actions {
@@ -644,6 +854,9 @@ reason: Code quality
                 directories: None,
                 operations: None,
                 command_match: None,
+                prompt_match: None,
+                require_fields: None,
+                field_types: None,
             },
             actions: Actions {
                 inject: None,
@@ -652,6 +865,8 @@ reason: Code quality
                 run: None,
                 block: None,
                 block_if_match: None,
+                validate_expr: None,
+                inline_script: None,
             },
             mode: None,
             priority: None,
@@ -673,6 +888,9 @@ reason: Code quality
                 directories: None,
                 operations: None,
                 command_match: None,
+                prompt_match: None,
+                require_fields: None,
+                field_types: None,
             },
             actions: Actions {
                 inject: None,
@@ -681,6 +899,8 @@ reason: Code quality
                 run: None,
                 block: None,
                 block_if_match: None,
+                validate_expr: None,
+                inline_script: None,
             },
             mode: Some(PolicyMode::Audit),
             priority: None,
@@ -702,6 +922,9 @@ reason: Code quality
                 directories: None,
                 operations: None,
                 command_match: None,
+                prompt_match: None,
+                require_fields: None,
+                field_types: None,
             },
             actions: Actions {
                 inject: None,
@@ -710,6 +933,8 @@ reason: Code quality
                 run: None,
                 block: None,
                 block_if_match: None,
+                validate_expr: None,
+                inline_script: None,
             },
             mode: None,
             priority: None,
@@ -731,6 +956,9 @@ reason: Code quality
                 directories: None,
                 operations: None,
                 command_match: None,
+                prompt_match: None,
+                require_fields: None,
+                field_types: None,
             },
             actions: Actions {
                 inject: None,
@@ -739,6 +967,8 @@ reason: Code quality
                 run: None,
                 block: None,
                 block_if_match: None,
+                validate_expr: None,
+                inline_script: None,
             },
             mode: None,
             priority: Some(100),
@@ -760,6 +990,9 @@ reason: Code quality
                 directories: None,
                 operations: None,
                 command_match: None,
+                prompt_match: None,
+                require_fields: None,
+                field_types: None,
             },
             actions: Actions {
                 inject: None,
@@ -768,6 +1001,8 @@ reason: Code quality
                 run: None,
                 block: None,
                 block_if_match: None,
+                validate_expr: None,
+                inline_script: None,
             },
             mode: None,
             priority: None,
@@ -793,6 +1028,9 @@ reason: Code quality
                 directories: None,
                 operations: None,
                 command_match: None,
+                prompt_match: None,
+                require_fields: None,
+                field_types: None,
             },
             actions: Actions {
                 inject: None,
@@ -801,6 +1039,8 @@ reason: Code quality
                 run: None,
                 block: None,
                 block_if_match: None,
+                validate_expr: None,
+                inline_script: None,
             },
             mode: None,
             priority: Some(100), // New field takes precedence
@@ -880,6 +1120,9 @@ reason: Code quality
                 directories: None,
                 operations: None,
                 command_match: None,
+                prompt_match: None,
+                require_fields: None,
+                field_types: None,
             },
             actions: Actions {
                 inject: None,
@@ -888,6 +1131,8 @@ reason: Code quality
                 run: None,
                 block: None,
                 block_if_match: None,
+                validate_expr: None,
+                inline_script: None,
             },
             mode: None,
             priority: Some(priority),
@@ -964,29 +1209,29 @@ metadata:
     #[test]
     fn test_inject_inline_literal_block() {
         // Tests YAML literal block style (|) which preserves newlines
-        let yaml = r#"
+        let yaml = r"
 inject_inline: |
   ## Production Warning
   You are editing production files.
   Be extra careful.
-"#;
+";
         let actions: Actions = serde_yaml::from_str(yaml).unwrap();
 
         assert!(actions.inject_inline.is_some());
         let content = actions.inject_inline.unwrap();
         assert!(content.contains("## Production Warning"));
-        assert!(content.contains("\n")); // Literal block preserves newlines
+        assert!(content.contains('\n')); // Literal block preserves newlines
         assert!(content.contains("Be extra careful"));
     }
 
     #[test]
     fn test_inject_inline_folded_block() {
         // Tests YAML folded block style (>) which folds newlines into spaces
-        let yaml = r#"
+        let yaml = r"
 inject_inline: >
   This is a long paragraph that
   will be folded into a single line.
-"#;
+";
         let actions: Actions = serde_yaml::from_str(yaml).unwrap();
 
         assert!(actions.inject_inline.is_some());
@@ -1134,13 +1379,13 @@ actions:
     #[test]
     fn test_enabled_when_none_by_default() {
         // Tests that enabled_when is None when not specified
-        let yaml = r#"
+        let yaml = r"
 name: no-condition
 matchers:
   tools: [Bash]
 actions:
   block: true
-"#;
+";
         let rule: Rule = serde_yaml::from_str(yaml).unwrap();
         assert!(rule.enabled_when.is_none());
     }
@@ -1162,7 +1407,10 @@ priority: 50
 "#;
         let rule: Rule = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(rule.name, "dev-helper");
-        assert_eq!(rule.description, Some("Only for local development".to_string()));
+        assert_eq!(
+            rule.description,
+            Some("Only for local development".to_string())
+        );
         assert_eq!(rule.enabled_when, Some(r#"env_CI != "true""#.to_string()));
         assert_eq!(rule.effective_mode(), PolicyMode::Warn);
         assert_eq!(rule.effective_priority(), 50);
@@ -1171,16 +1419,582 @@ priority: 50
     #[test]
     fn test_evalexpr_basic_expression() {
         // Tests that evalexpr can parse and evaluate basic expressions
-        use evalexpr::{eval_boolean_with_context, ContextWithMutableVariables, DefaultNumericTypes, HashMapContext, Value};
+        use evalexpr::{
+            ContextWithMutableVariables, DefaultNumericTypes, HashMapContext, Value,
+            eval_boolean_with_context,
+        };
 
         let mut ctx: HashMapContext<DefaultNumericTypes> = HashMapContext::new();
-        ctx.set_value("env_CI".into(), Value::String("true".to_string())).unwrap();
+        ctx.set_value("env_CI".into(), Value::String("true".to_string()))
+            .unwrap();
 
         let result = eval_boolean_with_context(r#"env_CI == "true""#, &ctx).unwrap();
         assert!(result);
 
         let result = eval_boolean_with_context(r#"env_CI == "false""#, &ctx).unwrap();
         assert!(!result);
+    }
+
+    // =========================================================================
+    // Phase 4: Prompt Matching Tests
+    // =========================================================================
+
+    #[test]
+    fn test_match_mode_default() {
+        assert_eq!(MatchMode::default(), MatchMode::Any);
+    }
+
+    #[test]
+    fn test_match_mode_display() {
+        assert_eq!(format!("{}", MatchMode::Any), "any");
+        assert_eq!(format!("{}", MatchMode::All), "all");
+    }
+
+    #[test]
+    fn test_match_mode_deserialize() {
+        let any: MatchMode = serde_json::from_str(r#""any""#).unwrap();
+        let all: MatchMode = serde_json::from_str(r#""all""#).unwrap();
+        assert_eq!(any, MatchMode::Any);
+        assert_eq!(all, MatchMode::All);
+    }
+
+    #[test]
+    fn test_anchor_display() {
+        assert_eq!(format!("{}", Anchor::Start), "start");
+        assert_eq!(format!("{}", Anchor::End), "end");
+        assert_eq!(format!("{}", Anchor::Contains), "contains");
+    }
+
+    #[test]
+    fn test_anchor_deserialize() {
+        let start: Anchor = serde_json::from_str(r#""start""#).unwrap();
+        let end: Anchor = serde_json::from_str(r#""end""#).unwrap();
+        let contains: Anchor = serde_json::from_str(r#""contains""#).unwrap();
+        assert_eq!(start, Anchor::Start);
+        assert_eq!(end, Anchor::End);
+        assert_eq!(contains, Anchor::Contains);
+    }
+
+    #[test]
+    fn test_prompt_match_simple_array_syntax() {
+        let yaml = r#"prompt_match: ["delete", "drop"]"#;
+        let matchers: Matchers = serde_yaml::from_str(yaml).unwrap();
+        assert!(matchers.prompt_match.is_some());
+        let pm = matchers.prompt_match.as_ref().unwrap();
+        assert_eq!(pm.patterns(), &["delete".to_string(), "drop".to_string()]);
+        assert_eq!(pm.mode(), MatchMode::Any);
+        assert!(!pm.case_insensitive());
+        assert_eq!(pm.anchor(), None);
+    }
+
+    #[test]
+    fn test_prompt_match_complex_object_syntax() {
+        let yaml = r#"
+prompt_match:
+  patterns: ["secret", "password"]
+  mode: all
+  case_insensitive: true
+  anchor: start
+"#;
+        let matchers: Matchers = serde_yaml::from_str(yaml).unwrap();
+        assert!(matchers.prompt_match.is_some());
+        let pm = matchers.prompt_match.as_ref().unwrap();
+        assert_eq!(
+            pm.patterns(),
+            &["secret".to_string(), "password".to_string()]
+        );
+        assert_eq!(pm.mode(), MatchMode::All);
+        assert!(pm.case_insensitive());
+        assert_eq!(pm.anchor(), Some(Anchor::Start));
+    }
+
+    #[test]
+    fn test_prompt_match_complex_with_defaults() {
+        let yaml = r#"
+prompt_match:
+  patterns: ["test"]
+"#;
+        let matchers: Matchers = serde_yaml::from_str(yaml).unwrap();
+        let pm = matchers.prompt_match.as_ref().unwrap();
+        assert_eq!(pm.mode(), MatchMode::Any); // default
+        assert!(!pm.case_insensitive()); // default
+        assert_eq!(pm.anchor(), None); // default
+    }
+
+    #[test]
+    fn test_prompt_match_expand_pattern_contains_word() {
+        let expanded = PromptMatch::expand_pattern("contains_word:delete");
+        assert_eq!(expanded, r"\bdelete\b");
+    }
+
+    #[test]
+    fn test_prompt_match_expand_pattern_passthrough() {
+        let expanded = PromptMatch::expand_pattern(".*force.*");
+        assert_eq!(expanded, ".*force.*");
+    }
+
+    #[test]
+    fn test_prompt_match_apply_anchor_start() {
+        let anchored = PromptMatch::apply_anchor("test", Some(Anchor::Start));
+        assert_eq!(anchored, "^test");
+    }
+
+    #[test]
+    fn test_prompt_match_apply_anchor_end() {
+        let anchored = PromptMatch::apply_anchor("test", Some(Anchor::End));
+        assert_eq!(anchored, "test$");
+    }
+
+    #[test]
+    fn test_prompt_match_apply_anchor_contains() {
+        let anchored = PromptMatch::apply_anchor("test", Some(Anchor::Contains));
+        assert_eq!(anchored, "test");
+    }
+
+    #[test]
+    fn test_prompt_match_apply_anchor_none() {
+        let anchored = PromptMatch::apply_anchor("test", None);
+        assert_eq!(anchored, "test");
+    }
+
+    #[test]
+    fn test_matchers_with_prompt_match_yaml() {
+        // Full rule with prompt_match
+        let yaml = r#"
+name: warn-on-dangerous-prompts
+matchers:
+  prompt_match: ["delete", "drop", "rm -rf"]
+actions:
+  inject_inline: "Warning: Dangerous operation detected"
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(rule.name, "warn-on-dangerous-prompts");
+        assert!(rule.matchers.prompt_match.is_some());
+    }
+}
+
+// =============================================================================
+// Phase 4 Plan 4: Comprehensive PromptMatch Tests (PROMPT-01 through PROMPT-05)
+// =============================================================================
+
+#[cfg(test)]
+mod prompt_match_tests {
+    use super::*;
+
+    // =========================================================================
+    // PromptMatch Deserialization Tests (PROMPT-01)
+    // =========================================================================
+
+    #[test]
+    fn test_prompt_match_simple_array_deserialization() {
+        // Simple array syntax: ["pattern1", "pattern2"]
+        let json = r#"["delete", "drop"]"#;
+        let pm: PromptMatch = serde_json::from_str(json).unwrap();
+
+        match pm {
+            PromptMatch::Simple(patterns) => {
+                assert_eq!(patterns, vec!["delete".to_string(), "drop".to_string()]);
+            }
+            PromptMatch::Complex { .. } => panic!("Expected Simple variant"),
+        }
+    }
+
+    #[test]
+    fn test_prompt_match_complex_object_deserialization() {
+        // Complex object syntax with all fields
+        let yaml = r#"
+patterns: ["secret", "password"]
+mode: all
+case_insensitive: true
+anchor: start
+"#;
+        let pm: PromptMatch = serde_yaml::from_str(yaml).unwrap();
+
+        match pm {
+            PromptMatch::Complex {
+                patterns,
+                mode,
+                case_insensitive,
+                anchor,
+            } => {
+                assert_eq!(patterns, vec!["secret".to_string(), "password".to_string()]);
+                assert_eq!(mode, MatchMode::All);
+                assert!(case_insensitive);
+                assert_eq!(anchor, Some(Anchor::Start));
+            }
+            PromptMatch::Simple(_) => panic!("Expected Complex variant"),
+        }
+    }
+
+    #[test]
+    fn test_prompt_match_complex_with_defaults() {
+        // Complex syntax with only patterns (defaults apply)
+        let yaml = r#"
+patterns: ["test"]
+"#;
+        let pm: PromptMatch = serde_yaml::from_str(yaml).unwrap();
+
+        match pm {
+            PromptMatch::Complex {
+                patterns,
+                mode,
+                case_insensitive,
+                anchor,
+            } => {
+                assert_eq!(patterns, vec!["test".to_string()]);
+                assert_eq!(mode, MatchMode::Any); // default
+                assert!(!case_insensitive); // default false
+                assert_eq!(anchor, None); // default None
+            }
+            PromptMatch::Simple(_) => panic!("Expected Complex variant"),
+        }
+    }
+
+    #[test]
+    fn test_prompt_match_serialization_roundtrip() {
+        // Test that serialization and deserialization are consistent
+        let original = PromptMatch::Complex {
+            patterns: vec!["test".to_string()],
+            mode: MatchMode::All,
+            case_insensitive: true,
+            anchor: Some(Anchor::End),
+        };
+
+        let json = serde_json::to_string(&original).unwrap();
+        let deserialized: PromptMatch = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(original, deserialized);
+    }
+
+    // =========================================================================
+    // Helper Method Tests
+    // =========================================================================
+
+    #[test]
+    fn test_prompt_match_patterns_accessor_simple() {
+        let pm = PromptMatch::Simple(vec!["a".to_string(), "b".to_string()]);
+        assert_eq!(pm.patterns(), &["a".to_string(), "b".to_string()]);
+    }
+
+    #[test]
+    fn test_prompt_match_patterns_accessor_complex() {
+        let pm = PromptMatch::Complex {
+            patterns: vec!["x".to_string(), "y".to_string()],
+            mode: MatchMode::Any,
+            case_insensitive: false,
+            anchor: None,
+        };
+        assert_eq!(pm.patterns(), &["x".to_string(), "y".to_string()]);
+    }
+
+    #[test]
+    fn test_prompt_match_mode_accessor_simple() {
+        let pm = PromptMatch::Simple(vec!["test".to_string()]);
+        assert_eq!(pm.mode(), MatchMode::Any); // Simple always uses Any
+    }
+
+    #[test]
+    fn test_prompt_match_mode_accessor_complex() {
+        let pm = PromptMatch::Complex {
+            patterns: vec!["test".to_string()],
+            mode: MatchMode::All,
+            case_insensitive: false,
+            anchor: None,
+        };
+        assert_eq!(pm.mode(), MatchMode::All);
+    }
+
+    #[test]
+    fn test_prompt_match_case_insensitive_accessor_simple() {
+        let pm = PromptMatch::Simple(vec!["test".to_string()]);
+        assert!(!pm.case_insensitive()); // Simple always case-sensitive
+    }
+
+    #[test]
+    fn test_prompt_match_case_insensitive_accessor_complex() {
+        let pm = PromptMatch::Complex {
+            patterns: vec!["test".to_string()],
+            mode: MatchMode::Any,
+            case_insensitive: true,
+            anchor: None,
+        };
+        assert!(pm.case_insensitive());
+    }
+
+    #[test]
+    fn test_prompt_match_anchor_accessor_simple() {
+        let pm = PromptMatch::Simple(vec!["test".to_string()]);
+        assert_eq!(pm.anchor(), None); // Simple has no anchor
+    }
+
+    #[test]
+    fn test_prompt_match_anchor_accessor_complex() {
+        let pm = PromptMatch::Complex {
+            patterns: vec!["test".to_string()],
+            mode: MatchMode::Any,
+            case_insensitive: false,
+            anchor: Some(Anchor::Start),
+        };
+        assert_eq!(pm.anchor(), Some(Anchor::Start));
+    }
+
+    // =========================================================================
+    // Pattern Expansion Tests (contains_word shorthand)
+    // =========================================================================
+
+    #[test]
+    fn test_expand_pattern_contains_word_simple() {
+        let expanded = PromptMatch::expand_pattern("contains_word:delete");
+        assert_eq!(expanded, r"\bdelete\b");
+    }
+
+    #[test]
+    fn test_expand_pattern_contains_word_with_whitespace() {
+        let expanded = PromptMatch::expand_pattern("contains_word: foo ");
+        assert_eq!(expanded, r"\bfoo\b");
+    }
+
+    #[test]
+    fn test_expand_pattern_contains_word_escapes_special() {
+        // Special regex characters should be escaped in the word
+        let expanded = PromptMatch::expand_pattern("contains_word:foo.bar");
+        assert_eq!(expanded, r"\bfoo\.bar\b");
+    }
+
+    #[test]
+    fn test_expand_pattern_passthrough_regex() {
+        // Non-shorthand patterns pass through unchanged
+        let expanded = PromptMatch::expand_pattern(".*force.*");
+        assert_eq!(expanded, ".*force.*");
+    }
+
+    #[test]
+    fn test_expand_pattern_passthrough_simple() {
+        let expanded = PromptMatch::expand_pattern("simple text");
+        assert_eq!(expanded, "simple text");
+    }
+
+    // =========================================================================
+    // Anchor Application Tests (PROMPT-04)
+    // =========================================================================
+
+    #[test]
+    fn test_apply_anchor_start() {
+        let anchored = PromptMatch::apply_anchor("test", Some(Anchor::Start));
+        assert_eq!(anchored, "^test");
+    }
+
+    #[test]
+    fn test_apply_anchor_end() {
+        let anchored = PromptMatch::apply_anchor("test", Some(Anchor::End));
+        assert_eq!(anchored, "test$");
+    }
+
+    #[test]
+    fn test_apply_anchor_contains() {
+        let anchored = PromptMatch::apply_anchor("test", Some(Anchor::Contains));
+        assert_eq!(anchored, "test"); // No change
+    }
+
+    #[test]
+    fn test_apply_anchor_none() {
+        let anchored = PromptMatch::apply_anchor("test", None);
+        assert_eq!(anchored, "test"); // No change
+    }
+
+    #[test]
+    fn test_apply_anchor_preserves_complex_pattern() {
+        let anchored = PromptMatch::apply_anchor(r"\bdelete\b", Some(Anchor::Start));
+        assert_eq!(anchored, r"^\bdelete\b");
+    }
+
+    // =========================================================================
+    // MatchMode Tests
+    // =========================================================================
+
+    #[test]
+    fn test_match_mode_default_is_any() {
+        assert_eq!(MatchMode::default(), MatchMode::Any);
+    }
+
+    #[test]
+    fn test_match_mode_serialize() {
+        assert_eq!(serde_json::to_string(&MatchMode::Any).unwrap(), r#""any""#);
+        assert_eq!(serde_json::to_string(&MatchMode::All).unwrap(), r#""all""#);
+    }
+
+    #[test]
+    fn test_match_mode_deserialize() {
+        let any: MatchMode = serde_json::from_str(r#""any""#).unwrap();
+        let all: MatchMode = serde_json::from_str(r#""all""#).unwrap();
+        assert_eq!(any, MatchMode::Any);
+        assert_eq!(all, MatchMode::All);
+    }
+
+    // =========================================================================
+    // Anchor Enum Tests
+    // =========================================================================
+
+    #[test]
+    fn test_anchor_serialize() {
+        assert_eq!(serde_json::to_string(&Anchor::Start).unwrap(), r#""start""#);
+        assert_eq!(serde_json::to_string(&Anchor::End).unwrap(), r#""end""#);
+        assert_eq!(
+            serde_json::to_string(&Anchor::Contains).unwrap(),
+            r#""contains""#
+        );
+    }
+
+    #[test]
+    fn test_anchor_deserialize() {
+        let start: Anchor = serde_json::from_str(r#""start""#).unwrap();
+        let end: Anchor = serde_json::from_str(r#""end""#).unwrap();
+        let contains: Anchor = serde_json::from_str(r#""contains""#).unwrap();
+        assert_eq!(start, Anchor::Start);
+        assert_eq!(end, Anchor::End);
+        assert_eq!(contains, Anchor::Contains);
+    }
+
+    // =========================================================================
+    // Full Rule YAML Parsing with prompt_match
+    // =========================================================================
+
+    #[test]
+    fn test_rule_yaml_with_simple_prompt_match() {
+        let yaml = r#"
+name: block-dangerous-prompts
+description: Block prompts with dangerous keywords
+matchers:
+  prompt_match: ["delete", "drop", "rm -rf"]
+actions:
+  block: true
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+
+        assert_eq!(rule.name, "block-dangerous-prompts");
+        assert!(rule.matchers.prompt_match.is_some());
+        let pm = rule.matchers.prompt_match.unwrap();
+        assert_eq!(pm.patterns().len(), 3);
+        assert_eq!(pm.mode(), MatchMode::Any);
+    }
+
+    #[test]
+    fn test_rule_yaml_with_complex_prompt_match() {
+        let yaml = r#"
+name: block-credential-prompts
+description: Block prompts containing credential patterns
+matchers:
+  prompt_match:
+    patterns: ["password", "secret", "api_key"]
+    mode: any
+    case_insensitive: true
+    anchor: contains
+actions:
+  block: true
+mode: warn
+priority: 100
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+
+        assert_eq!(rule.name, "block-credential-prompts");
+        assert_eq!(rule.effective_mode(), PolicyMode::Warn);
+        assert_eq!(rule.effective_priority(), 100);
+        let pm = rule.matchers.prompt_match.unwrap();
+        assert_eq!(pm.patterns().len(), 3);
+        assert_eq!(pm.mode(), MatchMode::Any);
+        assert!(pm.case_insensitive());
+        assert_eq!(pm.anchor(), Some(Anchor::Contains));
+    }
+
+    #[test]
+    fn test_rule_yaml_with_all_mode_prompt_match() {
+        let yaml = r#"
+name: require-both-keywords
+matchers:
+  prompt_match:
+    patterns: ["database", "production"]
+    mode: all
+actions:
+  inject_inline: "Warning: Production database operation"
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+
+        let pm = rule.matchers.prompt_match.unwrap();
+        assert_eq!(pm.mode(), MatchMode::All);
+    }
+
+    #[test]
+    fn test_rule_yaml_with_anchor_prompt_match() {
+        let yaml = r#"
+name: starts-with-please
+matchers:
+  prompt_match:
+    patterns: ["please"]
+    anchor: start
+actions:
+  inject_inline: "Polite request detected"
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+
+        let pm = rule.matchers.prompt_match.unwrap();
+        assert_eq!(pm.anchor(), Some(Anchor::Start));
+    }
+
+    #[test]
+    fn test_rule_yaml_prompt_match_with_other_matchers() {
+        // prompt_match can be combined with other matchers
+        let yaml = r#"
+name: combined-matchers
+matchers:
+  tools: ["Bash"]
+  prompt_match: ["sudo"]
+actions:
+  block: true
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+
+        assert!(rule.matchers.tools.is_some());
+        assert!(rule.matchers.prompt_match.is_some());
+    }
+
+    #[test]
+    fn test_rule_yaml_prompt_match_with_enabled_when() {
+        // prompt_match works with enabled_when (Phase 3 + Phase 4 combination)
+        let yaml = r#"
+name: ci-prompt-check
+enabled_when: 'env_CI == "true"'
+matchers:
+  prompt_match: ["deploy"]
+actions:
+  inject_inline: "CI deployment detected"
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+
+        assert!(rule.enabled_when.is_some());
+        assert!(rule.matchers.prompt_match.is_some());
+    }
+
+    // =========================================================================
+    // Edge Cases and Error Handling
+    // =========================================================================
+
+    #[test]
+    fn test_prompt_match_empty_patterns_simple() {
+        let pm = PromptMatch::Simple(vec![]);
+        assert!(pm.patterns().is_empty());
+    }
+
+    #[test]
+    fn test_prompt_match_single_pattern() {
+        let pm = PromptMatch::Simple(vec!["only-one".to_string()]);
+        assert_eq!(pm.patterns().len(), 1);
+    }
+
+    #[test]
+    fn test_prompt_match_contains_word_edge_empty() {
+        // Edge case: contains_word with empty word after colon
+        let expanded = PromptMatch::expand_pattern("contains_word:");
+        assert_eq!(expanded, r"\b\b"); // Empty word boundary (regex will still work)
     }
 }
 
@@ -1204,6 +2018,7 @@ mod event_details_tests {
             cwd: None,
             permission_mode: None,
             tool_use_id: None,
+            prompt: None,
         };
 
         let details = EventDetails::extract(&event);
@@ -1225,6 +2040,7 @@ mod event_details_tests {
             cwd: None,
             permission_mode: None,
             tool_use_id: None,
+            prompt: None,
         };
 
         let details = EventDetails::extract(&event);
@@ -1248,6 +2064,7 @@ mod event_details_tests {
             cwd: None,
             permission_mode: None,
             tool_use_id: None,
+            prompt: None,
         };
 
         let details = EventDetails::extract(&event);
@@ -1271,6 +2088,7 @@ mod event_details_tests {
             cwd: None,
             permission_mode: None,
             tool_use_id: None,
+            prompt: None,
         };
 
         let details = EventDetails::extract(&event);
@@ -1294,6 +2112,7 @@ mod event_details_tests {
             cwd: None,
             permission_mode: None,
             tool_use_id: None,
+            prompt: None,
         };
 
         let details = EventDetails::extract(&event);
@@ -1318,6 +2137,7 @@ mod event_details_tests {
             cwd: None,
             permission_mode: None,
             tool_use_id: None,
+            prompt: None,
         };
 
         let details = EventDetails::extract(&event);
@@ -1341,6 +2161,7 @@ mod event_details_tests {
             cwd: None,
             permission_mode: None,
             tool_use_id: None,
+            prompt: None,
         };
 
         let details = EventDetails::extract(&event);
@@ -1366,6 +2187,7 @@ mod event_details_tests {
             cwd: None,
             permission_mode: None,
             tool_use_id: None,
+            prompt: None,
         };
 
         let details = EventDetails::extract(&event);
@@ -1391,6 +2213,7 @@ mod event_details_tests {
             cwd: None,
             permission_mode: None,
             tool_use_id: None,
+            prompt: None,
         };
 
         let details = EventDetails::extract(&event);
@@ -1442,7 +2265,7 @@ fn default_enabled() -> bool {
 /// Claude Code sends events with `hook_event_name` as the field name.
 /// The `alias = "event_type"` preserves backward compatibility with
 /// debug commands and tests that use the old field name.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub struct Event {
     /// Hook event type (Claude Code sends as `hook_event_name`)
     #[serde(alias = "event_type")]
@@ -1461,6 +2284,7 @@ pub struct Event {
 
     /// ISO 8601 timestamp (Claude Code may not send this, so default to now)
     #[serde(default = "chrono::Utc::now")]
+    #[schemars(with = "String")]
     pub timestamp: DateTime<Utc>,
 
     /// User identifier if available
@@ -1482,12 +2306,16 @@ pub struct Event {
     /// Tool use ID (sent by Claude Code)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tool_use_id: Option<String>,
+
+    /// User prompt text (sent by Claude Code on UserPromptSubmit events)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prompt: Option<String>,
 }
 
 /// Supported hook event types
 ///
 /// Includes all event types that Claude Code can send to hooks.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 #[serde(rename_all = "PascalCase")]
 pub enum EventType {
     PreToolUse,
@@ -1762,6 +2590,14 @@ pub struct MatcherResults {
     /// Whether operations matcher matched
     #[serde(skip_serializing_if = "Option::is_none")]
     pub operations_matched: Option<bool>,
+
+    /// Whether prompt_match regex matched
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prompt_match_matched: Option<bool>,
+
+    /// Whether field validation (require_fields/field_types) passed
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub field_validation_matched: Option<bool>,
 }
 
 /// Debug mode configuration
@@ -1965,5 +2801,277 @@ impl Response {
             reason: None,
             timing: None,
         }
+    }
+}
+
+// =============================================================================
+// Phase 5: Field Validation Tests
+// =============================================================================
+
+#[cfg(test)]
+mod field_validation_tests {
+    use super::*;
+
+    #[test]
+    fn test_dot_to_pointer_simple() {
+        assert_eq!(dot_to_pointer("name"), "/name");
+        assert_eq!(dot_to_pointer("file_path"), "/file_path");
+    }
+
+    #[test]
+    fn test_dot_to_pointer_nested() {
+        assert_eq!(dot_to_pointer("user.name"), "/user/name");
+        assert_eq!(dot_to_pointer("input.data"), "/input/data");
+    }
+
+    #[test]
+    fn test_dot_to_pointer_deep_nested() {
+        assert_eq!(dot_to_pointer("a.b.c.d"), "/a/b/c/d");
+        assert_eq!(
+            dot_to_pointer("input.user.address.city"),
+            "/input/user/address/city"
+        );
+    }
+
+    #[test]
+    fn test_dot_to_pointer_special_chars_tilde() {
+        assert_eq!(dot_to_pointer("user~name"), "/user~0name");
+        assert_eq!(dot_to_pointer("field~test"), "/field~0test");
+    }
+
+    #[test]
+    fn test_dot_to_pointer_special_chars_slash() {
+        assert_eq!(dot_to_pointer("path/to"), "/path~1to");
+        assert_eq!(dot_to_pointer("file/name"), "/file~1name");
+    }
+
+    #[test]
+    fn test_dot_to_pointer_combined_escapes() {
+        // Test both tilde and slash escaping together
+        assert_eq!(dot_to_pointer("a~b.c/d"), "/a~0b/c~1d");
+        assert_eq!(dot_to_pointer("x~/y"), "/x~0~1y");
+    }
+}
+
+// =============================================================================
+// Phase 5 Plan 3: Matchers Deserialization Tests for Field Validation
+// =============================================================================
+
+#[cfg(test)]
+mod matchers_field_validation_tests {
+    use super::*;
+
+    #[test]
+    fn test_matchers_require_fields_deserialization() {
+        // YAML with require_fields
+        let yaml = r#"
+name: test-require
+matchers:
+  require_fields: ["file_path", "command"]
+actions:
+  block: true
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(rule.name, "test-require");
+        assert!(rule.matchers.require_fields.is_some());
+        let fields = rule.matchers.require_fields.unwrap();
+        assert_eq!(fields.len(), 2);
+        assert_eq!(fields[0], "file_path");
+        assert_eq!(fields[1], "command");
+    }
+
+    #[test]
+    fn test_matchers_field_types_deserialization() {
+        // YAML with field_types
+        let yaml = r"
+name: test-types
+matchers:
+  field_types:
+    count: number
+    name: string
+    enabled: boolean
+actions:
+  block: true
+";
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(rule.name, "test-types");
+        assert!(rule.matchers.field_types.is_some());
+        let types = rule.matchers.field_types.unwrap();
+        assert_eq!(types.len(), 3);
+        assert_eq!(types.get("count"), Some(&"number".to_string()));
+        assert_eq!(types.get("name"), Some(&"string".to_string()));
+        assert_eq!(types.get("enabled"), Some(&"boolean".to_string()));
+    }
+
+    #[test]
+    fn test_matchers_both_require_and_types() {
+        // YAML with both require_fields and field_types
+        let yaml = r#"
+name: test-both
+matchers:
+  require_fields: ["file_path", "data"]
+  field_types:
+    count: number
+    data: object
+actions:
+  block: true
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(rule.name, "test-both");
+        assert!(rule.matchers.require_fields.is_some());
+        assert!(rule.matchers.field_types.is_some());
+
+        let fields = rule.matchers.require_fields.unwrap();
+        assert_eq!(fields.len(), 2);
+
+        let types = rule.matchers.field_types.unwrap();
+        assert_eq!(types.len(), 2);
+    }
+
+    #[test]
+    fn test_matchers_require_fields_with_nested_paths() {
+        // YAML with dot notation paths
+        let yaml = r#"
+name: test-nested
+matchers:
+  require_fields: ["user.name", "input.data.count", "simple"]
+actions:
+  block: true
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+        assert!(rule.matchers.require_fields.is_some());
+        let fields = rule.matchers.require_fields.unwrap();
+        assert_eq!(fields.len(), 3);
+        assert_eq!(fields[0], "user.name");
+        assert_eq!(fields[1], "input.data.count");
+        assert_eq!(fields[2], "simple");
+    }
+
+    #[test]
+    fn test_matchers_without_field_validation() {
+        // Matchers without require_fields/field_types still work
+        let yaml = r#"
+name: test-no-fields
+matchers:
+  tools: [Bash, Edit]
+  command_match: "git"
+actions:
+  block: true
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(rule.name, "test-no-fields");
+        assert!(rule.matchers.require_fields.is_none());
+        assert!(rule.matchers.field_types.is_none());
+        assert!(rule.matchers.tools.is_some());
+        assert!(rule.matchers.command_match.is_some());
+    }
+}
+
+// =============================================================================
+// Phase 6: SCRIPT-06 - Actions Deserialization Tests for validate_expr and inline_script
+// =============================================================================
+
+#[cfg(test)]
+mod actions_inline_script_tests {
+    use super::*;
+
+    #[test]
+    fn test_actions_validate_expr_deserialization() {
+        // YAML with validate_expr
+        let yaml = r#"
+name: test-validate-expr
+matchers:
+  tools: [Write]
+actions:
+  validate_expr: 'has_field("file_path") && get_field("content") != ""'
+  inject_inline: "Validation passed"
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(rule.name, "test-validate-expr");
+        assert!(rule.actions.validate_expr.is_some());
+        assert!(rule.actions.inline_script.is_none());
+
+        let expr = rule.actions.validate_expr.unwrap();
+        assert!(expr.contains("has_field"));
+        assert!(expr.contains("get_field"));
+    }
+
+    #[test]
+    fn test_actions_inline_script_deserialization() {
+        // YAML with inline_script using literal block (|)
+        let yaml = r#"
+name: test-inline-script
+matchers:
+  tools: [Bash]
+actions:
+  inline_script: |
+    #!/bin/bash
+    # Check if command is safe
+    exit 0
+  inject_inline: "Script validated"
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(rule.name, "test-inline-script");
+        assert!(rule.actions.inline_script.is_some());
+        assert!(rule.actions.validate_expr.is_none());
+
+        let script = rule.actions.inline_script.unwrap();
+        assert!(script.contains("#!/bin/bash"));
+        assert!(script.contains("exit 0"));
+    }
+
+    #[test]
+    fn test_actions_validate_expr_simple() {
+        // Simple validate_expr without quotes
+        let yaml = r#"
+name: test-simple-expr
+matchers:
+  tools: [API]
+actions:
+  validate_expr: has_field("count")
+  inject_inline: "Count present"
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(rule.name, "test-simple-expr");
+        assert!(rule.actions.validate_expr.is_some());
+
+        let expr = rule.actions.validate_expr.unwrap();
+        assert_eq!(expr, r#"has_field("count")"#);
+    }
+
+    #[test]
+    fn test_actions_inline_script_multiline() {
+        // Multi-line script with complex logic
+        let yaml = r#"
+name: test-multiline-script
+matchers:
+  tools: [Bash]
+actions:
+  inline_script: |
+    #!/bin/bash
+    set -e
+
+    # Parse JSON from stdin
+    INPUT=$(cat)
+
+    # Extract command field
+    COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // ""')
+
+    # Check if command is safe
+    if [[ "$COMMAND" == *"--force"* ]]; then
+      exit 1
+    fi
+
+    exit 0
+"#;
+        let rule: Rule = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(rule.name, "test-multiline-script");
+        assert!(rule.actions.inline_script.is_some());
+
+        let script = rule.actions.inline_script.unwrap();
+        assert!(script.contains("#!/bin/bash"));
+        assert!(script.contains("set -e"));
+        assert!(script.contains("jq -r"));
+        assert!(script.contains("--force"));
     }
 }

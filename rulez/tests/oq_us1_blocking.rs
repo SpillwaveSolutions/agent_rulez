@@ -34,7 +34,7 @@ fn test_us1_force_push_blocked() {
     let event = read_fixture("events/force-push-event.json");
 
     // Run CCH with the event
-    let output = Command::cargo_bin("cch")
+    let output = Command::cargo_bin("rulez")
         .expect("binary exists")
         .current_dir(temp_dir.path())
         .write_stdin(event)
@@ -78,7 +78,7 @@ fn test_us1_safe_push_allowed() {
     let event = read_fixture("events/safe-push-event.json");
 
     // Run CCH with the event
-    let result = Command::cargo_bin("cch")
+    let result = Command::cargo_bin("rulez")
         .expect("binary exists")
         .current_dir(temp_dir.path())
         .write_stdin(event)
@@ -116,7 +116,7 @@ fn test_us1_hard_reset_blocked() {
     }"#;
 
     // Run CCH with the event
-    let output = Command::cargo_bin("cch")
+    let output = Command::cargo_bin("rulez")
         .expect("binary exists")
         .current_dir(temp_dir.path())
         .write_stdin(event)
@@ -159,7 +159,7 @@ fn test_us1_block_reason_provided() {
     let event = read_fixture("events/force-push-event.json");
 
     // Run CCH with the event
-    let output = Command::cargo_bin("cch")
+    let output = Command::cargo_bin("rulez")
         .expect("binary exists")
         .current_dir(temp_dir.path())
         .write_stdin(event)

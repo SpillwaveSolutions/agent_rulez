@@ -8,7 +8,7 @@ use std::fs;
 use tempfile::TempDir;
 
 fn cch_cmd() -> Command {
-    Command::cargo_bin("cch").unwrap()
+    Command::cargo_bin("rulez").unwrap()
 }
 
 // =============================================================================
@@ -219,6 +219,109 @@ fn test_debug_invalid_event_type() {
 }
 
 // =============================================================================
+// Debug Prompt Command Tests (UserPromptSubmit)
+// =============================================================================
+
+#[test]
+fn test_debug_prompt_event() {
+    let temp_dir = TempDir::new().unwrap();
+
+    // Create a config first
+    cch_cmd()
+        .current_dir(temp_dir.path())
+        .args(["init"])
+        .assert()
+        .success();
+
+    // Test debug prompt command
+    cch_cmd()
+        .current_dir(temp_dir.path())
+        .args(["debug", "prompt", "--prompt", "deploy to production"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("UserPromptSubmit"))
+        .stdout(predicate::str::contains("deploy to production"))
+        .stdout(predicate::str::contains("Processed in"));
+}
+
+#[test]
+fn test_debug_prompt_alias_user_prompt() {
+    let temp_dir = TempDir::new().unwrap();
+
+    // Create a config first
+    cch_cmd()
+        .current_dir(temp_dir.path())
+        .args(["init"])
+        .assert()
+        .success();
+
+    // Test using user-prompt alias
+    cch_cmd()
+        .current_dir(temp_dir.path())
+        .args(["debug", "user-prompt", "--prompt", "test"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("UserPromptSubmit"));
+}
+
+#[test]
+fn test_debug_prompt_without_prompt_flag() {
+    let temp_dir = TempDir::new().unwrap();
+
+    // Create a config first
+    cch_cmd()
+        .current_dir(temp_dir.path())
+        .args(["init"])
+        .assert()
+        .success();
+
+    // Test prompt event without --prompt flag (should still work, prompt is None)
+    cch_cmd()
+        .current_dir(temp_dir.path())
+        .args(["debug", "prompt"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("UserPromptSubmit"));
+}
+
+#[test]
+fn test_debug_prompt_matching_rule() {
+    let temp_dir = TempDir::new().unwrap();
+
+    // Create a config first
+    cch_cmd()
+        .current_dir(temp_dir.path())
+        .args(["init"])
+        .assert()
+        .success();
+
+    // Create custom hooks.yaml with prompt_match rule
+    let hooks_yaml = temp_dir.path().join(".claude/hooks.yaml");
+    let config_content = r#"
+version: "1.0"
+settings:
+  debug_logs: false
+rules:
+  - name: deploy-guard
+    description: "Guard deploy prompts"
+    event_types: [UserPromptSubmit]
+    matchers:
+      prompt_match: ["deploy"]
+    actions:
+      inject_inline: "CAUTION: Deploy detected"
+"#;
+    fs::write(&hooks_yaml, config_content).unwrap();
+
+    // Test that the rule matches
+    cch_cmd()
+        .current_dir(temp_dir.path())
+        .args(["debug", "prompt", "--prompt", "deploy to production"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Allowed with injected context"));
+}
+
+// =============================================================================
 // Install/Uninstall Command Tests
 // =============================================================================
 
@@ -228,7 +331,7 @@ fn test_install_help() {
         .args(["install", "--help"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("Install CCH hook"))
+        .stdout(predicate::str::contains("Install RuleZ hook"))
         .stdout(predicate::str::contains("--global"));
 }
 
@@ -238,7 +341,7 @@ fn test_uninstall_help() {
         .args(["uninstall", "--help"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("Uninstall CCH hook"));
+        .stdout(predicate::str::contains("Uninstall RuleZ hook"));
 }
 
 #[test]
@@ -253,7 +356,7 @@ fn test_install_creates_settings_json() {
         .success();
 
     // Get the binary path
-    let binary = assert_cmd::cargo::cargo_bin("cch");
+    let binary = assert_cmd::cargo::cargo_bin("rulez");
 
     // Install with explicit binary path
     cch_cmd()
@@ -302,7 +405,7 @@ fn test_uninstall_removes_hooks() {
         .success();
 
     // Get the binary path
-    let binary = assert_cmd::cargo::cargo_bin("cch");
+    let binary = assert_cmd::cargo::cargo_bin("rulez");
 
     // Install
     cch_cmd()

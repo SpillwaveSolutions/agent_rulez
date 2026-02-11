@@ -4,6 +4,7 @@
   "workflow": {
     "require_discussion": true,
     "require_research": true,
-    "require_verification": true
+    "require_verification": true,
+    "research": true
   }
 }
