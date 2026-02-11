@@ -18,7 +18,7 @@ test.describe("RuleZ UI Application", () => {
     await expect(page.getByText("Global")).toBeVisible();
 
     // Check for project config section
-    await expect(page.getByText("Project")).toBeVisible();
+    await expect(page.getByText("Project", { exact: true })).toBeVisible();
   });
 
   test("should toggle theme", async ({ page }) => {
@@ -52,7 +52,7 @@ test.describe("RuleZ UI Application", () => {
     await page.getByRole("button", { name: "Rules" }).click();
 
     // Check that rules content is shown
-    await expect(page.getByText("Rule Tree")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Rule Tree" })).toBeVisible();
 
     // Click back to Simulator tab
     await page.getByRole("button", { name: "Simulator" }).click();
