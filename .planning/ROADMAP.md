@@ -75,8 +75,8 @@ See [v1.3-ROADMAP.md](milestones/v1.3-ROADMAP.md) for full details.
 **Plans:** 2 plans
 
 Plans:
-- [ ] 07-01-PLAN.md -- Add dependencies, derive JsonSchema, create schema module, integrate into event pipeline
-- [ ] 07-02-PLAN.md -- Unit tests for schema validation and integration tests for CLI behavior
+- [x] 07-01-PLAN.md -- Add dependencies, derive JsonSchema, create schema module, integrate into event pipeline
+- [x] 07-02-PLAN.md -- Unit tests for schema validation and integration tests for CLI behavior
 
 ### Phase 8: Debug CLI Enhancements
 
@@ -104,8 +104,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 08-01-PLAN.md — Add UserPromptSubmit to debug CLI, --prompt flag, REGEX_CACHE clearing, enhanced output
-- [ ] 08-02-PLAN.md — Replace REGEX_CACHE HashMap with LRU cache, state isolation tests (TDD)
+- [x] 08-01-PLAN.md — Add UserPromptSubmit to debug CLI, --prompt flag, REGEX_CACHE clearing, enhanced output
+- [x] 08-02-PLAN.md — Replace REGEX_CACHE HashMap with LRU cache, state isolation tests (TDD)
 
 ### Phase 9: E2E Test Stabilization
 
@@ -165,11 +165,11 @@ Plans:
 | 4. Prompt Matching | v1.3 | 4/4 | ✅ Complete | 2026-02-09 |
 | 5. Field Validation | v1.3 | 3/3 | ✅ Complete | 2026-02-09 |
 | 6. Inline Script Blocks | v1.3 | 3/3 | ✅ Complete | 2026-02-09 |
-| 7. JSON Schema Validation | v1.4 | 0/2 | 🔄 Planned | — |
-| 8. Debug CLI Enhancements | v1.4 | 0/2 | 🔄 Planned | — |
+| 7. JSON Schema Validation | v1.4 | 2/2 | ✅ Complete | 2026-02-10 |
+| 8. Debug CLI Enhancements | v1.4 | 2/2 | ✅ Complete | 2026-02-10 |
 | 9. E2E Test Stabilization | v1.4 | 0/? | 🔄 Planning | — |
 | 10. Tauri CI Integration | v1.4 | 0/? | 🔄 Planning | — |
 
 ---
 
-*Created 2026-02-06 — Updated 2026-02-10 v1.4 milestone started*
+*Created 2026-02-06 — Updated 2026-02-10 Phases 7-8 complete*
