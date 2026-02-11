@@ -10,7 +10,7 @@
 |-----------|----------|----------|--------|
 | **RuleZ Core** | `rulez/` | P1 - Primary | v1.4 Shipped |
 | **Mastering Hooks** | `mastering-hooks/` | P2 - Secondary | Complete (skill) |
-| **RuleZ UI** | `rulez-ui/` | P3 - Tertiary | M1 Complete |
+| **RuleZ UI** | `rulez-ui/` | P1 - Primary (v1.5) | M1 Scaffold Complete, v1.5 Active |
 
 ## Core Value
 
@@ -58,10 +58,12 @@ RuleZ positions itself as comparable to:
 - References: schema, CLI commands, patterns, troubleshooting
 - Future: Convert to plugin format
 
-### RuleZ UI (In Progress)
-- Tauri 2.0 desktop app
-- M1 (scaffold) complete, M2-M8 pending
-- Lower priority than core binary enhancements
+### RuleZ UI (v1.5 Active)
+- Tauri 2.0 desktop app — M1 scaffold complete
+- 18 React components, 3 Zustand stores, Monaco YAML editor with schema validation
+- Dual-mode architecture (Tauri desktop + web browser fallback)
+- Playwright E2E tests with Page Object Model
+- Known issues: Tauri backend still references `cch` binary (needs `rulez` update)
 
 ## Requirements
 
@@ -93,9 +95,18 @@ RuleZ positions itself as comparable to:
 - ✓ REQ-PERF-01..02: Performance quality gates (<0.1ms schema validation) — v1.4
 - ✓ REQ-COMPAT-01..02: Cross-platform compatibility (CI matrix) — v1.4
 
-### Active
+### Active — v1.5 RuleZ UI
 
-(No active requirements — run `/gsd:new-milestone` to define next milestone)
+- [ ] Fix cch→rulez binary references throughout Tauri backend and config
+- [ ] Production-quality YAML editor with autocomplete, error markers, live preview
+- [ ] Audit log viewer with filtering, search, and rule-to-log correlation
+- [ ] Config management (global + project configs, import/export)
+- [ ] Debug simulator improvements (real rulez binary integration, event replay)
+- [ ] E2E test stabilization and expansion for all UI features
+- [ ] Settings/preferences panel (theme, editor options, paths)
+- [ ] Onboarding flow for first-time users
+
+See REQUIREMENTS.md for full requirement details with REQ-IDs.
 
 ### Out of Scope
 
@@ -155,6 +166,6 @@ RuleZ positions itself as comparable to:
 
 ---
 
-*Last updated: 2026-02-10 after v1.4 milestone shipped*
+*Last updated: 2026-02-10 after v1.5 milestone started*
 *Reorganized as monorepo on 2026-02-06*
 *Renamed from CCH to RuleZ*

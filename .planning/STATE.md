@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** LLMs do not enforce policy. LLMs are subject to policy.
-**Current focus:** Planning next milestone
+**Current focus:** v1.5 RuleZ UI
 
 ## Current Position
 
-Milestone: v1.4 Stability & Polish — SHIPPED
-Phase: All complete (10 phases across 3 milestones)
-Current Plan: MILESTONE_COMPLETE
-Status: v1.4 archived, ready for next milestone
-Last activity: 2026-02-10 — v1.4 milestone archived
+Milestone: v1.5 RuleZ UI
+Phase: Not started (defining requirements)
+Current Plan: —
+Status: Defining requirements
+Last activity: 2026-02-10 — Milestone v1.5 started
 
-Progress: ████████████████████ 100%
+Progress: ░░░░░░░░░░░░░░░░░░░░ 0%
 
 ## Performance Metrics
 
@@ -53,4 +53,4 @@ Last session: 2026-02-10
 Stopped at: v1.4 milestone archived
 Resume file: None
 
-Next action: `/gsd:new-milestone` — define next milestone
+Next action: Research → Requirements → Roadmap for v1.5
