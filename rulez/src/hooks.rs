@@ -39,8 +39,11 @@ const REGEX_CACHE_MAX_SIZE: usize = 100;
 ///
 /// The cache is public to allow the debug CLI to clear it between invocations,
 /// ensuring clean test isolation.
-pub static REGEX_CACHE: LazyLock<Mutex<LruCache<String, Regex>>> =
-    LazyLock::new(|| Mutex::new(LruCache::new(NonZeroUsize::new(REGEX_CACHE_MAX_SIZE).unwrap())));
+pub static REGEX_CACHE: LazyLock<Mutex<LruCache<String, Regex>>> = LazyLock::new(|| {
+    Mutex::new(LruCache::new(
+        NonZeroUsize::new(REGEX_CACHE_MAX_SIZE).unwrap(),
+    ))
+});
 
 /// Get or compile a regex pattern with caching
 fn get_or_compile_regex(pattern: &str, case_insensitive: bool) -> Result<Regex> {
@@ -5169,31 +5172,35 @@ mod tests {
 
     #[test]
     fn test_regex_cache_lru_eviction() {
-        // Clear cache to start fresh
-        REGEX_CACHE.lock().unwrap().clear();
+        // Lock cache for entire test to prevent parallel test interference
+        let mut cache = REGEX_CACHE.lock().unwrap();
+        cache.clear();
 
-        // Compile 101 unique patterns
+        // Compile 101 unique patterns directly using the cache
         for i in 0..101 {
-            let pattern = format!("pattern_{}", i);
-            get_or_compile_regex(&pattern, false).expect("Failed to compile pattern");
+            let pattern = format!("lru_eviction_test_{}", i);
+            let cache_key = format!("{}:false", pattern);
+            let regex = Regex::new(&pattern).expect("Failed to compile pattern");
+            cache.put(cache_key, regex);
         }
 
         // After 101 insertions, cache should have max 100 entries (LRU cap)
-        assert_eq!(
-            regex_cache_len(),
-            100,
-            "Cache should be capped at 100 entries"
+        assert_eq!(cache.len(), 100, "Cache should be capped at 100 entries");
+
+        // The first pattern should have been evicted (least recently used)
+        let first_key = "lru_eviction_test_0:false";
+        assert!(
+            cache.get(first_key).is_none(),
+            "First pattern should have been evicted"
         );
 
-        // The first pattern (pattern_0) should have been evicted (least recently used)
-        // Trying to get it again should require recompilation
-        // We can verify by checking that the cache size stays at 100 after getting pattern_0
-        let first_pattern = "pattern_0";
-        get_or_compile_regex(first_pattern, false).expect("Failed to recompile pattern_0");
+        // Add it back
+        let regex = Regex::new("lru_eviction_test_0").unwrap();
+        cache.put(first_key.to_string(), regex);
 
-        // Cache should still be at 100 (pattern_0 was recompiled and evicted something else)
+        // Cache should still be at 100 (adding first pattern evicted something else)
         assert_eq!(
-            regex_cache_len(),
+            cache.len(),
             100,
             "Cache should remain at 100 after accessing evicted pattern"
         );
@@ -5201,13 +5208,16 @@ mod tests {
 
     #[test]
     fn test_regex_cache_clear_isolates_state() {
-        // Add several patterns
-        get_or_compile_regex("test_pattern_1", false).expect("Failed to compile");
-        get_or_compile_regex("test_pattern_2", true).expect("Failed to compile");
-        get_or_compile_regex("test_pattern_3", false).expect("Failed to compile");
+        // Add several patterns (use test-specific prefix)
+        get_or_compile_regex("clear_test_pattern_1", false).expect("Failed to compile");
+        get_or_compile_regex("clear_test_pattern_2", true).expect("Failed to compile");
+        get_or_compile_regex("clear_test_pattern_3", false).expect("Failed to compile");
 
         // Verify patterns are cached
-        assert!(regex_cache_len() >= 3, "Cache should have at least 3 patterns");
+        assert!(
+            regex_cache_len() >= 3,
+            "Cache should have at least 3 patterns"
+        );
 
         // Clear the cache (simulates debug CLI state isolation)
         REGEX_CACHE.lock().unwrap().clear();
@@ -5221,17 +5231,17 @@ mod tests {
         // Clear cache to start fresh
         REGEX_CACHE.lock().unwrap().clear();
 
-        // Insert patterns A, B, C
-        get_or_compile_regex("pattern_A", false).expect("Failed to compile A");
-        get_or_compile_regex("pattern_B", false).expect("Failed to compile B");
-        get_or_compile_regex("pattern_C", false).expect("Failed to compile C");
+        // Insert patterns A, B, C (use test-specific prefix)
+        get_or_compile_regex("refresh_test_A", false).expect("Failed to compile A");
+        get_or_compile_regex("refresh_test_B", false).expect("Failed to compile B");
+        get_or_compile_regex("refresh_test_C", false).expect("Failed to compile C");
 
         // Access pattern A again (refreshes it in LRU order)
-        get_or_compile_regex("pattern_A", false).expect("Failed to re-access A");
+        get_or_compile_regex("refresh_test_A", false).expect("Failed to re-access A");
 
         // Insert 97 more patterns to reach 100 total (A, B, C + 97 = 100)
         for i in 0..97 {
-            let pattern = format!("pattern_{}", i);
+            let pattern = format!("refresh_test_{}", i);
             get_or_compile_regex(&pattern, false).expect("Failed to compile pattern");
         }
 
@@ -5239,7 +5249,7 @@ mod tests {
         assert_eq!(regex_cache_len(), 100, "Cache should be at capacity");
 
         // Insert one more pattern (should evict pattern_B, the least recently used)
-        get_or_compile_regex("pattern_FINAL", false).expect("Failed to compile FINAL");
+        get_or_compile_regex("refresh_test_FINAL", false).expect("Failed to compile FINAL");
 
         // Cache should still be at 100
         assert_eq!(regex_cache_len(), 100, "Cache should remain at 100");
