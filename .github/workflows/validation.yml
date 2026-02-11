@@ -211,15 +211,15 @@ jobs:
       - name: Measure binary size
         run: |
           echo "# Binary Size Analysis" > pq-binary-size.log
-          ls -lh target/release/cch >> pq-binary-size.log
-          size target/release/cch >> pq-binary-size.log 2>/dev/null || true
+          ls -lh target/release/rulez >> pq-binary-size.log
+          size target/release/rulez >> pq-binary-size.log 2>/dev/null || true
       
       - name: Run cold start benchmark
         run: |
           echo "# Cold Start Benchmarks" > pq-cold-start.log
           for i in {1..5}; do
             echo "Run $i:" >> pq-cold-start.log
-            { time ./target/release/cch --version; } 2>&1 | grep real >> pq-cold-start.log
+            { time ./target/release/rulez --version; } 2>&1 | grep real >> pq-cold-start.log
           done
       
       - name: Combine PQ evidence
@@ -268,7 +268,7 @@ jobs:
           mkdir -p validation-report
           
           # Get version from Cargo.toml
-          VERSION=$(grep '^version' cch_cli/Cargo.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          VERSION=$(grep '^version' rulez/Cargo.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
           
           cat > validation-report/VALIDATION_REPORT.md << 'REPORT_HEADER'
           # CCH Validation Report

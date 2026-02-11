@@ -43,7 +43,7 @@ done
 DATE=$(date +%Y-%m-%d)
 TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 EVIDENCE_DIR="$PROJECT_ROOT/docs/validation/oq/$DATE"
-VERSION=$(grep '^version' "$PROJECT_ROOT/cch_cli/Cargo.toml" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+VERSION=$(grep '^version' "$PROJECT_ROOT/rulez/Cargo.toml" | head -1 | sed 's/.*"\(.*\)".*/\1/')
 
 echo -e "${BLUE}========================================${NC}"
 echo -e "${BLUE}CCH OQ Evidence Collection${NC}"

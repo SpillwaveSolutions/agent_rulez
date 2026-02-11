@@ -103,7 +103,7 @@ fn test_pq_memory_baseline() {
     fs::copy(&config_src, claude_dir.join("hooks.yaml")).expect("copy config");
 
     // Get binary path
-    let binary = assert_cmd::cargo::cargo_bin("cch");
+    let binary = assert_cmd::cargo::cargo_bin("rulez");
 
     // Run --version to measure baseline (quick operation)
     let child = std::process::Command::new(&binary)
@@ -112,7 +112,7 @@ fn test_pq_memory_baseline() {
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()
-        .expect("spawn cch");
+        .expect("spawn rulez");
 
     let pid = child.id();
 
@@ -192,7 +192,7 @@ fn test_pq_memory_under_load() {
     }"#;
 
     // Get binary path
-    let binary = assert_cmd::cargo::cargo_bin("cch");
+    let binary = assert_cmd::cargo::cargo_bin("rulez");
 
     // Track memory across multiple invocations
     let mut memory_samples: Vec<u64> = Vec::new();
@@ -204,7 +204,7 @@ fn test_pq_memory_under_load() {
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .spawn()
-            .expect("spawn cch");
+            .expect("spawn rulez");
 
         // Write event
         if let Some(mut stdin) = child.stdin.take() {
@@ -279,7 +279,7 @@ fn test_pq_memory_stability() {
         "timestamp": "2025-01-22T12:00:00Z"
     }"#;
 
-    let binary = assert_cmd::cargo::cargo_bin("cch");
+    let binary = assert_cmd::cargo::cargo_bin("rulez");
 
     // Run first batch and measure
     let mut first_batch_memory: Vec<u64> = Vec::new();
@@ -290,7 +290,7 @@ fn test_pq_memory_stability() {
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .spawn()
-            .expect("spawn cch");
+            .expect("spawn rulez");
 
         if let Some(mut stdin) = child.stdin.take() {
             use std::io::Write;
@@ -313,7 +313,7 @@ fn test_pq_memory_stability() {
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .spawn()
-            .expect("spawn cch");
+            .expect("spawn rulez");
 
         if let Some(mut stdin) = child.stdin.take() {
             use std::io::Write;
@@ -331,7 +331,7 @@ fn test_pq_memory_stability() {
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .spawn()
-            .expect("spawn cch");
+            .expect("spawn rulez");
 
         if let Some(mut stdin) = child.stdin.take() {
             use std::io::Write;
@@ -396,7 +396,7 @@ fn test_pq_binary_size() {
     let timer = Timer::start();
     let mut evidence = TestEvidence::new("binary_size", "PQ");
 
-    let binary = assert_cmd::cargo::cargo_bin("cch");
+    let binary = assert_cmd::cargo::cargo_bin("rulez");
 
     if let Ok(metadata) = fs::metadata(&binary) {
         let size_bytes = metadata.len();

@@ -51,7 +51,7 @@ fi
 DATE=$(date +%Y-%m-%d)
 TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 EVIDENCE_DIR="$PROJECT_ROOT/docs/validation/pq/$DATE"
-VERSION=$(grep '^version' "$PROJECT_ROOT/cch_cli/Cargo.toml" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+VERSION=$(grep '^version' "$PROJECT_ROOT/rulez/Cargo.toml" | head -1 | sed 's/.*"\(.*\)".*/\1/')
 
 echo -e "${BLUE}========================================${NC}"
 echo -e "${BLUE}CCH PQ Evidence Collection${NC}"
@@ -72,9 +72,9 @@ cargo build $CARGO_FLAGS 2>&1 | tee "$EVIDENCE_DIR/build.log"
 
 # Set binary path
 if [[ "$BUILD_MODE" == "release" ]]; then
-    BINARY="$PROJECT_ROOT/target/release/cch"
+    BINARY="$PROJECT_ROOT/target/release/rulez"
 else
-    BINARY="$PROJECT_ROOT/target/debug/cch"
+    BINARY="$PROJECT_ROOT/target/debug/rulez"
 fi
 
 # Collect binary info

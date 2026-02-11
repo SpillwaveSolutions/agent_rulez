@@ -42,7 +42,7 @@ done
 TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 VALIDATION_DIR="$PROJECT_ROOT/docs/validation"
 REPORT_DIR="$VALIDATION_DIR/sign-off"
-VERSION=$(grep '^version' "$PROJECT_ROOT/cch_cli/Cargo.toml" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+VERSION=$(grep '^version' "$PROJECT_ROOT/rulez/Cargo.toml" | head -1 | sed 's/.*"\(.*\)".*/\1/')
 
 echo -e "${BLUE}========================================${NC}"
 echo -e "${BLUE}CCH Validation Report Generator${NC}"
