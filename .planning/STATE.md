@@ -10,19 +10,19 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 ## Current Position
 
 Milestone: v1.4 Stability & Polish
-Phase: 10 — Tauri CI Integration (1/2 plans complete)
-Current Plan: 10-02
-Status: In progress — executing Phase 10
-Last activity: 2026-02-10 — Completed Phase 10 Plan 01 (E2E Workflow Path Fix)
+Phase: 10 — Tauri CI Integration (2/2 plans complete)
+Current Plan: Completed
+Status: Phase 10 complete — ready for next phase
+Last activity: 2026-02-11 — Completed Phase 10 Plan 02 (Tauri CI Build Workflow)
 
-Progress: ██████████████░░░░░░ 60%
+Progress: ████████████████░░░░ 70%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 26 (6 v1.2 + 10 v1.3 + 10 v1.4)
+- Total plans completed: 27 (6 v1.2 + 10 v1.3 + 11 v1.4)
 - Average duration: ~5min (Phases 4-10)
-- Total execution time: 135min (Phase 4: 61min, Phase 5: 21min, Phase 6: 18min, Phase 7: 7min, Phase 8: 12min, Phase 9: 16min, Phase 10: <1min)
+- Total execution time: 137min (Phase 4: 61min, Phase 5: 21min, Phase 6: 18min, Phase 7: 7min, Phase 8: 12min, Phase 9: 16min, Phase 10: 2min)
 
 **Phase 7 Progress:**
 | Plan | Duration | Tasks | Files | Status |
@@ -47,6 +47,7 @@ Progress: ██████████████░░░░░░ 60%
 | Plan | Duration | Tasks | Files | Status |
 |------|----------|-------|-------|--------|
 | 10-01 | <1min | 1 | 1 | Complete |
+| 10-02 | 1min | 1 | 1 (1 new) | Complete |
 
 ## Verification Results
 
@@ -58,6 +59,13 @@ Progress: ██████████████░░░░░░ 60%
 ## Accumulated Context
 
 ### Decisions
+
+**Phase 10 - Tauri CI Integration (10-02):**
+- E2E tests run FIRST in web mode (2-3min) before any Tauri builds start
+- Linux builds use explicit ubuntu-22.04 with libwebkit2gtk-4.1-dev (NOT ubuntu-latest or webkit 4.0)
+- Matrix uses fail-fast: false to allow all platform builds to complete for diagnostics
+- Rust cache targets rulez-ui/src-tauri workspace for faster incremental builds
+- Auto-release on version tags using conditional expressions in tauri-action parameters
 
 **Phase 10 - Tauri CI Integration (10-01):**
 - All rulez_ui references replaced with rulez-ui to match actual directory name
@@ -111,8 +119,8 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-02-10
-Stopped at: Completed Phase 10 Plan 01 (E2E Workflow Path Fix)
+Last session: 2026-02-11
+Stopped at: Completed Phase 10 (Tauri CI Integration)
 Resume file: None
 
-Next action: Continue Phase 10 with Plan 02 (Tauri CI Build Workflow)
+Next action: Phase 10 complete — ready for verification or next phase
