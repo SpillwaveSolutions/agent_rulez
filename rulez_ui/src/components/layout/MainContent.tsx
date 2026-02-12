@@ -1,15 +1,18 @@
 import { writeConfig } from "@/lib/tauri";
 import { useConfigStore } from "@/stores/configStore";
 import { useEditorStore } from "@/stores/editorStore";
+import { useUIStore } from "@/stores/uiStore";
 import { loader } from "@monaco-editor/react";
 import { useCallback, useEffect, useRef } from "react";
 import { EditorToolbar } from "../editor/EditorToolbar";
 import { ValidationPanel } from "../editor/ValidationPanel";
 import { YamlEditor } from "../editor/YamlEditor";
 import { FileTabBar } from "../files/FileTabBar";
+import { LogViewer } from "../logs/LogViewer";
 
 export function MainContent() {
   const { activeFile, openFiles, updateContent, markSaved, getActiveContent } = useConfigStore();
+  const mainView = useUIStore((s) => s.mainView);
   const activeContent = getActiveContent();
 
   // Dispose Monaco models when files are closed
@@ -60,6 +63,14 @@ export function MainContent() {
       console.error("Failed to save file:", err);
     }
   }, [activeFile, markSaved]);
+
+  if (mainView === "logs") {
+    return (
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <LogViewer />
+      </main>
+    );
+  }
 
   return (
     <main className="flex-1 flex flex-col min-w-0 overflow-hidden">

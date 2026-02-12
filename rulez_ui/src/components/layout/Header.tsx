@@ -3,7 +3,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { ThemeToggle } from "../ui/ThemeToggle";
 
 export function Header() {
-  const { toggleSidebar, sidebarOpen, setRightPanelTab } = useUIStore();
+  const { toggleSidebar, sidebarOpen, setRightPanelTab, mainView, setMainView } = useUIStore();
 
   return (
     <header className="flex items-center justify-between h-12 px-4 border-b border-gray-200 dark:border-gray-700 bg-surface dark:bg-surface-dark no-select">
@@ -44,6 +44,34 @@ export function Header() {
             <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
           </svg>
           <span className="font-semibold text-lg text-gray-900 dark:text-gray-100">RuleZ UI</span>
+        </div>
+
+        {/* View switcher */}
+        <div className="flex items-center gap-0.5 bg-gray-200 dark:bg-gray-700 rounded p-0.5">
+          <button
+            type="button"
+            onClick={() => setMainView("editor")}
+            className={`px-2 py-0.5 text-xs rounded transition-colors ${
+              mainView === "editor"
+                ? "bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 shadow-sm"
+                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+            }`}
+            aria-label="Editor"
+          >
+            Editor
+          </button>
+          <button
+            type="button"
+            onClick={() => setMainView("logs")}
+            className={`px-2 py-0.5 text-xs rounded transition-colors ${
+              mainView === "logs"
+                ? "bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 shadow-sm"
+                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+            }`}
+            aria-label="Logs"
+          >
+            Logs
+          </button>
         </div>
 
         {/* Mode indicator */}
