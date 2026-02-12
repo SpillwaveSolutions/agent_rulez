@@ -116,3 +116,40 @@ export interface HooksConfig {
   rules?: Rule[];
   hooks?: Rule[]; // Alias for rules
 }
+
+// Log viewer types (Phase 13)
+export type Severity = "error" | "warn" | "info" | "debug";
+
+export interface LogEntryDto {
+  timestamp: string;
+  eventType: string;
+  sessionId: string;
+  toolName: string | null;
+  rulesMatched: string[];
+  outcome: "allow" | "block" | "inject";
+  processingMs: number;
+  rulesEvaluated: number;
+  decision: "allowed" | "blocked" | "warned" | "audited" | null;
+  mode: "enforce" | "warn" | "audit" | null;
+  priority: number | null;
+  responseContinue: boolean | null;
+  responseReason: string | null;
+  eventDetailCommand: string | null;
+  eventDetailFilePath: string | null;
+}
+
+export interface LogQueryParams {
+  textFilter?: string;
+  outcomeFilter?: string;
+  decisionFilter?: string;
+  since?: string;
+  until?: string;
+  limit?: number;
+}
+
+export interface LogStats {
+  totalEntries: number;
+  fileSizeBytes: number;
+  oldestEntry: string | null;
+  newestEntry: string | null;
+}

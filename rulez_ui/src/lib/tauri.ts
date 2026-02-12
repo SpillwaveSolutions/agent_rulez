@@ -5,7 +5,14 @@
  * When running in browser (for testing), uses web fallbacks with mock data.
  */
 
-import type { ConfigFile, DebugParams, DebugResult } from "@/types";
+import type {
+  ConfigFile,
+  DebugParams,
+  DebugResult,
+  LogEntryDto,
+  LogQueryParams,
+  LogStats,
+} from "@/types";
 
 /**
  * Check if running inside Tauri desktop app
@@ -67,6 +74,28 @@ export async function validateConfig(path: string): Promise<{ valid: boolean; er
     return invoke<{ valid: boolean; errors: string[] }>("validate_config", { path });
   }
   return mockValidateConfig(path);
+}
+
+/**
+ * Read and filter log entries from rulez.log
+ */
+export async function readLogs(params: LogQueryParams): Promise<LogEntryDto[]> {
+  if (isTauri()) {
+    const { invoke } = await import("@tauri-apps/api/core");
+    return invoke<LogEntryDto[]>("read_logs", { params });
+  }
+  return mockReadLogs(params);
+}
+
+/**
+ * Get log file statistics
+ */
+export async function getLogStats(): Promise<LogStats> {
+  if (isTauri()) {
+    const { invoke } = await import("@tauri-apps/api/core");
+    return invoke<LogStats>("get_log_stats");
+  }
+  return mockGetLogStats();
 }
 
 // ============================================================================
@@ -132,4 +161,72 @@ async function mockValidateConfig(_path: string): Promise<{ valid: boolean; erro
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Mock log data generator
+function generateMockLogEntries(count: number): LogEntryDto[] {
+  const eventTypes = ["PreToolUse", "PostToolUse", "SessionStart", "UserPromptSubmit"];
+  const tools = ["Bash", "Write", "Edit", "Read", "Glob", "Grep"];
+  const outcomes: Array<"allow" | "block" | "inject"> = ["allow", "block", "inject"];
+  const decisions: Array<"allowed" | "blocked" | "warned" | "audited"> = [
+    "allowed",
+    "blocked",
+    "warned",
+    "audited",
+  ];
+  const modes: Array<"enforce" | "warn" | "audit"> = ["enforce", "warn", "audit"];
+  const rules = ["block-force-push", "inject-python-context", "block-rm-rf", "security-check"];
+
+  const entries: LogEntryDto[] = [];
+  const now = Date.now();
+
+  for (let i = 0; i < count; i++) {
+    const outcomeIdx = i % 10 === 0 ? 1 : i % 7 === 0 ? 2 : 0; // ~10% block, ~14% inject, rest allow
+    const outcome = outcomes[outcomeIdx] ?? "allow";
+    const decision =
+      outcome === "block"
+        ? "blocked"
+        : outcome === "inject"
+          ? "allowed"
+          : (decisions[i % decisions.length] ?? "allowed");
+
+    entries.push({
+      timestamp: new Date(now - i * 60000).toISOString(),
+      eventType: eventTypes[i % eventTypes.length] ?? "PreToolUse",
+      sessionId: `session-${String(Math.floor(i / 20)).padStart(4, "0")}`,
+      toolName:
+        eventTypes[i % eventTypes.length] === "SessionStart"
+          ? null
+          : (tools[i % tools.length] ?? "Bash"),
+      rulesMatched: outcome !== "allow" ? [rules[i % rules.length] ?? "rule"] : [],
+      outcome,
+      processingMs: Math.floor(Math.random() * 10),
+      rulesEvaluated: 3 + (i % 5),
+      decision,
+      mode: modes[i % modes.length] ?? "enforce",
+      priority: null,
+      responseContinue: outcome !== "block",
+      responseReason: outcome === "block" ? "Policy violation detected" : null,
+      eventDetailCommand: eventTypes[i % eventTypes.length] === "PreToolUse" ? "git status" : null,
+      eventDetailFilePath:
+        eventTypes[i % eventTypes.length] === "PostToolUse" ? `/src/lib/example-${i}.ts` : null,
+    });
+  }
+
+  return entries;
+}
+
+async function mockReadLogs(_params: LogQueryParams): Promise<LogEntryDto[]> {
+  await delay(100);
+  return generateMockLogEntries(50);
+}
+
+async function mockGetLogStats(): Promise<LogStats> {
+  await delay(50);
+  return {
+    totalEntries: 14382,
+    fileSizeBytes: 5_200_000,
+    oldestEntry: new Date(Date.now() - 86400000).toISOString(),
+    newestEntry: new Date().toISOString(),
+  };
 }
