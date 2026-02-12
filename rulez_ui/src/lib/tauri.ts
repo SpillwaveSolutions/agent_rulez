@@ -88,6 +88,45 @@ export async function readLogs(params: LogQueryParams): Promise<LogEntryDto[]> {
 }
 
 /**
+ * Import a config file from disk via file picker dialog.
+ * Returns the selected file's path and content, or null if cancelled.
+ */
+export async function importConfigFile(): Promise<{ path: string; content: string } | null> {
+  if (isTauri()) {
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    const { readTextFile } = await import("@tauri-apps/plugin-fs");
+    const selected = await open({
+      filters: [{ name: "YAML", extensions: ["yaml", "yml"] }],
+      multiple: false,
+    });
+    if (!selected) return null;
+    const filePath = typeof selected === "string" ? selected : selected;
+    const content = await readTextFile(filePath);
+    return { path: filePath, content };
+  }
+  return mockImportConfigFile();
+}
+
+/**
+ * Export config content to a file via save dialog.
+ * Returns true if exported, false if cancelled.
+ */
+export async function exportConfigFile(content: string, defaultName?: string): Promise<boolean> {
+  if (isTauri()) {
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const { writeTextFile } = await import("@tauri-apps/plugin-fs");
+    const path = await save({
+      filters: [{ name: "YAML", extensions: ["yaml", "yml"] }],
+      defaultPath: defaultName ?? "hooks.yaml",
+    });
+    if (!path) return false;
+    await writeTextFile(path, content);
+    return true;
+  }
+  return mockExportConfigFile(content, defaultName);
+}
+
+/**
  * Get log file statistics
  */
 export async function getLogStats(): Promise<LogStats> {
@@ -157,6 +196,27 @@ async function mockValidateConfig(_path: string): Promise<{ valid: boolean; erro
   await delay(50);
   // In mock mode, always return valid
   return { valid: true, errors: [] };
+}
+
+async function mockImportConfigFile(): Promise<{ path: string; content: string } | null> {
+  await delay(100);
+  // In browser mode, simulate importing the global config
+  const content = getMockConfig("~/.claude/hooks.yaml");
+  return { path: "imported-hooks.yaml", content };
+}
+
+async function mockExportConfigFile(content: string, _defaultName?: string): Promise<boolean> {
+  // In browser mode, trigger a download via Blob
+  const blob = new Blob([content], { type: "text/yaml" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = _defaultName ?? "hooks.yaml";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  return true;
 }
 
 function delay(ms: number): Promise<void> {
