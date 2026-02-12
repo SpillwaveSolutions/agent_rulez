@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://spillwave.dev/schemas/hooks-config/v1.0",
-  "title": "CCH Hooks Configuration",
-  "description": "Configuration schema for Claude Code Hooks (CCH) hooks.yaml files. Defines rules that intercept Claude Code tool calls to block dangerous operations, inject context, or run custom scripts.",
+  "title": "RuleZ Hooks Configuration",
+  "description": "Configuration schema for RuleZ hooks.yaml files. Defines rules that intercept Claude Code tool calls to block dangerous operations, inject context, or run custom scripts.",
   "type": "object",
   "required": ["version"],
   "additionalProperties": false,
@@ -59,7 +59,7 @@
         "log_level": {
           "type": "string",
           "title": "Log Level",
-          "description": "Controls the verbosity of CCH log output. Use 'debug' for troubleshooting, 'info' for normal operation, 'warn' for important warnings only, or 'error' for critical errors only.",
+          "description": "Controls the verbosity of RuleZ log output. Use 'debug' for troubleshooting, 'info' for normal operation, 'warn' for important warnings only, or 'error' for critical errors only.",
           "enum": ["debug", "info", "warn", "error"],
           "default": "info",
           "examples": ["info", "debug"]
@@ -67,7 +67,7 @@
         "fail_open": {
           "type": "boolean",
           "title": "Fail Open",
-          "description": "When true, if CCH encounters an internal error processing a hook, it allows the tool call to proceed rather than blocking it. When false, errors cause the tool call to be blocked. Recommended: true for development, false for strict security environments.",
+          "description": "When true, if RuleZ encounters an internal error processing a hook, it allows the tool call to proceed rather than blocking it. When false, errors cause the tool call to be blocked. Recommended: true for development, false for strict security environments.",
           "default": true,
           "examples": [true, false]
         },

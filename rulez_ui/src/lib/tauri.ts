@@ -48,7 +48,7 @@ export async function writeConfig(path: string, content: string): Promise<void> 
 }
 
 /**
- * Run CCH debug command
+ * Run RuleZ debug command
  */
 export async function runDebug(params: DebugParams): Promise<DebugResult> {
   if (isTauri()) {
@@ -59,7 +59,7 @@ export async function runDebug(params: DebugParams): Promise<DebugResult> {
 }
 
 /**
- * Validate config file using CCH
+ * Validate config file using RuleZ
  */
 export async function validateConfig(path: string): Promise<{ valid: boolean; errors: string[] }> {
   if (isTauri()) {

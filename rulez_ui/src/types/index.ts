@@ -80,7 +80,7 @@ export interface DebugResult {
   evaluations: RuleEvaluation[];
 }
 
-// CCH Configuration types
+// RuleZ Configuration types
 export interface HooksSettings {
   log_level?: "debug" | "info" | "warn" | "error";
   fail_open?: boolean;

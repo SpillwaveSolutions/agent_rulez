@@ -24,7 +24,7 @@ pub struct DebugResult {
     pub evaluations: Vec<RuleEvaluation>,
 }
 
-/// Run CCH debug command and parse output
+/// Run RuleZ debug command and parse output
 #[tauri::command]
 pub async fn run_debug(
     event_type: String,
@@ -49,24 +49,22 @@ pub async fn run_debug(
         args.push(p);
     }
 
-    let output = Command::new("cch")
-        .args(&args)
-        .output()
-        .map_err(|e| {
-            if e.kind() == std::io::ErrorKind::NotFound {
-                "CCH binary not found. Please ensure 'cch' is installed and in your PATH.".to_string()
-            } else {
-                format!("Failed to execute CCH: {}", e)
-            }
-        })?;
+    let output = Command::new("rulez").args(&args).output().map_err(|e| {
+        if e.kind() == std::io::ErrorKind::NotFound {
+            "RuleZ binary not found. Please ensure 'rulez' is installed and in your PATH."
+                .to_string()
+        } else {
+            format!("Failed to execute RuleZ: {}", e)
+        }
+    })?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("CCH debug failed: {}", stderr));
+        return Err(format!("RuleZ debug failed: {}", stderr));
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    serde_json::from_str(&stdout).map_err(|e| format!("Failed to parse CCH output: {}", e))
+    serde_json::from_str(&stdout).map_err(|e| format!("Failed to parse RuleZ output: {}", e))
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -75,17 +73,18 @@ pub struct ValidationResult {
     pub errors: Vec<String>,
 }
 
-/// Validate config file using CCH
+/// Validate config file using RuleZ
 #[tauri::command]
 pub async fn validate_config(path: String) -> Result<ValidationResult, String> {
-    let output = Command::new("cch")
+    let output = Command::new("rulez")
         .args(["validate", &path, "--json"])
         .output()
         .map_err(|e| {
             if e.kind() == std::io::ErrorKind::NotFound {
-                "CCH binary not found. Please ensure 'cch' is installed and in your PATH.".to_string()
+                "RuleZ binary not found. Please ensure 'rulez' is installed and in your PATH."
+                    .to_string()
             } else {
-                format!("Failed to execute CCH: {}", e)
+                format!("Failed to execute RuleZ: {}", e)
             }
         })?;
 
@@ -99,5 +98,5 @@ pub async fn validate_config(path: String) -> Result<ValidationResult, String> {
         });
     }
 
-    serde_json::from_str(&stdout).map_err(|e| format!("Failed to parse CCH output: {}", e))
+    serde_json::from_str(&stdout).map_err(|e| format!("Failed to parse RuleZ output: {}", e))
 }
