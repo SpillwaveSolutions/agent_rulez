@@ -1,6 +1,6 @@
 # RuleZ Roadmap
 
-**Current Focus:** v1.6 RuleZ UI — Phase 11 ready to plan
+**Current Focus:** v1.6 RuleZ UI — Phase 12 ready to plan
 
 ---
 
@@ -64,11 +64,12 @@ See [v1.4-ROADMAP.md](milestones/v1.4-ROADMAP.md) for full details.
   3. User can configure theme, editor font size, and binary path from settings panel
   4. Settings persist across app restarts (theme, editor preferences, binary path)
   5. Binary path is auto-detected from PATH with fallback to manual configuration
-**Plans**: 2 plans
+**Plans**: 3 plans
 
 Plans:
-- [ ] 11-01: Rename UI labels + log path update
-- [ ] 11-02: Settings panel + persisted preferences + rulez binary resolution
+- [x] 11-01: Rename sweep (UI labels, shell scope, log path)
+- [x] 11-02: Settings store + binary path resolution
+- [x] 11-03: Settings panel UI + live preferences
 
 ### Phase 12: YAML Editor Enhancements
 **Goal**: Production-quality Monaco integration with autocomplete, error markers, and memory management
@@ -205,7 +206,7 @@ Phases execute in numeric order: 11 → 12 → 13 → 14 → 15 → 16 → 17
 | 8. Debug CLI Enhancements | v1.4 | 2/2 | ✅ Complete | 2026-02-10 |
 | 9. E2E Test Stabilization | v1.4 | 3/3 | ✅ Complete | 2026-02-10 |
 | 10. Tauri CI Integration | v1.4 | 2/2 | ✅ Complete | 2026-02-10 |
-| 11. Rename Fix + Settings Foundation | v1.6 | 0/TBD | Not started | - |
+| 11. Rename Fix + Settings Foundation | v1.6 | 3/3 | ✅ Complete | 2026-02-12 |
 | 12. YAML Editor Enhancements | v1.6 | 0/TBD | Not started | - |
 | 13. Log Viewer | v1.6 | 0/TBD | Not started | - |
 | 14. Config Management | v1.6 | 0/TBD | Not started | - |
@@ -248,4 +249,4 @@ Plans:
 
 ---
 
-*Created 2026-02-06 — Updated 2026-02-11 v1.6 roadmap created, v1.7 phases added*
+*Created 2026-02-06 — Updated 2026-02-12 Phase 11 complete, v1.7 phases added*
