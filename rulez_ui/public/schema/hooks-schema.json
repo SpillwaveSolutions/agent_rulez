@@ -215,7 +215,7 @@
         "block": {
           "type": "boolean",
           "title": "Block Tool Call",
-          "description": "When true, prevents the matched tool call from executing. CCH returns exit code 2 to Claude Code, which interprets this as a blocked operation. The tool call is not performed.",
+          "description": "When true, prevents the matched tool call from executing. RuleZ returns exit code 2 to Claude Code, which interprets this as a blocked operation. The tool call is not performed.",
           "examples": [true]
         },
         "inject": {
