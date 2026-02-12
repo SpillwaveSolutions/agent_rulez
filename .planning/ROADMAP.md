@@ -1,6 +1,6 @@
 # RuleZ Roadmap
 
-**Current Focus:** v1.6 RuleZ UI — Phase 12 ready to plan
+**Current Focus:** v1.6 RuleZ UI — Phase 13 ready to plan
 
 ---
 
@@ -84,9 +84,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 12-01: Schema hardening + YAML formatting provider
-- [ ] 12-02: Memory management & disposal patterns
-- [ ] 12-03: Format-on-save + integration verification
+- [x] 12-01: Schema hardening + YAML formatting provider
+- [x] 12-02: Memory management & disposal patterns
+- [x] 12-03: Format-on-save + integration verification
 
 ### Phase 13: Log Viewer
 **Goal**: High-performance audit log visualization with virtual scrolling and filtering
@@ -208,7 +208,7 @@ Phases execute in numeric order: 11 → 12 → 13 → 14 → 15 → 16 → 17
 | 9. E2E Test Stabilization | v1.4 | 3/3 | ✅ Complete | 2026-02-10 |
 | 10. Tauri CI Integration | v1.4 | 2/2 | ✅ Complete | 2026-02-10 |
 | 11. Rename Fix + Settings Foundation | v1.6 | 3/3 | ✅ Complete | 2026-02-12 |
-| 12. YAML Editor Enhancements | v1.6 | 0/3 | Not started | - |
+| 12. YAML Editor Enhancements | v1.6 | 3/3 | ✅ Complete | 2026-02-12 |
 | 13. Log Viewer | v1.6 | 0/TBD | Not started | - |
 | 14. Config Management | v1.6 | 0/TBD | Not started | - |
 | 15. Debug Simulator | v1.6 | 0/TBD | Not started | - |
