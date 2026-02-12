@@ -29,7 +29,7 @@ export function DebugSimulator() {
       <div>
         <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Debug Simulator</h3>
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          Test your CCH rules by simulating events.
+          Test your RuleZ rules by simulating events.
         </p>
       </div>
 

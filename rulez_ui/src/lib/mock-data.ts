@@ -1,7 +1,7 @@
 /**
  * Mock data module for browser testing mode.
  *
- * Provides sample CCH configuration data when running outside of Tauri.
+ * Provides sample RuleZ configuration data when running outside of Tauri.
  */
 
 import type { ConfigFile } from "@/types";
@@ -10,7 +10,7 @@ import type { ConfigFile } from "@/types";
 const mockConfigs = new Map<string, string>();
 
 // Sample hooks.yaml content
-const SAMPLE_GLOBAL_CONFIG = `# Global CCH Configuration
+const SAMPLE_GLOBAL_CONFIG = `# Global RuleZ Configuration
 version: "1.0"
 
 settings:
@@ -43,7 +43,7 @@ rules:
       block: true
 `;
 
-const SAMPLE_PROJECT_CONFIG = `# Project-specific CCH Configuration
+const SAMPLE_PROJECT_CONFIG = `# Project-specific RuleZ Configuration
 version: "1.0"
 
 settings:
@@ -95,7 +95,7 @@ export function getMockConfig(path: string): string {
   const content = mockConfigs.get(path);
   if (!content) {
     // Return empty config for new files
-    return `# New CCH Configuration
+    return `# New RuleZ Configuration
 version: "1.0"
 
 settings:

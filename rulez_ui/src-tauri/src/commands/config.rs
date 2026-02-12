@@ -61,7 +61,7 @@ pub async fn read_config(path: String) -> Result<String, String> {
 
     if !std::path::Path::new(&path).exists() {
         // Return default content for new files
-        return Ok(r#"# CCH Configuration
+        return Ok(r#"# RuleZ Configuration
 version: "1.0"
 
 settings:
