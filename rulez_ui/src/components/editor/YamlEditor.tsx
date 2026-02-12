@@ -1,13 +1,13 @@
 import { configureYamlSchema } from "@/lib/schema";
+import { useSettingsStore } from "@/stores/settingsStore";
 import { useEditorStore } from "@/stores/editorStore";
-import { useUIStore } from "@/stores/uiStore";
 import { DARK_THEME_NAME, LIGHT_THEME_NAME, darkTheme, lightTheme } from "@/styles/monaco-theme";
 import Editor, { type BeforeMount, type OnMount } from "@monaco-editor/react";
 import type { MarkerSeverity, Uri, editor } from "monaco-editor";
 import { useCallback, useMemo, useRef } from "react";
 
 function useResolvedTheme(): "light" | "dark" {
-  const theme = useUIStore((s) => s.theme);
+  const theme = useSettingsStore((s) => s.settings.theme);
   return useMemo(() => {
     if (theme === "system") {
       return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
@@ -29,6 +29,8 @@ export function YamlEditor({ value, onChange, onSave }: YamlEditorProps) {
   const setEditorRef = useEditorStore((s) => s.setEditorRef);
   const setValidationResults = useEditorStore((s) => s.setValidationResults);
   const resolvedTheme = useResolvedTheme();
+  const editorFontSize = useSettingsStore((s) => s.settings.editorFontSize);
+  const editorTabSize = useSettingsStore((s) => s.settings.editorTabSize);
 
   const monacoThemeName = useMemo(
     () => (resolvedTheme === "dark" ? DARK_THEME_NAME : LIGHT_THEME_NAME),
@@ -141,10 +143,10 @@ export function YamlEditor({ value, onChange, onSave }: YamlEditorProps) {
       options={{
         minimap: { enabled: false },
         wordWrap: "off",
-        tabSize: 2,
+        tabSize: editorTabSize,
         autoIndent: "full",
         folding: true,
-        fontSize: 14,
+        fontSize: editorFontSize,
         lineNumbers: "on",
         renderLineHighlight: "line",
         scrollBeyondLastLine: false,

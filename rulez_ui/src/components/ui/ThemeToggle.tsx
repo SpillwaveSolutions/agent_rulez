@@ -1,11 +1,13 @@
-import { type Theme, useUIStore } from "@/stores/uiStore";
+import { type Theme } from "@/lib/settings";
+import { useSettingsStore } from "@/stores/settingsStore";
 
 export function ThemeToggle() {
-  const { theme, setTheme } = useUIStore();
+  const theme = useSettingsStore((s) => s.settings.theme);
+  const setTheme = useSettingsStore((s) => s.setTheme);
 
   const cycleTheme = () => {
     const next: Theme = theme === "light" ? "dark" : theme === "dark" ? "system" : "light";
-    setTheme(next);
+    void setTheme(next);
   };
 
   const getIcon = () => {
