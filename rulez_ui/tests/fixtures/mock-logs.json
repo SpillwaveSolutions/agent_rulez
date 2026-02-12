@@ -1,122 +1,172 @@
 [
   {
-    "timestamp": "2025-01-01T10:00:00Z",
-    "level": "info",
-    "message": "Rule evaluation started",
-    "source": "engine"
+    "timestamp": "2025-01-09T14:12:34Z",
+    "eventType": "PreToolUse",
+    "sessionId": "session-0001",
+    "toolName": "Bash",
+    "rulesMatched": ["block-force-push"],
+    "outcome": "block",
+    "processingMs": 2,
+    "rulesEvaluated": 4,
+    "decision": "blocked",
+    "mode": "enforce",
+    "priority": null,
+    "responseContinue": false,
+    "responseReason": "Force push to main/master is prohibited",
+    "eventDetailCommand": "git push --force origin main",
+    "eventDetailFilePath": null
   },
   {
-    "timestamp": "2025-01-01T10:00:01Z",
-    "level": "info",
-    "message": "Matched rule: block-force-push",
-    "source": "engine"
+    "timestamp": "2025-01-09T14:11:00Z",
+    "eventType": "PreToolUse",
+    "sessionId": "session-0001",
+    "toolName": "Write",
+    "rulesMatched": [],
+    "outcome": "allow",
+    "processingMs": 1,
+    "rulesEvaluated": 4,
+    "decision": "allowed",
+    "mode": "enforce",
+    "priority": null,
+    "responseContinue": true,
+    "responseReason": null,
+    "eventDetailCommand": null,
+    "eventDetailFilePath": "/src/lib/config.ts"
   },
   {
-    "timestamp": "2025-01-01T10:00:02Z",
-    "level": "warn",
-    "message": "Command includes --force flag",
-    "source": "matcher"
+    "timestamp": "2025-01-09T14:10:30Z",
+    "eventType": "PostToolUse",
+    "sessionId": "session-0001",
+    "toolName": "Edit",
+    "rulesMatched": [],
+    "outcome": "allow",
+    "processingMs": 1,
+    "rulesEvaluated": 3,
+    "decision": "allowed",
+    "mode": "audit",
+    "priority": null,
+    "responseContinue": true,
+    "responseReason": null,
+    "eventDetailCommand": null,
+    "eventDetailFilePath": "/src/components/App.tsx"
   },
   {
-    "timestamp": "2025-01-01T10:00:03Z",
-    "level": "error",
-    "message": "Force push blocked on protected branch",
-    "source": "policy"
+    "timestamp": "2025-01-09T14:09:15Z",
+    "eventType": "PreToolUse",
+    "sessionId": "session-0001",
+    "toolName": "Bash",
+    "rulesMatched": ["block-rm-rf"],
+    "outcome": "block",
+    "processingMs": 3,
+    "rulesEvaluated": 4,
+    "decision": "blocked",
+    "mode": "enforce",
+    "priority": null,
+    "responseContinue": false,
+    "responseReason": "Recursive force delete is prohibited",
+    "eventDetailCommand": "rm -rf /",
+    "eventDetailFilePath": null
   },
   {
-    "timestamp": "2025-01-01T10:01:00Z",
-    "level": "info",
-    "message": "Rule evaluation completed",
-    "source": "engine"
+    "timestamp": "2025-01-09T14:08:00Z",
+    "eventType": "PreToolUse",
+    "sessionId": "session-0001",
+    "toolName": "Bash",
+    "rulesMatched": ["inject-python-context"],
+    "outcome": "inject",
+    "processingMs": 2,
+    "rulesEvaluated": 4,
+    "decision": "allowed",
+    "mode": "enforce",
+    "priority": null,
+    "responseContinue": true,
+    "responseReason": null,
+    "eventDetailCommand": "python src/main.py",
+    "eventDetailFilePath": null
   },
   {
-    "timestamp": "2025-01-02T11:15:00Z",
-    "level": "debug",
-    "message": "Loading config from ~/.claude/hooks.yaml",
-    "source": "config"
-  },
-  {
-    "timestamp": "2025-01-02T11:15:02Z",
-    "level": "info",
-    "message": "Config parsed successfully",
-    "source": "config"
-  },
-  {
-    "timestamp": "2025-01-03T08:42:11Z",
-    "level": "info",
-    "message": "Simulation started for PreToolUse",
-    "source": "simulator"
-  },
-  {
-    "timestamp": "2025-01-03T08:42:12Z",
-    "level": "info",
-    "message": "Tool: Bash",
-    "source": "simulator"
-  },
-  {
-    "timestamp": "2025-01-03T08:42:13Z",
-    "level": "warn",
-    "message": "Potentially unsafe command detected",
-    "source": "simulator"
-  },
-  {
-    "timestamp": "2025-01-04T15:00:00Z",
-    "level": "info",
-    "message": "Evaluation trace saved",
-    "source": "audit"
-  },
-  {
-    "timestamp": "2025-01-05T09:20:45Z",
-    "level": "info",
-    "message": "Hook injected: Follow PEP 8 style guidelines",
-    "source": "injector"
-  },
-  {
-    "timestamp": "2025-01-05T09:20:46Z",
-    "level": "debug",
-    "message": "Injection target: src/main.py",
-    "source": "injector"
-  },
-  {
-    "timestamp": "2025-01-06T12:10:00Z",
-    "level": "info",
-    "message": "Settings saved",
-    "source": "ui"
-  },
-  {
-    "timestamp": "2025-01-06T12:10:01Z",
-    "level": "info",
-    "message": "Theme switched to dark",
-    "source": "ui"
-  },
-  {
-    "timestamp": "2025-01-07T07:30:00Z",
-    "level": "info",
-    "message": "Exported logs to CSV",
-    "source": "ui"
-  },
-  {
-    "timestamp": "2025-01-07T07:30:02Z",
-    "level": "info",
-    "message": "Exported logs to JSON",
-    "source": "ui"
+    "timestamp": "2025-01-09T14:07:00Z",
+    "eventType": "SessionStart",
+    "sessionId": "session-0001",
+    "toolName": null,
+    "rulesMatched": [],
+    "outcome": "allow",
+    "processingMs": 0,
+    "rulesEvaluated": 0,
+    "decision": null,
+    "mode": null,
+    "priority": null,
+    "responseContinue": true,
+    "responseReason": null,
+    "eventDetailCommand": null,
+    "eventDetailFilePath": null
   },
   {
     "timestamp": "2025-01-08T17:00:00Z",
-    "level": "debug",
-    "message": "Virtual scroll window updated",
-    "source": "log-viewer"
+    "eventType": "PreToolUse",
+    "sessionId": "session-0000",
+    "toolName": "Read",
+    "rulesMatched": [],
+    "outcome": "allow",
+    "processingMs": 1,
+    "rulesEvaluated": 3,
+    "decision": "allowed",
+    "mode": "warn",
+    "priority": null,
+    "responseContinue": true,
+    "responseReason": null,
+    "eventDetailCommand": null,
+    "eventDetailFilePath": "/src/index.ts"
   },
   {
-    "timestamp": "2025-01-08T17:00:01Z",
-    "level": "info",
-    "message": "Log entry copied to clipboard",
-    "source": "log-viewer"
+    "timestamp": "2025-01-08T16:55:00Z",
+    "eventType": "PostToolUse",
+    "sessionId": "session-0000",
+    "toolName": "Glob",
+    "rulesMatched": [],
+    "outcome": "allow",
+    "processingMs": 1,
+    "rulesEvaluated": 2,
+    "decision": "audited",
+    "mode": "audit",
+    "priority": null,
+    "responseContinue": true,
+    "responseReason": null,
+    "eventDetailCommand": null,
+    "eventDetailFilePath": null
   },
   {
-    "timestamp": "2025-01-09T14:12:34Z",
-    "level": "error",
-    "message": "Failed to parse YAML",
-    "source": "parser"
+    "timestamp": "2025-01-08T16:50:00Z",
+    "eventType": "UserPromptSubmit",
+    "sessionId": "session-0000",
+    "toolName": null,
+    "rulesMatched": ["security-check"],
+    "outcome": "inject",
+    "processingMs": 5,
+    "rulesEvaluated": 4,
+    "decision": "warned",
+    "mode": "warn",
+    "priority": null,
+    "responseContinue": true,
+    "responseReason": "Security context injected",
+    "eventDetailCommand": null,
+    "eventDetailFilePath": null
+  },
+  {
+    "timestamp": "2025-01-08T16:45:00Z",
+    "eventType": "PreToolUse",
+    "sessionId": "session-0000",
+    "toolName": "Grep",
+    "rulesMatched": [],
+    "outcome": "allow",
+    "processingMs": 1,
+    "rulesEvaluated": 3,
+    "decision": "allowed",
+    "mode": "enforce",
+    "priority": null,
+    "responseContinue": true,
+    "responseReason": null,
+    "eventDetailCommand": null,
+    "eventDetailFilePath": null
   }
 ]

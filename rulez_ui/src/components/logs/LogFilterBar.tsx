@@ -1,5 +1,6 @@
 import { useLogStore } from "@/stores/logStore";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { LogExportMenu } from "./LogExportMenu";
 
 export function LogFilterBar() {
   const {
@@ -90,6 +91,9 @@ export function LogFilterBar() {
           className="px-1 py-1 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
         />
       </label>
+
+      {/* Export menu */}
+      <LogExportMenu />
 
       {/* Refresh button */}
       <button
