@@ -5,18 +5,18 @@
 See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Core value:** LLMs do not enforce policy. LLMs are subject to policy.
-**Current focus:** v1.6 RuleZ UI — Phase 17 (E2E Testing)
+**Current focus:** v1.7 Multi-Platform Hook Support — Phase 20 (Gemini CLI support and Gemini hooks support)
 **v1.7 planned:** Multi-Platform Hook Support (OpenCode, Gemini CLI, GitHub Copilot) — Phases 18-20
 
 ## Current Position
 
-Milestone: v1.6 RuleZ UI
-Phase: 17 of 17 (E2E Testing)
-Plan: 1 of 2 (complete)
+Milestone: v1.7 Multi-Platform Hook Support
+Phase: 20 of 20 (Gemini CLI support and Gemini hooks support)
+Plan: 1 of 2
 Status: In progress
-Last activity: 2026-02-11 — Completed Phase 17 Plan 01 (Comprehensive Feature Test Coverage)
+Last activity: 2026-02-12 — Completed Phase 20 Plan 01
 
-Progress: [██████████████████░] 16/17 phases complete (94%)
+Progress: [██████░░░░░░░░░░░░░] 11/17 phases complete (65%)
 
 ## Performance Metrics
 
@@ -42,6 +42,7 @@ Progress: [██████████████████░] 16/17 phas
 *Updated after roadmap creation*
 | Phase 17-e2e-testing P02 | 1 min | 7 tasks | 4 files |
 | Phase 17-e2e-testing P01 | 1 min | 8 tasks | 20 files |
+| Phase 20 P01 | 52 min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -66,6 +67,10 @@ v1.6 roadmap decisions:
 - Phase 16: Onboarding (polish layer after core features working)
 - Phase 17: E2E testing (validate all features before release)
 
+Phase 20 decisions:
+- Map Gemini BeforeTool/AfterTool to RuleZ PreToolUse/PostToolUse while preserving the original hook_event_name in tool_input.
+- Translate RuleZ context to Gemini systemMessage by default, with JSON tool_input override for tool hooks.
+
 ### Pending Todos
 
 0 pending
@@ -76,8 +81,8 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-02-11
-Stopped at: Completed 17-01 Comprehensive Feature Test Coverage
+Last session: 2026-02-12
+Stopped at: Completed 20-01-PLAN.md
 Resume file: None
 
-Next action: `/gsd-execute-phase 17` (run Plan 17-02)
+Next action: `/gsd-execute-phase 20` (run Plan 20-02)
