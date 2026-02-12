@@ -38,12 +38,12 @@ impl Logger {
         })
     }
 
-    /// Get the default log file path (~/.claude/logs/cch.log)
+    /// Get the default log file path (~/.claude/logs/rulez.log)
     pub fn default_log_path() -> PathBuf {
         let mut path = dirs::home_dir().expect("Could not determine home directory");
         path.push(".claude");
         path.push("logs");
-        path.push("cch.log");
+        path.push("rulez.log");
         path
     }
 
