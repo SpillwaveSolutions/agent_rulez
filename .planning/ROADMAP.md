@@ -98,11 +98,12 @@ Plans:
   3. Log viewer renders 100K+ entries at 60fps with virtual scrolling
   4. User can export filtered log results to JSON or CSV files
   5. User can copy individual log entries to clipboard
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 13-01: TBD
-- [ ] 13-02: TBD
+- [ ] 13-01: Rust log parsing command + TypeScript types + Tauri wiring
+- [ ] 13-02: Log viewer UI with virtual scrolling, filtering, and Zustand store
+- [ ] 13-03: Export (JSON/CSV) + clipboard copy + integration verification
 
 ### Phase 14: Config Management
 **Goal**: Multi-scope config handling with import/export and live reload
@@ -209,7 +210,7 @@ Phases execute in numeric order: 11 → 12 → 13 → 14 → 15 → 16 → 17
 | 10. Tauri CI Integration | v1.4 | 2/2 | ✅ Complete | 2026-02-10 |
 | 11. Rename Fix + Settings Foundation | v1.6 | 3/3 | ✅ Complete | 2026-02-12 |
 | 12. YAML Editor Enhancements | v1.6 | 3/3 | ✅ Complete | 2026-02-12 |
-| 13. Log Viewer | v1.6 | 0/TBD | Not started | - |
+| 13. Log Viewer | v1.6 | 0/3 | Not started | - |
 | 14. Config Management | v1.6 | 0/TBD | Not started | - |
 | 15. Debug Simulator | v1.6 | 0/TBD | Not started | - |
 | 16. Onboarding | v1.6 | 0/TBD | Not started | - |
@@ -241,12 +242,15 @@ Plans:
 
 ### Phase 21: Copilot CLI support and Copilot hooks support
 
-**Goal:** [To be planned]
+**Goal:** Integrate RuleZ with Copilot CLI hooks and Copilot chat participant for policy enforcement and diagnostics.
 **Depends on:** Phase 20
-**Plans:** 0 plans
+**Plans:** 4 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 21 to break down)
+- [ ] 21-01-PLAN.md — Copilot hook adapter + response translation
+- [ ] 21-02-PLAN.md — Copilot hook runner subcommand
+- [ ] 21-03-PLAN.md — Copilot hook install + doctor + docs
+- [ ] 21-04-PLAN.md — VS Code Copilot chat participant + LM summary
 
 ---
 
