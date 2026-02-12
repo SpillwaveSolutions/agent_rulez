@@ -1,17 +1,56 @@
 import { writeConfig } from "@/lib/tauri";
 import { useConfigStore } from "@/stores/configStore";
-import { useCallback } from "react";
+import { useEditorStore } from "@/stores/editorStore";
+import { loader } from "@monaco-editor/react";
+import { useCallback, useEffect, useRef } from "react";
 import { EditorToolbar } from "../editor/EditorToolbar";
 import { ValidationPanel } from "../editor/ValidationPanel";
 import { YamlEditor } from "../editor/YamlEditor";
 import { FileTabBar } from "../files/FileTabBar";
 
 export function MainContent() {
-  const { activeFile, updateContent, markSaved, getActiveContent } = useConfigStore();
+  const { activeFile, openFiles, updateContent, markSaved, getActiveContent } = useConfigStore();
   const activeContent = getActiveContent();
+
+  // Dispose Monaco models when files are closed
+  const prevOpenFilesRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const currentPaths = new Set(openFiles.keys());
+    const closedPaths: string[] = [];
+
+    for (const prevPath of prevOpenFilesRef.current) {
+      if (!currentPaths.has(prevPath)) {
+        closedPaths.push(prevPath);
+      }
+    }
+
+    if (closedPaths.length > 0) {
+      loader.init().then((monaco) => {
+        for (const closedPath of closedPaths) {
+          const uri = monaco.Uri.parse(closedPath);
+          const model = monaco.editor.getModel(uri);
+          model?.dispose();
+        }
+      });
+    }
+
+    prevOpenFilesRef.current = currentPaths;
+  }, [openFiles]);
 
   const handleSave = useCallback(async () => {
     if (!activeFile) return;
+
+    // Format before saving (if formatting provider is registered)
+    const editorRefValue = useEditorStore.getState().editorRef;
+    if (editorRefValue) {
+      const formatAction = editorRefValue.getAction("editor.action.formatDocument");
+      if (formatAction) {
+        await formatAction.run();
+      }
+    }
+
+    // Re-read content after formatting (formatting updates the model -> onChange -> configStore)
     const content = useConfigStore.getState().getActiveContent();
     if (content === null) return;
     try {
@@ -35,6 +74,7 @@ export function MainContent() {
             <div className="flex-1 overflow-hidden">
               <YamlEditor
                 value={activeContent}
+                path={activeFile}
                 onChange={(val) => updateContent(activeFile, val)}
                 onSave={handleSave}
               />

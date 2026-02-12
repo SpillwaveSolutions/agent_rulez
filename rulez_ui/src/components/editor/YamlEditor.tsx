@@ -1,10 +1,11 @@
 import { configureYamlSchema } from "@/lib/schema";
-import { useSettingsStore } from "@/stores/settingsStore";
+import { registerYamlFormatter } from "@/lib/yaml-formatter";
 import { useEditorStore } from "@/stores/editorStore";
+import { useSettingsStore } from "@/stores/settingsStore";
 import { DARK_THEME_NAME, LIGHT_THEME_NAME, darkTheme, lightTheme } from "@/styles/monaco-theme";
 import Editor, { type BeforeMount, type OnMount } from "@monaco-editor/react";
-import type { MarkerSeverity, Uri, editor } from "monaco-editor";
-import { useCallback, useMemo, useRef } from "react";
+import type { IDisposable, MarkerSeverity, Uri, editor } from "monaco-editor";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 
 function useResolvedTheme(): "light" | "dark" {
   const theme = useSettingsStore((s) => s.settings.theme);
@@ -18,11 +19,12 @@ function useResolvedTheme(): "light" | "dark" {
 
 interface YamlEditorProps {
   value: string;
+  path?: string;
   onChange: (value: string) => void;
   onSave?: () => void;
 }
 
-export function YamlEditor({ value, onChange, onSave }: YamlEditorProps) {
+export function YamlEditor({ value, path, onChange, onSave }: YamlEditorProps) {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const setCursorPosition = useEditorStore((s) => s.setCursorPosition);
   const setSelection = useEditorStore((s) => s.setSelection);
@@ -38,21 +40,31 @@ export function YamlEditor({ value, onChange, onSave }: YamlEditorProps) {
   );
 
   const schemaConfigured = useRef(false);
+  const yamlConfigDisposableRef = useRef<IDisposable | null>(null);
+  const formatterDisposableRef = useRef<IDisposable | null>(null);
+  const disposablesRef = useRef<IDisposable[]>([]);
 
   const handleBeforeMount: BeforeMount = useCallback((monaco) => {
     // Define custom themes
     monaco.editor.defineTheme(LIGHT_THEME_NAME, lightTheme);
     monaco.editor.defineTheme(DARK_THEME_NAME, darkTheme);
 
-    // Configure monaco-yaml schema (only once)
+    // Configure monaco-yaml schema and formatter (only once)
     if (!schemaConfigured.current) {
-      configureYamlSchema(monaco);
+      yamlConfigDisposableRef.current = configureYamlSchema(monaco);
+      formatterDisposableRef.current = registerYamlFormatter(monaco);
       schemaConfigured.current = true;
     }
   }, []);
 
   const handleMount: OnMount = useCallback(
     (editorInstance, monaco) => {
+      // Dispose any existing listeners (handles React Strict Mode double-mount)
+      for (const d of disposablesRef.current) {
+        d.dispose();
+      }
+      disposablesRef.current = [];
+
       editorRef.current = editorInstance;
       setEditorRef(editorInstance);
 
@@ -61,16 +73,25 @@ export function YamlEditor({ value, onChange, onSave }: YamlEditorProps) {
         onSave?.();
       });
 
+      // Cmd/Ctrl+Shift+I keybinding for format
+      editorInstance.addCommand(
+        monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyI,
+        () => {
+          editorInstance.getAction("editor.action.formatDocument")?.run();
+        },
+      );
+
       // Track cursor position
-      editorInstance.onDidChangeCursorPosition((e) => {
+      const cursorDisposable = editorInstance.onDidChangeCursorPosition((e) => {
         setCursorPosition({
           line: e.position.lineNumber,
           column: e.position.column,
         });
       });
+      disposablesRef.current.push(cursorDisposable);
 
       // Track selection
-      editorInstance.onDidChangeCursorSelection((e) => {
+      const selectionDisposable = editorInstance.onDidChangeCursorSelection((e) => {
         const sel = e.selection;
         if (sel.startLineNumber === sel.endLineNumber && sel.startColumn === sel.endColumn) {
           setSelection(null);
@@ -83,11 +104,12 @@ export function YamlEditor({ value, onChange, onSave }: YamlEditorProps) {
           });
         }
       });
+      disposablesRef.current.push(selectionDisposable);
 
       // Subscribe to marker changes (validation errors from monaco-yaml)
       const model = editorInstance.getModel();
       if (model) {
-        monaco.editor.onDidChangeMarkers((uris: readonly Uri[]) => {
+        const markerDisposable = monaco.editor.onDidChangeMarkers((uris: readonly Uri[]) => {
           const modelUri = model.uri.toString();
           if (uris.some((uri: Uri) => uri.toString() === modelUri)) {
             const markers = monaco.editor.getModelMarkers({ resource: model.uri });
@@ -116,6 +138,7 @@ export function YamlEditor({ value, onChange, onSave }: YamlEditorProps) {
             setValidationResults(errors, warnings);
           }
         });
+        disposablesRef.current.push(markerDisposable);
       }
 
       // Focus editor on mount
@@ -123,6 +146,19 @@ export function YamlEditor({ value, onChange, onSave }: YamlEditorProps) {
     },
     [onSave, setCursorPosition, setSelection, setEditorRef, setValidationResults],
   );
+
+  // Cleanup all disposables on unmount
+  useEffect(() => {
+    return () => {
+      for (const d of disposablesRef.current) {
+        d.dispose();
+      }
+      disposablesRef.current = [];
+      formatterDisposableRef.current?.dispose();
+      formatterDisposableRef.current = null;
+      setEditorRef(null);
+    };
+  }, [setEditorRef]);
 
   const handleChange = useCallback(
     (val: string | undefined) => {
@@ -135,6 +171,7 @@ export function YamlEditor({ value, onChange, onSave }: YamlEditorProps) {
     <Editor
       height="100%"
       language="yaml"
+      path={path}
       value={value}
       onChange={handleChange}
       beforeMount={handleBeforeMount}
