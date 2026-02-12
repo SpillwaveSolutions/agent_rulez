@@ -1,6 +1,6 @@
 # RuleZ Roadmap
 
-**Current Focus:** v1.6 RuleZ UI — Phase 13 ready to plan
+**Current Focus:** v1.6 RuleZ UI — Phase 13 complete, Phase 14 next
 
 ---
 
@@ -101,9 +101,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 13-01: Rust log parsing command + TypeScript types + Tauri wiring
-- [ ] 13-02: Log viewer UI with virtual scrolling, filtering, and Zustand store
-- [ ] 13-03: Export (JSON/CSV) + clipboard copy + integration verification
+- [x] 13-01: Rust log parsing command + TypeScript types + Tauri wiring
+- [x] 13-02: Log viewer UI with virtual scrolling, filtering, and Zustand store
+- [x] 13-03: Export (JSON/CSV) + clipboard copy + integration verification
 
 ### Phase 14: Config Management
 **Goal**: Multi-scope config handling with import/export and live reload
@@ -210,7 +210,7 @@ Phases execute in numeric order: 11 → 12 → 13 → 14 → 15 → 16 → 17
 | 10. Tauri CI Integration | v1.4 | 2/2 | ✅ Complete | 2026-02-10 |
 | 11. Rename Fix + Settings Foundation | v1.6 | 3/3 | ✅ Complete | 2026-02-12 |
 | 12. YAML Editor Enhancements | v1.6 | 3/3 | ✅ Complete | 2026-02-12 |
-| 13. Log Viewer | v1.6 | 0/3 | Not started | - |
+| 13. Log Viewer | v1.6 | 3/3 | ✅ Complete | 2026-02-12 |
 | 14. Config Management | v1.6 | 0/TBD | Not started | - |
 | 15. Debug Simulator | v1.6 | 0/TBD | Not started | - |
 | 16. Onboarding | v1.6 | 0/TBD | Not started | - |
