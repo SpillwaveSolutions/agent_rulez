@@ -95,6 +95,11 @@ enum Commands {
         /// Event/session ID to explain (legacy usage)
         event_id: Option<String>,
     },
+    /// Gemini CLI utilities
+    Gemini {
+        #[command(subcommand)]
+        subcommand: GeminiSubcommand,
+    },
 }
 
 /// Subcommands for the explain command
@@ -117,6 +122,17 @@ enum ExplainSubcommand {
     Event {
         /// Session/event ID
         event_id: String,
+    },
+}
+
+/// Subcommands for Gemini CLI utilities
+#[derive(Subcommand)]
+enum GeminiSubcommand {
+    /// Diagnose Gemini hook installation and configuration
+    Doctor {
+        /// Output machine-readable JSON
+        #[arg(long)]
+        json: bool,
     },
 }
 
@@ -216,6 +232,11 @@ async fn main() -> Result<()> {
                 }
             }
         }
+        Some(Commands::Gemini { subcommand }) => match subcommand {
+            GeminiSubcommand::Doctor { json } => {
+                cli::gemini_doctor::run(json).await?;
+            }
+        },
         None => {
             // No subcommand provided, read from stdin for hook processing
             process_hook_event(&cli, &config).await?;
