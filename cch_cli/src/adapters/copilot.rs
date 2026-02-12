@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use serde_json::{Map, Value};
 
-use crate::models::{Event, EventType};
+use crate::models::{CopilotDecision, CopilotHookResponse, Event, EventType, Response};
 
 #[derive(Debug, Deserialize)]
 struct CopilotHookInput {
@@ -59,6 +59,40 @@ pub fn parse_event(value: Value) -> Result<CopilotEvent> {
         event,
         is_tool_event,
     })
+}
+
+pub fn translate_response(
+    response: &Response,
+    copilot_event: &CopilotEvent,
+) -> CopilotHookResponse {
+    let decision = if response.continue_ {
+        CopilotDecision::Allow
+    } else {
+        CopilotDecision::Deny
+    };
+
+    let mut tool_input_override = None;
+    if copilot_event.is_tool_event {
+        if let Some(context) = response.context.as_ref() {
+            if let Ok(value) = serde_json::from_str::<Value>(context) {
+                if value.is_object() {
+                    tool_input_override = Some(value);
+                }
+            }
+        }
+    }
+
+    let reason = if response.continue_ {
+        None
+    } else {
+        response.reason.clone()
+    };
+
+    CopilotHookResponse {
+        permission_decision: decision,
+        permission_decision_reason: reason,
+        tool_input: tool_input_override,
+    }
 }
 
 fn map_event_type(hook_event_name: &str) -> (EventType, bool) {

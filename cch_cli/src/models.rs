@@ -1331,6 +1331,36 @@ pub struct GeminiHookResponse {
     pub tool_input: Option<serde_json::Value>,
 }
 
+/// GitHub Copilot CLI output structure for hook responses
+///
+/// Copilot expects a strict JSON object with permission decisions.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+#[allow(dead_code)]
+pub enum CopilotDecision {
+    Allow,
+    Deny,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[allow(dead_code)]
+pub struct CopilotHookResponse {
+    /// Whether the tool execution is allowed or denied
+    #[serde(rename = "permissionDecision")]
+    pub permission_decision: CopilotDecision,
+
+    /// Explanation for blocking decisions
+    #[serde(
+        rename = "permissionDecisionReason",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub permission_decision_reason: Option<String>,
+
+    /// Optional tool input override
+    #[serde(rename = "tool_input", skip_serializing_if = "Option::is_none")]
+    pub tool_input: Option<serde_json::Value>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Timing {
     /// Total processing time in milliseconds
