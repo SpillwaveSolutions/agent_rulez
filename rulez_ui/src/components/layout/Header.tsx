@@ -3,7 +3,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { ThemeToggle } from "../ui/ThemeToggle";
 
 export function Header() {
-  const { toggleSidebar, sidebarOpen } = useUIStore();
+  const { toggleSidebar, sidebarOpen, setRightPanelTab } = useUIStore();
 
   return (
     <header className="flex items-center justify-between h-12 px-4 border-b border-gray-200 dark:border-gray-700 bg-surface dark:bg-surface-dark no-select">
@@ -54,6 +54,30 @@ export function Header() {
 
       {/* Right section */}
       <div className="flex items-center gap-2">
+        {/* Settings button */}
+        <button
+          type="button"
+          onClick={() => setRightPanelTab("settings")}
+          className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+          aria-label="Open settings"
+          title="Settings"
+        >
+          <svg
+            className="w-5 h-5 text-gray-600 dark:text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 4c0-.59-.06-1.17-.17-1.73l2.07-1.62-2-3.46-2.49 1a7.952 7.952 0 00-2.99-1.73l-.38-2.65H9.02l-.38 2.65a7.952 7.952 0 00-2.99 1.73l-2.49-1-2 3.46 2.07 1.62c-.11.56-.17 1.14-.17 1.73s.06 1.17.17 1.73l-2.07 1.62 2 3.46 2.49-1c.86.72 1.88 1.28 2.99 1.73l.38 2.65h3.96l.38-2.65a7.952 7.952 0 002.99-1.73l2.49 1 2-3.46-2.07-1.62c.11-.56.17-1.14.17-1.73z"
+            />
+          </svg>
+        </button>
+
         {/* Help button */}
         <button
           type="button"
