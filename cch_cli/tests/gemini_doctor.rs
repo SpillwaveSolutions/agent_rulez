@@ -50,7 +50,7 @@ fn gemini_doctor_reports_scope_and_extension_statuses() -> Result<(), Box<dyn st
     write_settings(&project_settings, "/usr/local/bin/cch gemini hook")?;
 
     let user_settings = home_dir.path().join(".gemini/settings.json");
-    write_settings(&user_settings, "/usr/local/bin/other")?;
+    write_settings(&user_settings, "/usr/local/bin/cch hook")?;
 
     let system_settings = system_dir.path().join("settings.json");
     write_settings(&system_settings, "/usr/local/bin/cch gemini hook")?;
@@ -61,7 +61,7 @@ fn gemini_doctor_reports_scope_and_extension_statuses() -> Result<(), Box<dyn st
     write_settings(&extension_hooks, "/usr/local/bin/cch gemini hook")?;
 
     let shared_hooks = home_dir.path().join(".gemini/hooks/shared.json");
-    write_settings(&shared_hooks, "/usr/local/bin/other")?;
+    write_settings(&shared_hooks, "/usr/local/bin/cch hook")?;
 
     let output = Command::new(assert_cmd::cargo::cargo_bin!("cch"))
         .current_dir(project_dir.path())
@@ -85,6 +85,12 @@ fn gemini_doctor_reports_scope_and_extension_statuses() -> Result<(), Box<dyn st
 
     let user_scope = find_scope(scopes, "user");
     assert_eq!(user_scope["status"], "misconfigured");
+    let user_details = user_scope
+        .get("details")
+        .and_then(Value::as_str)
+        .expect("user scope details missing");
+    assert!(user_details.contains("docs/GEMINI_CLI_HOOKS.md"));
+    assert!(user_details.contains("cch gemini install"));
 
     let system_scope = find_scope(scopes, "system");
     assert_eq!(system_scope["status"], "installed");
@@ -104,6 +110,12 @@ fn gemini_doctor_reports_scope_and_extension_statuses() -> Result<(), Box<dyn st
         .expect("shared_hooks array missing");
     let shared_report = find_hook_file(shared_entries, "shared.json");
     assert_eq!(shared_report["status"], "misconfigured");
+    let shared_details = shared_report
+        .get("details")
+        .and_then(Value::as_str)
+        .expect("shared hook details missing");
+    assert!(shared_details.contains("docs/GEMINI_CLI_HOOKS.md"));
+    assert!(shared_details.contains("cch gemini install"));
 
     Ok(())
 }
