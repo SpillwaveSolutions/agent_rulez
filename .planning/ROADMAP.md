@@ -1,6 +1,6 @@
 # RuleZ Roadmap
 
-**Current Focus:** v1.6 RuleZ UI — Phase 13 complete, Phase 14 next
+**Current Focus:** v1.6 RuleZ UI — Phase 14 complete, Phase 15 next
 
 ---
 
@@ -118,9 +118,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 14-01: Scope indicators + config precedence UI
-- [ ] 14-02: Import/export with validation
-- [ ] 14-03: File watching + external change detection
+- [x] 14-01: Scope indicators + config precedence UI
+- [x] 14-02: Import/export with validation
+- [x] 14-03: File watching + external change detection
 
 ### Phase 15: Debug Simulator
 **Goal**: Real binary integration with step-by-step rule evaluation traces
@@ -212,7 +212,7 @@ Phases execute in numeric order: 11 → 12 → 13 → 14 → 15 → 16 → 17
 | 11. Rename Fix + Settings Foundation | v1.6 | 3/3 | ✅ Complete | 2026-02-12 |
 | 12. YAML Editor Enhancements | v1.6 | 3/3 | ✅ Complete | 2026-02-12 |
 | 13. Log Viewer | v1.6 | 3/3 | ✅ Complete | 2026-02-12 |
-| 14. Config Management | v1.6 | 0/3 | Planned | - |
+| 14. Config Management | v1.6 | 3/3 | ✅ Complete | 2026-02-12 |
 | 15. Debug Simulator | v1.6 | 0/TBD | Not started | - |
 | 16. Onboarding | v1.6 | 0/TBD | Not started | - |
 | 17. E2E Testing | v1.6 | 2/2 | ✅ Complete | 2026-02-11 |

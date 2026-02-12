@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** LLMs do not enforce policy. LLMs are subject to policy.
-**Current focus:** v1.6 RuleZ UI — Phase 14 (Config Management) next
+**Current focus:** v1.6 RuleZ UI — Phase 15 (Debug Simulator) next
 **v1.7 planned:** Multi-Platform Hook Support (OpenCode, Gemini CLI, GitHub Copilot) — Phases 18-21
 
 ## Current Position
 
 Milestone: v1.6 RuleZ UI
-Phase: 13 of 17 (Log Viewer) — COMPLETE
+Phase: 14 of 17 (Config Management) — COMPLETE
 Plan: 3 of 3
-Status: Phase 13 complete, ready for Phase 14
-Last activity: 2026-02-12 — Completed Phase 13 Plan 03 (Log export + integration)
+Status: Phase 14 complete, ready for Phase 15
+Last activity: 2026-02-12 — Completed Phase 14 Plan 03 (File watching + external change detection)
 
-Progress: [████████████░░░░░] 14/21 phases complete (67%)
+Progress: [█████████████░░░░] 15/21 phases complete (71%)
 
 ## Performance Metrics
 
 **Velocity (all milestones):**
-- Total plans completed: 33 (6 v1.2 + 10 v1.3 + 9 v1.4 + 8 v1.6)
+- Total plans completed: 39 (6 v1.2 + 10 v1.3 + 9 v1.4 + 14 v1.6)
 - Average duration: ~5min per plan (Phases 4-10)
 - v1.5.0 released 2026-02-11 (first successful cross-platform binary release)
 
@@ -32,7 +32,7 @@ Progress: [████████████░░░░░] 14/21 phases com
 | v1.2 | 3 | 6 | Complete |
 | v1.3 | 3 | 10 | Complete |
 | v1.4 | 4 | 9 | Complete |
-| v1.6 | 7 | 8/TBD | In progress |
+| v1.6 | 7 | 14/TBD | In progress |
 | v1.7 | 4 | TBD | Planned |
 
 **Recent Trend:**
@@ -43,6 +43,9 @@ Progress: [████████████░░░░░] 14/21 phases com
 
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
+| Phase 14 P01 | 1 min | 3 tasks | 3 files |
+| Phase 14 P02 | 1 min | 3 tasks | 3 files |
+| Phase 14 P03 | 1 min | 3 tasks | 3 files |
 | Phase 13 P01 | 1 min | 3 tasks | 8 files |
 | Phase 13 P02 | 1 min | 4 tasks | 8 files |
 | Phase 13 P03 | 1 min | 3 tasks | 3 files |
@@ -82,6 +85,11 @@ v1.6 roadmap decisions:
 Phase 11 decisions:
 - Persist settings under a single settings key with localStorage fallback to keep defaults consistent across Tauri and web modes.
 
+Phase 14 decisions:
+- No config merging — matches CLI first-found-wins behavior (project completely overrides global)
+- File watching uses Tauri watchImmediate() wrapping OS-native watchers (FSEvents/inotify) with 500ms debounce
+- Export writes raw YAML strings to preserve comments (never parse-then-reserialize)
+
 Phase 20 decisions:
 - Map Gemini BeforeTool/AfterTool to RuleZ PreToolUse/PostToolUse while preserving the original hook_event_name in tool_input.
 - Translate RuleZ context to Gemini systemMessage by default, with JSON tool_input override for tool hooks.
@@ -98,7 +106,7 @@ None active.
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed Phase 13 (Log Viewer) — all 3 plans done
+Stopped at: Completed Phase 14 (Config Management) — all 3 plans done
 Resume file: None
 
-Next action: Plan Phase 14 (Config Management)
+Next action: Plan Phase 15 (Debug Simulator)
