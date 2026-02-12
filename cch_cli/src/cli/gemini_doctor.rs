@@ -15,6 +15,8 @@ enum DoctorStatus {
     Error,
 }
 
+const OUTDATED_CCH_HINT: &str = "See docs/GEMINI_CLI_HOOKS.md; run `cch gemini install`.";
+
 #[derive(Debug, Serialize)]
 struct DoctorReport {
     scopes: Vec<ScopeReport>,
@@ -336,8 +338,10 @@ fn inspect_settings_scope(scope: &str, path: &Path, checked_paths: Vec<String>) 
         (
             DoctorStatus::Misconfigured,
             if outdated_hooks > 0 {
-                "CCH hook commands found but missing `cch gemini hook` (binary may be outdated)"
-                    .to_string()
+                format!(
+                    "CCH hook commands found but missing `cch gemini hook` (binary may be outdated). {}",
+                    OUTDATED_CCH_HINT
+                )
             } else {
                 "Hooks found but no cch command entries".to_string()
             },
@@ -346,8 +350,8 @@ fn inspect_settings_scope(scope: &str, path: &Path, checked_paths: Vec<String>) 
         (
             DoctorStatus::Misconfigured,
             format!(
-                "Found {} cch hook entries and {} outdated cch entries",
-                cch_hooks, outdated_hooks
+                "Found {} cch hook entries and {} outdated cch entries. {}",
+                cch_hooks, outdated_hooks, OUTDATED_CCH_HINT
             ),
         )
     } else {
@@ -512,8 +516,10 @@ fn inspect_hook_file(name: &str, path: &Path) -> HookFileReport {
         (
             DoctorStatus::Misconfigured,
             if outdated_hooks > 0 {
-                "CCH hook commands found but missing `cch gemini hook` (binary may be outdated)"
-                    .to_string()
+                format!(
+                    "CCH hook commands found but missing `cch gemini hook` (binary may be outdated). {}",
+                    OUTDATED_CCH_HINT
+                )
             } else {
                 "Command entries found but none reference cch".to_string()
             },
@@ -522,8 +528,8 @@ fn inspect_hook_file(name: &str, path: &Path) -> HookFileReport {
         (
             DoctorStatus::Misconfigured,
             format!(
-                "Found {} cch hook entries and {} outdated cch entries",
-                cch_hooks, outdated_hooks
+                "Found {} cch hook entries and {} outdated cch entries. {}",
+                cch_hooks, outdated_hooks, OUTDATED_CCH_HINT
             ),
         )
     } else {
