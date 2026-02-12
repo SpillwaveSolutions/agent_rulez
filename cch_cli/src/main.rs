@@ -3,6 +3,7 @@ use clap::{Parser, Subcommand};
 use std::io::{self, Read};
 use tracing::{error, info};
 
+mod adapters;
 mod cli;
 mod config;
 mod hooks;
@@ -134,6 +135,8 @@ enum GeminiSubcommand {
         #[arg(long)]
         json: bool,
     },
+    /// Run Gemini hook runner (stdin -> Gemini JSON response)
+    Hook,
 }
 
 #[tokio::main(flavor = "current_thread")]
@@ -235,6 +238,9 @@ async fn main() -> Result<()> {
         Some(Commands::Gemini { subcommand }) => match subcommand {
             GeminiSubcommand::Doctor { json } => {
                 cli::gemini_doctor::run(json).await?;
+            }
+            GeminiSubcommand::Hook => {
+                cli::gemini_hook::run(cli.debug_logs).await?;
             }
         },
         None => {
