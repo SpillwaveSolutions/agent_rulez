@@ -135,6 +135,18 @@ enum GeminiSubcommand {
         #[arg(long)]
         json: bool,
     },
+    /// Install Gemini hook settings
+    Install {
+        /// Settings scope (project, user, system)
+        #[arg(long, value_enum, default_value_t = cli::gemini_install::Scope::Project)]
+        scope: cli::gemini_install::Scope,
+        /// Path to CCH binary (auto-detected if not specified)
+        #[arg(short, long)]
+        binary: Option<String>,
+        /// Print JSON snippet without writing
+        #[arg(long, alias = "dry-run")]
+        print: bool,
+    },
     /// Run Gemini hook runner (stdin -> Gemini JSON response)
     Hook,
 }
@@ -238,6 +250,13 @@ async fn main() -> Result<()> {
         Some(Commands::Gemini { subcommand }) => match subcommand {
             GeminiSubcommand::Doctor { json } => {
                 cli::gemini_doctor::run(json).await?;
+            }
+            GeminiSubcommand::Install {
+                scope,
+                binary,
+                print,
+            } => {
+                cli::gemini_install::run(scope, binary, print).await?;
             }
             GeminiSubcommand::Hook => {
                 cli::gemini_hook::run(cli.debug_logs).await?;
