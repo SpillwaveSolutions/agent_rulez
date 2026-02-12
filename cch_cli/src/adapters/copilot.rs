@@ -5,6 +5,7 @@ use serde_json::{Map, Value};
 
 use crate::models::{CopilotDecision, CopilotHookResponse, Event, EventType, Response};
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 struct CopilotHookInput {
     session_id: String,
@@ -23,6 +24,7 @@ struct CopilotHookInput {
     extra: Map<String, Value>,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct CopilotEvent {
     pub hook_event_name: String,
@@ -30,6 +32,7 @@ pub struct CopilotEvent {
     pub is_tool_event: bool,
 }
 
+#[allow(dead_code)]
 pub fn parse_event(value: Value) -> Result<CopilotEvent> {
     let input: CopilotHookInput = serde_json::from_value(value)?;
     let (event_type, is_tool_event) = map_event_type(&input.hook_event_name);
@@ -61,6 +64,7 @@ pub fn parse_event(value: Value) -> Result<CopilotEvent> {
     })
 }
 
+#[allow(dead_code)]
 pub fn translate_response(
     response: &Response,
     copilot_event: &CopilotEvent,
@@ -95,6 +99,7 @@ pub fn translate_response(
     }
 }
 
+#[allow(dead_code)]
 fn map_event_type(hook_event_name: &str) -> (EventType, bool) {
     match hook_event_name {
         "preToolUse" => (EventType::PreToolUse, true),
@@ -102,11 +107,11 @@ fn map_event_type(hook_event_name: &str) -> (EventType, bool) {
         "promptSubmit" => (EventType::UserPromptSubmit, false),
         "sessionStart" => (EventType::SessionStart, false),
         "sessionEnd" => (EventType::SessionEnd, false),
-        "error" => (EventType::Notification, false),
         _ => (EventType::Notification, false),
     }
 }
 
+#[allow(dead_code)]
 fn merge_tool_input(
     tool_input: Option<Value>,
     extra: Map<String, Value>,
@@ -122,7 +127,7 @@ fn merge_tool_input(
         None => Map::new(),
     };
 
-    for (key, value) in extra.into_iter() {
+    for (key, value) in extra {
         if !merged.contains_key(&key) {
             merged.insert(key, value);
         }

@@ -89,9 +89,7 @@ pub fn translate_response(response: &Response, gemini_event: &GeminiEvent) -> Ge
         }
     }
 
-    let continue_ = if response.continue_ {
-        None
-    } else if gemini_event.is_tool_event {
+    let continue_ = if response.continue_ || gemini_event.is_tool_event {
         None
     } else {
         Some(false)
@@ -117,7 +115,6 @@ fn map_event_type(hook_event_name: &str) -> (EventType, bool) {
         "BeforeToolSelection" => (EventType::BeforeToolSelection, false),
         "SessionStart" => (EventType::SessionStart, false),
         "SessionEnd" => (EventType::SessionEnd, false),
-        "Notification" => (EventType::Notification, false),
         "PreCompact" => (EventType::PreCompact, false),
         _ => (EventType::Notification, false),
     }
@@ -138,7 +135,7 @@ fn merge_tool_input(
         None => Map::new(),
     };
 
-    for (key, value) in extra.into_iter() {
+    for (key, value) in extra {
         if !merged.contains_key(&key) {
             merged.insert(key, value);
         }

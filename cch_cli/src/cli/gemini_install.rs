@@ -80,7 +80,7 @@ pub async fn run(scope: Scope, binary_path: Option<String>, print: bool) -> Resu
     let hooks = settings.hooks.get_or_insert_with(HashMap::new);
     let new_entry = build_hook_entry(&hook_command);
 
-    for event in GEMINI_HOOK_EVENTS.iter() {
+    for event in &GEMINI_HOOK_EVENTS {
         let entries = hooks.entry((*event).to_string()).or_default();
         let cleaned = remove_cch_hooks(entries);
         *entries = cleaned;
@@ -91,7 +91,7 @@ pub async fn run(scope: Scope, binary_path: Option<String>, print: bool) -> Resu
 
     println!("✓ Gemini hooks installed successfully!\n");
     println!("Hook registered for events:");
-    for event in GEMINI_HOOK_EVENTS.iter() {
+    for event in &GEMINI_HOOK_EVENTS {
         println!("  • {}", event);
     }
     println!();
@@ -108,7 +108,7 @@ fn build_snippet(command: &str) -> GeminiSettings {
     let mut hooks = HashMap::new();
     let entry = build_hook_entry(command);
 
-    for event in GEMINI_HOOK_EVENTS.iter() {
+    for event in &GEMINI_HOOK_EVENTS {
         hooks.insert((*event).to_string(), vec![entry.clone()]);
     }
 
@@ -222,9 +222,11 @@ fn system_settings_candidates() -> Vec<PathBuf> {
     #[cfg(target_os = "windows")]
     {
         if let Ok(program_data) = std::env::var("ProgramData") {
-            vec![PathBuf::from(program_data)
-                .join("Gemini")
-                .join("settings.json")]
+            vec![
+                PathBuf::from(program_data)
+                    .join("Gemini")
+                    .join("settings.json"),
+            ]
         } else {
             vec![PathBuf::from("C:\\ProgramData\\Gemini\\settings.json")]
         }

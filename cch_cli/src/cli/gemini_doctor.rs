@@ -120,22 +120,19 @@ fn build_report() -> Result<DoctorReport> {
     let user_settings = user_settings_path()?;
     let (system_settings, system_checked) = system_settings_path();
 
-    let mut scopes = Vec::new();
-    scopes.push(inspect_settings_scope(
-        "project",
-        &project_settings,
-        vec![project_settings.to_string_lossy().to_string()],
-    ));
-    scopes.push(inspect_settings_scope(
-        "user",
-        &user_settings,
-        vec![user_settings.to_string_lossy().to_string()],
-    ));
-    scopes.push(inspect_settings_scope(
-        "system",
-        &system_settings,
-        system_checked,
-    ));
+    let scopes = vec![
+        inspect_settings_scope(
+            "project",
+            &project_settings,
+            vec![project_settings.to_string_lossy().to_string()],
+        ),
+        inspect_settings_scope(
+            "user",
+            &user_settings,
+            vec![user_settings.to_string_lossy().to_string()],
+        ),
+        inspect_settings_scope("system", &system_settings, system_checked),
+    ];
 
     let extensions = inspect_extensions()?;
 
@@ -214,9 +211,11 @@ fn system_settings_candidates() -> Vec<PathBuf> {
     #[cfg(target_os = "windows")]
     {
         if let Ok(program_data) = std::env::var("ProgramData") {
-            vec![PathBuf::from(program_data)
-                .join("Gemini")
-                .join("settings.json")]
+            vec![
+                PathBuf::from(program_data)
+                    .join("Gemini")
+                    .join("settings.json"),
+            ]
         } else {
             vec![PathBuf::from("C:\\ProgramData\\Gemini\\settings.json")]
         }
@@ -273,21 +272,18 @@ fn inspect_settings_scope(scope: &str, path: &Path, checked_paths: Vec<String>) 
         }
     };
 
-    let hooks = match settings.hooks {
-        Some(hooks) => hooks,
-        None => {
-            return ScopeReport {
-                scope: scope.to_string(),
-                path: path_str,
-                exists: true,
-                status: DoctorStatus::Missing,
-                details: "No hooks section found".to_string(),
-                hooks_total: 0,
-                cch_hooks: 0,
-                events: Vec::new(),
-                checked_paths,
-            };
-        }
+    let Some(hooks) = settings.hooks else {
+        return ScopeReport {
+            scope: scope.to_string(),
+            path: path_str,
+            exists: true,
+            status: DoctorStatus::Missing,
+            details: "No hooks section found".to_string(),
+            hooks_total: 0,
+            cch_hooks: 0,
+            events: Vec::new(),
+            checked_paths,
+        };
     };
 
     let mut events = Vec::new();
@@ -304,7 +300,7 @@ fn inspect_settings_scope(scope: &str, path: &Path, checked_paths: Vec<String>) 
             let mut event_cch = 0;
 
             for entry in entries {
-                let commands = entry.hooks.as_ref().map(|hooks| hooks.as_slice());
+                let commands = entry.hooks.as_deref();
                 if let Some(hooks) = commands {
                     for hook in hooks {
                         event_hooks += 1;
@@ -573,7 +569,7 @@ fn collect_command_strings(value: &Value, commands: &mut Vec<String>) {
 
 fn print_human_report(report: &DoctorReport) {
     println!("Gemini hook diagnostics");
-    println!("");
+    println!();
     println!("Settings scopes:");
 
     for scope in &report.scopes {
@@ -603,7 +599,7 @@ fn print_human_report(report: &DoctorReport) {
         }
     }
 
-    println!("");
+    println!();
     println!("Extension hooks:");
     if !report.extensions.extensions_dir_exists {
         println!(
@@ -625,7 +621,7 @@ fn print_human_report(report: &DoctorReport) {
         }
     }
 
-    println!("");
+    println!();
     println!("Shared hooks directory:");
     if !report.extensions.shared_hooks_dir_exists {
         println!(
@@ -647,7 +643,7 @@ fn print_human_report(report: &DoctorReport) {
         }
     }
 
-    println!("");
+    println!();
     println!("Summary:");
     println!("- scopes installed: {}", report.summary.installed_scopes);
     println!("- scopes missing: {}", report.summary.missing_scopes);

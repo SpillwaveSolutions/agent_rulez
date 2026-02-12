@@ -3,7 +3,7 @@ use serde_json::Value;
 use std::fs;
 
 fn cch_cmd() -> Command {
-    Command::cargo_bin("cch").unwrap()
+    assert_cmd::cargo::cargo_bin_cmd!("cch")
 }
 
 #[test]
@@ -27,7 +27,7 @@ fn gemini_install_merges_existing_hooks() -> Result<(), Box<dyn std::error::Erro
     fs::create_dir_all(settings_path.parent().unwrap())?;
     fs::write(&settings_path, serde_json::to_string_pretty(&existing)?)?;
 
-    let binary = assert_cmd::cargo::cargo_bin("cch");
+    let binary = assert_cmd::cargo::cargo_bin!("cch");
 
     cch_cmd()
         .current_dir(temp_dir.path())
@@ -59,7 +59,7 @@ fn gemini_install_prints_snippet_without_writing() -> Result<(), Box<dyn std::er
     let temp_dir = tempfile::tempdir()?;
     let settings_path = temp_dir.path().join(".gemini/settings.json");
 
-    let binary = assert_cmd::cargo::cargo_bin("cch");
+    let binary = assert_cmd::cargo::cargo_bin!("cch");
 
     let output = cch_cmd()
         .current_dir(temp_dir.path())
