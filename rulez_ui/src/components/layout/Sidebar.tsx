@@ -1,10 +1,19 @@
 import { listConfigFiles, readConfig } from "@/lib/tauri";
 import { useConfigStore } from "@/stores/configStore";
+import type { ScopeInfo } from "@/stores/configStore";
 import { useEffect } from "react";
 
 export function Sidebar() {
-  const { globalConfig, projectConfig, setGlobalConfig, setProjectConfig, openFile, activeFile } =
-    useConfigStore();
+  const {
+    globalConfig,
+    projectConfig,
+    setGlobalConfig,
+    setProjectConfig,
+    openFile,
+    activeFile,
+    getScopeInfo,
+  } = useConfigStore();
+  const scopeInfo: ScopeInfo = getScopeInfo();
 
   // Load config files on mount
   useEffect(() => {
@@ -64,6 +73,7 @@ export function Sidebar() {
               />
             </svg>
             <span>Global</span>
+            <ScopeBadge status={scopeInfo.globalStatus} type="global" />
           </div>
           {globalConfig ? (
             <FileItem
@@ -95,6 +105,7 @@ export function Sidebar() {
               />
             </svg>
             <span>Project</span>
+            <ScopeBadge status={scopeInfo.projectStatus} type="project" />
           </div>
           {projectConfig ? (
             <FileItem
@@ -111,6 +122,37 @@ export function Sidebar() {
         </div>
       </div>
     </aside>
+  );
+}
+
+interface ScopeBadgeProps {
+  status: "active" | "overridden" | "missing";
+  type: "global" | "project";
+}
+
+function ScopeBadge({ status, type }: ScopeBadgeProps) {
+  if (status === "missing") return null;
+
+  const isActive = status === "active";
+  const label = isActive ? "Active" : "Overridden";
+  const tooltip =
+    isActive && type === "project"
+      ? "This project config takes priority over the global config"
+      : isActive && type === "global"
+        ? "No project config found — using this global config"
+        : "This global config is overridden by the project config";
+
+  return (
+    <span
+      title={tooltip}
+      className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium leading-none ${
+        isActive
+          ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+          : "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300"
+      }`}
+    >
+      {label}
+    </span>
   );
 }
 

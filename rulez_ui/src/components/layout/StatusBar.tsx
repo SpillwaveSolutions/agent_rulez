@@ -3,8 +3,10 @@ import { useConfigStore } from "@/stores/configStore";
 import { useEditorStore } from "@/stores/editorStore";
 
 export function StatusBar() {
-  const { activeFile, openFiles } = useConfigStore();
+  const { activeFile, openFiles, globalConfig, projectConfig, setActiveFile, getScopeInfo } =
+    useConfigStore();
   const { cursorPosition, errors, warnings } = useEditorStore();
+  const scopeInfo = getScopeInfo();
 
   const activeFileState = activeFile ? openFiles.get(activeFile) : null;
 
@@ -12,6 +14,38 @@ export function StatusBar() {
     <footer className="status-bar flex items-center justify-between px-4 text-xs border-t border-gray-200 dark:border-gray-700 bg-surface dark:bg-surface-dark text-gray-600 dark:text-gray-400 no-select">
       {/* Left section */}
       <div className="flex items-center gap-4">
+        {/* Config scope indicator */}
+        <button
+          type="button"
+          onClick={() => {
+            const targetPath =
+              scopeInfo.activeScope === "project" ? projectConfig?.path : globalConfig?.path;
+            if (targetPath) setActiveFile(targetPath);
+          }}
+          className="flex items-center gap-1 hover:text-gray-900 dark:hover:text-gray-200 transition-colors"
+          title={
+            scopeInfo.activeScope === "project"
+              ? "Project config is active (click to open)"
+              : scopeInfo.activeScope === "global"
+                ? "Global config is active (click to open)"
+                : "No config found"
+          }
+        >
+          <span
+            className={`w-2 h-2 rounded-full ${
+              scopeInfo.activeScope === "project"
+                ? "bg-green-500"
+                : scopeInfo.activeScope === "global"
+                  ? "bg-green-500"
+                  : "bg-gray-400"
+            }`}
+          />
+          Config:{" "}
+          {scopeInfo.activeScope === "none"
+            ? "None"
+            : scopeInfo.activeScope.charAt(0).toUpperCase() + scopeInfo.activeScope.slice(1)}
+        </button>
+
         {/* Cursor position */}
         <span>
           Ln {cursorPosition.line}, Col {cursorPosition.column}
