@@ -18,6 +18,27 @@ Gemini extensions can also provide hooks in:
 - `~/.gemini/extensions/<extension>/hooks/hooks.json`
 - `~/.gemini/hooks/*.json`
 
+## Install Gemini Hooks
+
+Use the install command to generate or merge hook settings that invoke the RuleZ Gemini hook runner:
+
+```
+cch gemini install
+```
+
+To target a different scope:
+
+```
+cch gemini install --scope user
+cch gemini install --scope system
+```
+
+To print the JSON snippet without writing:
+
+```
+cch gemini install --print
+```
+
 ## Diagnostics: `cch gemini doctor`
 
 Run the doctor command to validate settings and hook installation across all scopes:
@@ -53,7 +74,7 @@ Example (trimmed to essentials):
       {
         "matcher": ".*",
         "hooks": [
-          { "type": "command", "command": "/path/to/cch", "timeout": 5 }
+          { "type": "command", "command": "/path/to/cch gemini hook", "timeout": 5 }
         ]
       }
     ]
@@ -66,6 +87,24 @@ Re-run the installation process you used previously (project settings, user sett
 ### Hooks present but misconfigured
 
 If a scope is **WARN**, hooks exist but do not reference the `cch` command. Verify the hook command path and that the `type` is `command`. Update the entry to point at the correct `cch` binary.
+
+### Outdated CCH binary
+
+If diagnostics warn that hook commands reference `cch` without `gemini hook`, the binary on your PATH may be outdated.
+
+1. Confirm Gemini subcommands are available:
+   ```
+   cch --help
+   ```
+   Look for `gemini` in the subcommand list.
+2. If missing, update your PATH or reinstall the latest binary:
+   ```
+   cargo install --path .
+   ```
+3. Re-run the installer to refresh settings:
+   ```
+   cch gemini install
+   ```
 
 ### Extension hook issues
 

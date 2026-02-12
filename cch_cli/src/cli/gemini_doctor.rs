@@ -291,6 +291,7 @@ fn inspect_settings_scope(scope: &str, path: &Path, checked_paths: Vec<String>) 
     let mut events = Vec::new();
     let mut hooks_total = 0;
     let mut cch_hooks = 0;
+    let mut outdated_hooks = 0;
 
     let mut event_names: Vec<String> = hooks.keys().cloned().collect();
     event_names.sort();
@@ -306,8 +307,10 @@ fn inspect_settings_scope(scope: &str, path: &Path, checked_paths: Vec<String>) 
                     for hook in hooks {
                         event_hooks += 1;
                         if let Some(command) = hook.command.as_ref() {
-                            if is_cch_command(command, hook.hook_type.as_deref()) {
-                                event_cch += 1;
+                            match classify_cch_command(command, hook.hook_type.as_deref()) {
+                                CchCommandStatus::Runner => event_cch += 1,
+                                CchCommandStatus::Outdated => outdated_hooks += 1,
+                                CchCommandStatus::Other => {}
                             }
                         }
                     }
@@ -332,7 +335,20 @@ fn inspect_settings_scope(scope: &str, path: &Path, checked_paths: Vec<String>) 
     } else if cch_hooks == 0 {
         (
             DoctorStatus::Misconfigured,
-            "Hooks found but no cch command entries".to_string(),
+            if outdated_hooks > 0 {
+                "CCH hook commands found but missing `cch gemini hook` (binary may be outdated)"
+                    .to_string()
+            } else {
+                "Hooks found but no cch command entries".to_string()
+            },
+        )
+    } else if outdated_hooks > 0 {
+        (
+            DoctorStatus::Misconfigured,
+            format!(
+                "Found {} cch hook entries and {} outdated cch entries",
+                cch_hooks, outdated_hooks
+            ),
         )
     } else {
         (
@@ -354,13 +370,28 @@ fn inspect_settings_scope(scope: &str, path: &Path, checked_paths: Vec<String>) 
     }
 }
 
-fn is_cch_command(command: &str, hook_type: Option<&str>) -> bool {
+enum CchCommandStatus {
+    Runner,
+    Outdated,
+    Other,
+}
+
+fn classify_cch_command(command: &str, hook_type: Option<&str>) -> CchCommandStatus {
     if let Some(hook_type) = hook_type {
         if hook_type != "command" {
-            return false;
+            return CchCommandStatus::Other;
         }
     }
-    command.contains("cch")
+
+    if !command.contains("cch") {
+        return CchCommandStatus::Other;
+    }
+
+    if command.contains("gemini hook") {
+        return CchCommandStatus::Runner;
+    }
+
+    CchCommandStatus::Outdated
 }
 
 fn inspect_extensions() -> Result<ExtensionsReport> {
@@ -460,10 +491,17 @@ fn inspect_hook_file(name: &str, path: &Path) -> HookFileReport {
     let mut commands = Vec::new();
     collect_command_strings(&value, &mut commands);
     let hooks_total = commands.len();
-    let cch_hooks = commands
-        .iter()
-        .filter(|command| command.contains("cch"))
-        .count();
+    let mut cch_hooks = 0;
+    let mut outdated_hooks = 0;
+    for command in &commands {
+        if command.contains("cch") {
+            if command.contains("gemini hook") {
+                cch_hooks += 1;
+            } else {
+                outdated_hooks += 1;
+            }
+        }
+    }
 
     let (status, details) = if hooks_total == 0 {
         (
@@ -473,7 +511,20 @@ fn inspect_hook_file(name: &str, path: &Path) -> HookFileReport {
     } else if cch_hooks == 0 {
         (
             DoctorStatus::Misconfigured,
-            "Command entries found but none reference cch".to_string(),
+            if outdated_hooks > 0 {
+                "CCH hook commands found but missing `cch gemini hook` (binary may be outdated)"
+                    .to_string()
+            } else {
+                "Command entries found but none reference cch".to_string()
+            },
+        )
+    } else if outdated_hooks > 0 {
+        (
+            DoctorStatus::Misconfigured,
+            format!(
+                "Found {} cch hook entries and {} outdated cch entries",
+                cch_hooks, outdated_hooks
+            ),
         )
     } else {
         (

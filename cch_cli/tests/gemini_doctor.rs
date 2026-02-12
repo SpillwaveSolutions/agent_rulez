@@ -47,18 +47,18 @@ fn gemini_doctor_reports_scope_and_extension_statuses() -> Result<(), Box<dyn st
     let system_dir = tempfile::tempdir()?;
 
     let project_settings = project_dir.path().join(".gemini/settings.json");
-    write_settings(&project_settings, "/usr/local/bin/cch")?;
+    write_settings(&project_settings, "/usr/local/bin/cch gemini hook")?;
 
     let user_settings = home_dir.path().join(".gemini/settings.json");
     write_settings(&user_settings, "/usr/local/bin/other")?;
 
     let system_settings = system_dir.path().join("settings.json");
-    write_settings(&system_settings, "/usr/local/bin/cch")?;
+    write_settings(&system_settings, "/usr/local/bin/cch gemini hook")?;
 
     let extension_hooks = home_dir
         .path()
         .join(".gemini/extensions/test-ext/hooks/hooks.json");
-    write_settings(&extension_hooks, "/usr/local/bin/cch")?;
+    write_settings(&extension_hooks, "/usr/local/bin/cch gemini hook")?;
 
     let shared_hooks = home_dir.path().join(".gemini/hooks/shared.json");
     write_settings(&shared_hooks, "/usr/local/bin/other")?;
