@@ -92,13 +92,40 @@ test.describe("Debug Simulator", () => {
   });
 
   test("should save debug test case", async ({ page }) => {
-    await page.getByRole("button", { name: /save test case|save/i }).click();
-    await expect(page.getByText(/saved|success/i).first()).toBeVisible();
+    const simulatorPage = new SimulatorPage(page);
+
+    // Run a simulation first (save button only appears after a simulation)
+    await simulatorPage.selectEventType("PreToolUse");
+    await simulatorPage.fillTool("Bash");
+    await simulatorPage.fillCommand("git push --force origin main");
+    await simulatorPage.runSimulation();
+
+    await page.waitForTimeout(500);
+
+    // Click save
+    await page.getByRole("button", { name: /save test case/i }).click();
+
+    // Verify success message
+    await expect(page.getByText(/saved/i).first()).toBeVisible();
   });
 
   test("should load and replay saved test case", async ({ page }) => {
-    await page.getByRole("button", { name: /load test case|load/i }).click();
-    await expect(page.getByText(/loaded|replay/i).first()).toBeVisible();
+    const simulatorPage = new SimulatorPage(page);
+
+    // Run a simulation and save it first
+    await simulatorPage.selectEventType("PreToolUse");
+    await simulatorPage.fillTool("Bash");
+    await simulatorPage.fillCommand("echo hello");
+    await simulatorPage.runSimulation();
+    await page.waitForTimeout(500);
+    await page.getByRole("button", { name: /save test case/i }).click();
+    await page.waitForTimeout(300);
+
+    // Now click load to show saved cases
+    await page.getByRole("button", { name: /load test case/i }).click();
+
+    // Should show the saved test case in the list
+    await expect(page.getByText(/PreToolUse/i).first()).toBeVisible();
   });
 
   test("should show which rules matched and why", async ({ page }) => {

@@ -162,6 +162,15 @@ async function mockWriteConfig(path: string, content: string): Promise<void> {
 async function mockRunDebug(params: DebugParams): Promise<DebugResult> {
   await delay(100);
 
+  // Check for injected mock response (used by E2E tests)
+  if (
+    typeof window !== "undefined" &&
+    (window as unknown as { __rulezMockDebugResponse?: DebugResult }).__rulezMockDebugResponse
+  ) {
+    return (window as unknown as { __rulezMockDebugResponse: DebugResult })
+      .__rulezMockDebugResponse;
+  }
+
   // Simulate debug evaluation
   const evaluations = [
     {
