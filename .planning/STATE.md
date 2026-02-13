@@ -108,7 +108,10 @@ Phase 21 decisions:
 
 ### Pending Todos
 
-0 pending
+- [ ] Replace Naive Matchers with globset (tooling)
+- [ ] Implement Regex and Config Caching (tooling)
+- [ ] Offload Log Filtering to Web Worker or Rust (ui)
+- [ ] Parallel Rule Evaluation (tooling)
 
 ### Blockers/Concerns
 
