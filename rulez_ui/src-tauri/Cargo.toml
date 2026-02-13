@@ -12,10 +12,15 @@ tauri-build = { version = "2.0", features = [] }
 [dependencies]
 tauri = { version = "2.0", features = ["devtools"] }
 tauri-plugin-shell = "2.0"
+tauri-plugin-store = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-clipboard-manager = "2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1.0", features = ["process", "fs"] }
 dirs = "5.0"
+chrono = { version = "0.4", features = ["serde"] }
 
 [features]
 # This feature is used for production builds or when a dev server is not specified

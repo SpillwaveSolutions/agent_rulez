@@ -13,7 +13,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "RuleZ UI - CCH Configuration Editor",
+        "title": "RuleZ UI - RuleZ Configuration Editor",
         "width": 1280,
         "height": 800,
         "minWidth": 800,
@@ -46,8 +46,8 @@
       "open": true,
       "scope": [
         {
-          "name": "cch",
-          "cmd": "cch",
+          "name": "rulez",
+          "cmd": "rulez",
           "args": true
         }
       ]

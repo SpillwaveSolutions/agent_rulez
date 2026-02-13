@@ -1,0 +1,119 @@
+# Tauri CI Build for RuleZ UI
+#
+# Two-job pipeline:
+# 1. E2E Tests (Web Mode) — Fast Playwright tests (~2-3 min)
+# 2. Tauri Build (Multi-Platform) — Cross-platform desktop builds (~8-15 min)
+#
+# The Tauri build only starts if E2E tests pass (fail-fast pattern).
+# Linux uses explicit ubuntu-22.04 with libwebkit2gtk-4.1-dev (Tauri 2.0 requirement).
+#
+# Release artifacts (.dmg, .msi, .AppImage) are auto-uploaded when triggered by version tags (v*).
+
+name: Tauri CI Build
+
+on:
+  push:
+    branches: [main, develop, 'release/**']
+    paths:
+      - 'rulez_ui/**'
+      - '.github/workflows/tauri-build.yml'
+  pull_request:
+    paths:
+      - 'rulez_ui/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test-e2e:
+    name: E2E Tests (Web Mode)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rulez_ui
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Install Playwright browsers
+        run: bunx playwright install --with-deps chromium webkit
+
+      - name: Run E2E tests
+        run: bunx playwright test --retries=1
+        env:
+          CI: true
+
+      - name: Upload test results (always)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-tauri-gate
+          path: rulez_ui/playwright-report/
+          retention-days: 30
+
+      - name: Upload failure artifacts
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-failures-tauri-gate
+          path: |
+            rulez_ui/test-results/**/*.png
+            rulez_ui/test-results/**/*.webm
+          retention-days: 7
+
+  build-tauri:
+    name: Build Tauri (${{ matrix.platform }})
+    needs: test-e2e
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ubuntu-22.04, macos-latest, windows-latest]
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux dependencies (Tauri 2.0)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y             libwebkit2gtk-4.1-dev             build-essential             curl             wget             file             libxdo-dev             libssl-dev             libayatana-appindicator3-dev             librsvg2-dev
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: rulez_ui/src-tauri -> target
+
+      - name: Install frontend dependencies
+        run: bun install
+        working-directory: rulez_ui
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: rulez_ui
+          tagName: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
+          releaseName: ${{ startsWith(github.ref, 'refs/tags/v') && format('RuleZ UI {0}', github.ref_name) || '' }}
+          releaseBody: ${{ startsWith(github.ref, 'refs/tags/v') && 'See CHANGELOG.md for details.' || '' }}
+          releaseDraft: false
+          prerelease: false
