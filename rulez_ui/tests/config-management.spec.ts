@@ -1,8 +1,11 @@
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
 import { ConfigManagerPage } from "./pages";
 import { resetAppState } from "./utils/reset-app-state";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const fixturesDir = path.join(__dirname, "fixtures");
 
 test.describe("Config Management", () => {

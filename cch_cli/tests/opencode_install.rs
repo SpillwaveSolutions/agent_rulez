@@ -1,15 +1,24 @@
 use assert_cmd::Command;
 use serde_json::Value;
 
+fn cch_cmd() -> Command {
+    assert_cmd::cargo::cargo_bin_cmd!("cch")
+}
+
 #[test]
 fn opencode_install_print_mode_shows_json() -> Result<(), Box<dyn std::error::Error>> {
     let tmp = tempfile::tempdir()?;
+    let binary = assert_cmd::cargo::cargo_bin!("cch");
 
-    let output = Command::new(assert_cmd::cargo::cargo_bin!("cch"))
+    let output = cch_cmd()
         .current_dir(tmp.path())
-        .arg("opencode")
-        .arg("install")
-        .arg("--print")
+        .args([
+            "opencode",
+            "install",
+            "--print",
+            "--binary",
+            binary.to_str().unwrap(),
+        ])
         .output()?;
 
     assert!(output.status.success());
@@ -24,12 +33,17 @@ fn opencode_install_print_mode_shows_json() -> Result<(), Box<dyn std::error::Er
 #[test]
 fn opencode_install_print_contains_all_events() -> Result<(), Box<dyn std::error::Error>> {
     let tmp = tempfile::tempdir()?;
+    let binary = assert_cmd::cargo::cargo_bin!("cch");
 
-    let output = Command::new(assert_cmd::cargo::cargo_bin!("cch"))
+    let output = cch_cmd()
         .current_dir(tmp.path())
-        .arg("opencode")
-        .arg("install")
-        .arg("--print")
+        .args([
+            "opencode",
+            "install",
+            "--print",
+            "--binary",
+            binary.to_str().unwrap(),
+        ])
         .output()?;
 
     assert!(output.status.success());
@@ -45,12 +59,17 @@ fn opencode_install_print_contains_all_events() -> Result<(), Box<dyn std::error
 #[test]
 fn opencode_install_print_is_valid_json() -> Result<(), Box<dyn std::error::Error>> {
     let tmp = tempfile::tempdir()?;
+    let binary = assert_cmd::cargo::cargo_bin!("cch");
 
-    let output = Command::new(assert_cmd::cargo::cargo_bin!("cch"))
+    let output = cch_cmd()
         .current_dir(tmp.path())
-        .arg("opencode")
-        .arg("install")
-        .arg("--print")
+        .args([
+            "opencode",
+            "install",
+            "--print",
+            "--binary",
+            binary.to_str().unwrap(),
+        ])
         .output()?;
 
     assert!(output.status.success());
