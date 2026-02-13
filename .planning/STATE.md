@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** LLMs do not enforce policy. LLMs are subject to policy.
-**Current focus:** v1.7 Multi-Platform Hook Support — Phases 20, 21 complete; Phase 18 in progress
+**Current focus:** v1.7 Multi-Platform Hook Support — COMPLETE (all phases 18-21 done)
 **v1.6:** RuleZ UI — COMPLETE (all phases 11-17 done)
 
 ## Current Position
 
-Milestone: v1.7 Multi-Platform Hook Support
-Phase: 18 of 21 (OpenCode Plugin Integration — partially done by prior agent)
-Plan: 1 of 3 (18-01 complete; 18-02, 18-03 need verification/completion)
-Status: Phases 20 (Gemini CLI) and 21 (Copilot CLI) complete; Phase 18 in progress; Phase 19 superseded
-Last activity: 2026-02-13 — Completed Phase 21 (Copilot CLI support), fixed OpenCode compile issues
+Milestone: v1.7 Multi-Platform Hook Support — COMPLETE
+Phase: 21 of 21
+Plan: All plans complete
+Status: All phases complete (18 OpenCode, 19 superseded, 20 Gemini CLI, 21 Copilot CLI)
+Last activity: 2026-02-13 — Completed Phase 18 (OpenCode doctor, tests, docs)
 
-Progress: [█████████████████░] 20/21 phases complete (95%) — Phase 18 partially done
+Progress: [█████████████████] 21/21 phases complete (100%)
 
 ## Performance Metrics
 
 **Velocity (all milestones):**
-- Total plans completed: 54 (6 v1.2 + 10 v1.3 + 9 v1.4 + 19 v1.6 + 10 v1.7)
+- Total plans completed: 56 (6 v1.2 + 10 v1.3 + 9 v1.4 + 19 v1.6 + 12 v1.7)
 - Average duration: ~5min per plan (Phases 4-10)
 - v1.5.0 released 2026-02-11 (first successful cross-platform binary release)
 
@@ -33,7 +33,7 @@ Progress: [█████████████████░] 20/21 phases 
 | v1.3 | 3 | 10 | Complete |
 | v1.4 | 4 | 9 | Complete |
 | v1.6 | 7 | 19/19 | Complete |
-| v1.7 | 4 | 10/12 | In progress (Phase 18 partial) |
+| v1.7 | 4 | 12/12 | Complete |
 
 **Recent Trend:**
 - v1.4 shipped in 1 day (9 plans)
@@ -117,7 +117,7 @@ None active.
 ## Session Continuity
 
 Last session: 2026-02-13
-Stopped at: Completed Phase 21 (Copilot CLI), fixed OpenCode compile issues, updated ROADMAP.md + STATE.md
+Stopped at: v1.7 COMPLETE — all phases 18-21 done (228 tests passing)
 Resume file: None
 
-Next action: Verify and complete Phase 18 (OpenCode Plugin Integration) — plans 18-02 and 18-03 need assessment
+Next action: Plan v1.8 milestone or release v1.7

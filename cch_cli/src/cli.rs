@@ -9,6 +9,7 @@ pub mod gemini_install;
 pub mod init;
 pub mod install;
 pub mod logs;
+pub mod opencode_doctor;
 pub mod opencode_hook;
 pub mod opencode_install;
 pub mod validate;

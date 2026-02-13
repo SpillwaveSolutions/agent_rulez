@@ -111,6 +111,7 @@ enum Commands {
         subcommand: CopilotSubcommand,
     },
     /// OpenCode CLI utilities
+    #[command(name = "opencode")]
     OpenCode {
         #[command(subcommand)]
         subcommand: OpenCodeSubcommand,
@@ -190,6 +191,12 @@ enum GeminiSubcommand {
 /// Subcommands for OpenCode CLI utilities
 #[derive(Subcommand)]
 enum OpenCodeSubcommand {
+    /// Diagnose OpenCode hook installation and configuration
+    Doctor {
+        /// Output machine-readable JSON
+        #[arg(long)]
+        json: bool,
+    },
     /// Install OpenCode hook settings
     Install {
         /// Settings scope (project, user)
@@ -330,6 +337,9 @@ async fn main() -> Result<()> {
             }
         },
         Some(Commands::OpenCode { subcommand }) => match subcommand {
+            OpenCodeSubcommand::Doctor { json } => {
+                cli::opencode_doctor::run(json).await?;
+            }
             OpenCodeSubcommand::Install {
                 scope,
                 binary,

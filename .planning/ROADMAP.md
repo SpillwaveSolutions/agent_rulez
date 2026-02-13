@@ -1,6 +1,6 @@
 # RuleZ Roadmap
 
-**Current Focus:** v1.7 Multi-Platform Hook Support — Phase 21 complete, Phase 18 in progress
+**Current Focus:** v1.7 Multi-Platform Hook Support — ALL PHASES COMPLETE (18, 20, 21)
 
 ---
 
@@ -10,7 +10,7 @@
 - ✅ **v1.3 Advanced Matching & Validation** — Phases 4-6 (shipped 2026-02-10) — [Archive](milestones/v1.3-ROADMAP.md)
 - ✅ **v1.4 Stability & Polish** — Phases 7-10 (shipped 2026-02-10) — [Archive](milestones/v1.4-ROADMAP.md)
 - ✅ **v1.6 RuleZ UI** — Phases 11-17 (shipped 2026-02-12)
-- 🚧 **v1.7 Multi-Platform Hook Support** — Phases 18-21 (in progress — 20, 21 complete)
+- ✅ **v1.7 Multi-Platform Hook Support** — Phases 18-21 (shipped 2026-02-13)
 
 ---
 
@@ -170,7 +170,7 @@ Plans:
 
 ---
 
-## 🚧 v1.7 Multi-Platform Hook Support (In Progress)
+## ✅ v1.7 Multi-Platform Hook Support (Complete)
 
 **Milestone Goal:** Integrate RuleZ with OpenCode, Gemini CLI, and Copilot hook surfaces.
 
@@ -188,8 +188,8 @@ Plans:
 
 Plans:
 - [x] 18-01: OpenCode Event Capture + RuleZ Payload Mapping
-- [ ] 18-02: Policy Enforcement + Tool Registration
-- [ ] 18-03: Plugin Config + Audit Logging
+- [x] 18-02: Policy Enforcement + Tool Registration
+- [x] 18-03: Plugin Config + Audit Logging
 
 ---
 
@@ -217,7 +217,7 @@ Phases execute in numeric order: 11 → 12 → 13 → 14 → 15 → 16 → 17 �
 | 15. Debug Simulator | v1.6 | 3/3 | Complete | 2026-02-12 |
 | 16. Onboarding | v1.6 | 2/2 | Complete | 2026-02-12 |
 | 17. E2E Testing | v1.6 | 2/2 | ✅ Complete | 2026-02-11 |
-| 18. OpenCode Plugin Integration | v1.7 | 1/3 | 🚧 In progress | - |
+| 18. OpenCode Plugin Integration | v1.7 | 3/3 | ✅ Complete | 2026-02-13 |
 | 19. Gemini Hook Support | v1.7 | 0/3 | Superseded by Phase 20 | - |
 | 20. Gemini CLI Support | v1.7 | 5/5 | ✅ Complete | 2026-02-12 |
 | 21. Copilot CLI Support | v1.7 | 4/4 | ✅ Complete | 2026-02-13 |
@@ -260,4 +260,4 @@ Plans:
 
 ---
 
-*Created 2026-02-06 — Updated 2026-02-13 Phases 20, 21 complete; Phase 18 in progress*
+*Created 2026-02-06 — Updated 2026-02-13 v1.7 COMPLETE — all phases 18-21 done*
