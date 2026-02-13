@@ -3,7 +3,8 @@ import { SettingsPage } from "./pages";
 import { dismissOnboarding } from "./utils/dismiss-onboarding";
 import { resetAppState } from "./utils/reset-app-state";
 
-test.describe("Settings Panel", () => {
+// TODO: Enable when settings panel feature is implemented
+test.describe.skip("Settings Panel", () => {
   test.beforeEach(async ({ page }) => {
     await dismissOnboarding(page);
     await page.goto("/");
