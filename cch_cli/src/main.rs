@@ -51,7 +51,7 @@ enum Commands {
     },
     /// Simulate an event to test rules
     Debug {
-        /// Event type: PreToolUse, PostToolUse, SessionStart, PermissionRequest
+        /// Event type: PreToolUse, PostToolUse, SessionStart, PermissionRequest, UserPromptSubmit, SessionEnd, PreCompact
         event_type: String,
         /// Tool name (e.g., Bash, Write, Read)
         #[arg(short, long)]
@@ -65,6 +65,9 @@ enum Commands {
         /// Show verbose rule evaluation
         #[arg(short, long)]
         verbose: bool,
+        /// Output structured JSON (for programmatic consumption)
+        #[arg(long)]
+        json: bool,
     },
     /// Start interactive debug mode
     Repl,
@@ -197,8 +200,9 @@ async fn main() -> Result<()> {
             command,
             path,
             verbose,
+            json,
         }) => {
-            cli::debug::run(event_type, tool, command, path, verbose).await?;
+            cli::debug::run(event_type, tool, command, path, verbose, json).await?;
         }
         Some(Commands::Repl) => {
             cli::debug::interactive().await?;
