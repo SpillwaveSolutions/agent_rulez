@@ -1,6 +1,6 @@
 # RuleZ Roadmap
 
-**Current Focus:** v1.6 RuleZ UI — Phase 15 in progress
+**Current Focus:** v1.6 RuleZ UI — Phase 15 complete, Phase 16 next
 
 ---
 
@@ -134,9 +134,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 15-01: CLI `--json` flag + full event type support
-- [ ] 15-02: Save/load test cases
-- [ ] 15-03: Integration wiring + E2E test fixes
+- [x] 15-01: CLI `--json` flag + full event type support
+- [x] 15-02: Save/load test cases
+- [x] 15-03: Integration wiring + E2E test fixes
 
 ### Phase 16: Onboarding
 **Goal**: First-run wizard to guide new users through setup
@@ -214,7 +214,7 @@ Phases execute in numeric order: 11 → 12 → 13 → 14 → 15 → 16 → 17
 | 12. YAML Editor Enhancements | v1.6 | 3/3 | ✅ Complete | 2026-02-12 |
 | 13. Log Viewer | v1.6 | 3/3 | ✅ Complete | 2026-02-12 |
 | 14. Config Management | v1.6 | 3/3 | ✅ Complete | 2026-02-12 |
-| 15. Debug Simulator | v1.6 | 0/3 | In progress | - |
+| 15. Debug Simulator | v1.6 | 3/3 | Complete | 2026-02-12 |
 | 16. Onboarding | v1.6 | 0/TBD | Not started | - |
 | 17. E2E Testing | v1.6 | 2/2 | ✅ Complete | 2026-02-11 |
 | 18. OpenCode Plugin Integration | v1.7 | 0/TBD | Not started | - |

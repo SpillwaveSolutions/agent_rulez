@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** LLMs do not enforce policy. LLMs are subject to policy.
-**Current focus:** v1.6 RuleZ UI — Phase 15 (Debug Simulator) next
+**Current focus:** v1.6 RuleZ UI — Phase 16 (Onboarding) next
 **v1.7 planned:** Multi-Platform Hook Support (OpenCode, Gemini CLI, GitHub Copilot) — Phases 18-21
 
 ## Current Position
 
 Milestone: v1.6 RuleZ UI
-Phase: 14 of 17 (Config Management) — COMPLETE
+Phase: 15 of 17 (Debug Simulator) — COMPLETE
 Plan: 3 of 3
-Status: Phase 14 complete, ready for Phase 15
-Last activity: 2026-02-12 — Completed Phase 14 Plan 03 (File watching + external change detection)
+Status: Phase 15 complete, ready for Phase 16
+Last activity: 2026-02-12 — Completed Phase 15 Plan 03 (Integration wiring + E2E test fixes)
 
-Progress: [█████████████░░░░] 15/21 phases complete (71%)
+Progress: [██████████████░░░] 16/21 phases complete (76%)
 
 ## Performance Metrics
 
 **Velocity (all milestones):**
-- Total plans completed: 39 (6 v1.2 + 10 v1.3 + 9 v1.4 + 14 v1.6)
+- Total plans completed: 42 (6 v1.2 + 10 v1.3 + 9 v1.4 + 17 v1.6)
 - Average duration: ~5min per plan (Phases 4-10)
 - v1.5.0 released 2026-02-11 (first successful cross-platform binary release)
 
@@ -32,7 +32,7 @@ Progress: [█████████████░░░░] 15/21 phases com
 | v1.2 | 3 | 6 | Complete |
 | v1.3 | 3 | 10 | Complete |
 | v1.4 | 4 | 9 | Complete |
-| v1.6 | 7 | 14/TBD | In progress |
+| v1.6 | 7 | 17/TBD | In progress |
 | v1.7 | 4 | TBD | Planned |
 
 **Recent Trend:**
@@ -43,6 +43,9 @@ Progress: [█████████████░░░░] 15/21 phases com
 
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
+| Phase 15 P01 | 1 min | 4 tasks | 2 files |
+| Phase 15 P02 | 1 min | 4 tasks | 5 files |
+| Phase 15 P03 | 1 min | 3 tasks | 2 files |
 | Phase 14 P01 | 1 min | 3 tasks | 3 files |
 | Phase 14 P02 | 1 min | 3 tasks | 3 files |
 | Phase 14 P03 | 1 min | 3 tasks | 3 files |
@@ -106,7 +109,7 @@ None active.
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed Phase 14 (Config Management) — all 3 plans done
+Stopped at: Completed Phase 15 (Debug Simulator) — all 3 plans done
 Resume file: None
 
-Next action: Plan Phase 15 (Debug Simulator)
+Next action: Plan Phase 16 (Onboarding)
