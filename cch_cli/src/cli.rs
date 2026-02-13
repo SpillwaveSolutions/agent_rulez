@@ -1,3 +1,6 @@
+pub mod copilot_doctor;
+pub mod copilot_hook;
+pub mod copilot_install;
 pub mod debug;
 pub mod explain;
 pub mod gemini_doctor;
@@ -6,4 +9,6 @@ pub mod gemini_install;
 pub mod init;
 pub mod install;
 pub mod logs;
+pub mod opencode_hook;
+pub mod opencode_install;
 pub mod validate;

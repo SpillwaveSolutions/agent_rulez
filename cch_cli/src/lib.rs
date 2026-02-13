@@ -32,3 +32,4 @@ pub mod config;
 pub mod hooks;
 pub mod logging;
 pub mod models;
+pub mod opencode;

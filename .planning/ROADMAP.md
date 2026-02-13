@@ -1,6 +1,6 @@
 # RuleZ Roadmap
 
-**Current Focus:** v1.6 RuleZ UI — Phase 16 complete, v1.6 milestone DONE
+**Current Focus:** v1.7 Multi-Platform Hook Support — Phase 21 complete, Phase 18 in progress
 
 ---
 
@@ -9,8 +9,8 @@
 - ✅ **v1.2 P2 Features** — Phases 1-3 (shipped 2026-02-07) — [Archive](milestones/v1.2-ROADMAP.md)
 - ✅ **v1.3 Advanced Matching & Validation** — Phases 4-6 (shipped 2026-02-10) — [Archive](milestones/v1.3-ROADMAP.md)
 - ✅ **v1.4 Stability & Polish** — Phases 7-10 (shipped 2026-02-10) — [Archive](milestones/v1.4-ROADMAP.md)
-- 🚧 **v1.6 RuleZ UI** — Phases 11-17 (in progress)
-- 🔮 **v1.7 Multi-Platform Hook Support** — Phases 18-20 (planned)
+- ✅ **v1.6 RuleZ UI** — Phases 11-17 (shipped 2026-02-12)
+- 🚧 **v1.7 Multi-Platform Hook Support** — Phases 18-21 (in progress — 20, 21 complete)
 
 ---
 
@@ -50,7 +50,7 @@ See [v1.4-ROADMAP.md](milestones/v1.4-ROADMAP.md) for full details.
 
 ---
 
-## 🚧 v1.6 RuleZ UI (In Progress)
+## ✅ v1.6 RuleZ UI (Complete)
 
 **Milestone Goal:** Production-ready desktop UI for RuleZ policy management with log viewer, config management, debug simulator, and onboarding.
 
@@ -170,7 +170,7 @@ Plans:
 
 ---
 
-## 🔮 v1.7 Multi-Platform Hook Support (Planned)
+## 🚧 v1.7 Multi-Platform Hook Support (In Progress)
 
 **Milestone Goal:** Integrate RuleZ with OpenCode, Gemini CLI, and Copilot hook surfaces.
 
@@ -187,7 +187,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 18-01: OpenCode Event Capture + RuleZ Payload Mapping
+- [x] 18-01: OpenCode Event Capture + RuleZ Payload Mapping
 - [ ] 18-02: Policy Enforcement + Tool Registration
 - [ ] 18-03: Plugin Config + Audit Logging
 
@@ -196,7 +196,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 11 → 12 → 13 → 14 → 15 → 16 → 17
+Phases execute in numeric order: 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -217,43 +217,47 @@ Phases execute in numeric order: 11 → 12 → 13 → 14 → 15 → 16 → 17
 | 15. Debug Simulator | v1.6 | 3/3 | Complete | 2026-02-12 |
 | 16. Onboarding | v1.6 | 2/2 | Complete | 2026-02-12 |
 | 17. E2E Testing | v1.6 | 2/2 | ✅ Complete | 2026-02-11 |
-| 18. OpenCode Plugin Integration | v1.7 | 0/TBD | Not started | - |
-| 19. Gemini CLI Hook Integration | v1.7 | 0/TBD | Not started | - |
-| 20. GitHub Copilot Extension Integration | v1.7 | 0/TBD | Not started | - |
+| 18. OpenCode Plugin Integration | v1.7 | 1/3 | 🚧 In progress | - |
+| 19. Gemini Hook Support | v1.7 | 0/3 | Superseded by Phase 20 | - |
+| 20. Gemini CLI Support | v1.7 | 5/5 | ✅ Complete | 2026-02-12 |
+| 21. Copilot CLI Support | v1.7 | 4/4 | ✅ Complete | 2026-02-13 |
 
-### Phase 19: Gemini hooks support
+### Phase 19: Gemini hooks support (Superseded)
 
 **Goal:** Translate Gemini CLI hook events into RuleZ policy evaluation with install tooling and documentation.
 **Depends on:** Phase 18
-**Plans:** 3 plans
+**Status:** Superseded — all work absorbed into Phase 20 which expanded to 5 plans covering the full scope.
 
 Plans:
-- [ ] 19-01-PLAN.md — Gemini hook adapter + runner
-- [ ] 19-02-PLAN.md — Gemini settings install + extension hooks
-- [ ] 19-03-PLAN.md — Gemini integration docs + examples
+- [x] 19-01 — Absorbed into 20-01 (Gemini hook adapter + runner)
+- [x] 19-02 — Absorbed into 20-03 (Gemini install + settings integration)
+- [x] 19-03 — Absorbed into 20-05 (Gemini integration docs)
 
 ### Phase 20: Gemini CLI support and Gemini hooks support
 
-**Goal:** Finalize Gemini CLI integration with full event coverage and diagnostics for hook installation.
-**Depends on:** Phase 19
-**Plans:** 2 plans
+**Goal:** Finalize Gemini CLI integration with full event coverage, install tooling, diagnostics, and documentation.
+**Depends on:** Phase 18
+**Plans:** 5 plans — all complete
 
 Plans:
-- [ ] 20-01-PLAN.md — Expand Gemini event mapping + response semantics
-- [ ] 20-02-PLAN.md — Add Gemini diagnostics command + docs
+- [x] 20-01-PLAN.md — Gemini hook adapter + event mapping
+- [x] 20-02-PLAN.md — Gemini hook runner subcommand
+- [x] 20-03-PLAN.md — Gemini install command + settings integration
+- [x] 20-04-PLAN.md — Gemini doctor diagnostics command
+- [x] 20-05-PLAN.md — Gemini integration docs + examples
 
 ### Phase 21: Copilot CLI support and Copilot hooks support
 
-**Goal:** Integrate RuleZ with Copilot CLI hooks and Copilot chat participant for policy enforcement and diagnostics.
+**Goal:** Integrate RuleZ with Copilot CLI hooks and VS Code chat participant for policy enforcement and diagnostics.
 **Depends on:** Phase 20
-**Plans:** 4 plans
+**Plans:** 4 plans — all complete
 
 Plans:
-- [ ] 21-01-PLAN.md — Copilot hook adapter + response translation
-- [ ] 21-02-PLAN.md — Copilot hook runner subcommand
-- [ ] 21-03-PLAN.md — Copilot hook install + doctor + docs
-- [ ] 21-04-PLAN.md — VS Code Copilot chat participant + LM summary
+- [x] 21-01-PLAN.md — Copilot hook adapter + response translation
+- [x] 21-02-PLAN.md — Copilot hook runner subcommand
+- [x] 21-03-PLAN.md — Copilot hook install + doctor + wrapper scripts + docs
+- [x] 21-04-PLAN.md — VS Code Copilot chat participant + LM summary
 
 ---
 
-*Created 2026-02-06 — Updated 2026-02-12 Phase 11 complete, v1.7 phases added*
+*Created 2026-02-06 — Updated 2026-02-13 Phases 20, 21 complete; Phase 18 in progress*

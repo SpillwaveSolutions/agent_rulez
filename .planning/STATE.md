@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** LLMs do not enforce policy. LLMs are subject to policy.
-**Current focus:** v1.6 RuleZ UI — COMPLETE (all phases 11-17 done)
-**v1.7 planned:** Multi-Platform Hook Support (OpenCode, Gemini CLI, GitHub Copilot) — Phases 18-21
+**Current focus:** v1.7 Multi-Platform Hook Support — Phases 20, 21 complete; Phase 18 in progress
+**v1.6:** RuleZ UI — COMPLETE (all phases 11-17 done)
 
 ## Current Position
 
-Milestone: v1.6 RuleZ UI
-Phase: 16 of 17 (Onboarding) — COMPLETE
-Plan: 2 of 2
-Status: v1.6 milestone complete (Phases 11-17 all done)
-Last activity: 2026-02-12 — Completed Phase 16 Plan 02 (Settings panel integration)
+Milestone: v1.7 Multi-Platform Hook Support
+Phase: 18 of 21 (OpenCode Plugin Integration — partially done by prior agent)
+Plan: 1 of 3 (18-01 complete; 18-02, 18-03 need verification/completion)
+Status: Phases 20 (Gemini CLI) and 21 (Copilot CLI) complete; Phase 18 in progress; Phase 19 superseded
+Last activity: 2026-02-13 — Completed Phase 21 (Copilot CLI support), fixed OpenCode compile issues
 
-Progress: [███████████████░░] 17/21 phases complete (81%)
+Progress: [█████████████████░] 20/21 phases complete (95%) — Phase 18 partially done
 
 ## Performance Metrics
 
 **Velocity (all milestones):**
-- Total plans completed: 44 (6 v1.2 + 10 v1.3 + 9 v1.4 + 19 v1.6)
+- Total plans completed: 54 (6 v1.2 + 10 v1.3 + 9 v1.4 + 19 v1.6 + 10 v1.7)
 - Average duration: ~5min per plan (Phases 4-10)
 - v1.5.0 released 2026-02-11 (first successful cross-platform binary release)
 
@@ -33,7 +33,7 @@ Progress: [███████████████░░] 17/21 phases com
 | v1.3 | 3 | 10 | Complete |
 | v1.4 | 4 | 9 | Complete |
 | v1.6 | 7 | 19/19 | Complete |
-| v1.7 | 4 | TBD | Planned |
+| v1.7 | 4 | 10/12 | In progress (Phase 18 partial) |
 
 **Recent Trend:**
 - v1.4 shipped in 1 day (9 plans)
@@ -100,6 +100,12 @@ Phase 20 decisions:
 - Translate RuleZ context to Gemini systemMessage by default, with JSON tool_input override for tool hooks.
 - Ensure gemini_hook_event_name is included in tool_input overrides for Gemini tool events
 
+Phase 21 decisions:
+- Copilot hook format uses `permissionDecision` (allow/deny) + optional `permissionDecisionReason` + optional `tool_input` override
+- Copilot hook files stored in `.github/hooks/*.json` with version 1 format
+- `cch copilot install` generates wrapper scripts (bash + PowerShell) and `.github/hooks/rulez.json`
+- `cch copilot doctor` scans `.github/hooks/*.json` for installed/missing/misconfigured/outdated hooks
+
 ### Pending Todos
 
 0 pending
@@ -110,8 +116,8 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-02-12
-Stopped at: Completed Phase 16 (Onboarding) — v1.6 milestone DONE
+Last session: 2026-02-13
+Stopped at: Completed Phase 21 (Copilot CLI), fixed OpenCode compile issues, updated ROADMAP.md + STATE.md
 Resume file: None
 
-Next action: v1.7 Multi-Platform Hook Support (Phase 18: OpenCode Plugin Integration)
+Next action: Verify and complete Phase 18 (OpenCode Plugin Integration) — plans 18-02 and 18-03 need assessment

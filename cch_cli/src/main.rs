@@ -9,6 +9,7 @@ mod config;
 mod hooks;
 mod logging;
 mod models;
+mod opencode;
 
 #[derive(Parser)]
 #[command(name = "cch")]
@@ -104,6 +105,16 @@ enum Commands {
         #[command(subcommand)]
         subcommand: GeminiSubcommand,
     },
+    /// Copilot CLI utilities
+    Copilot {
+        #[command(subcommand)]
+        subcommand: CopilotSubcommand,
+    },
+    /// OpenCode CLI utilities
+    OpenCode {
+        #[command(subcommand)]
+        subcommand: OpenCodeSubcommand,
+    },
 }
 
 /// Subcommands for the explain command
@@ -129,6 +140,28 @@ enum ExplainSubcommand {
     },
 }
 
+/// Subcommands for Copilot CLI utilities
+#[derive(Subcommand)]
+enum CopilotSubcommand {
+    /// Diagnose Copilot hook installation and configuration
+    Doctor {
+        /// Output machine-readable JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// Install Copilot hook files into .github/hooks
+    Install {
+        /// Path to CCH binary (auto-detected if not specified)
+        #[arg(short, long)]
+        binary: Option<String>,
+        /// Print JSON snippet without writing
+        #[arg(long, alias = "dry-run")]
+        print: bool,
+    },
+    /// Run Copilot hook runner (stdin -> Copilot JSON response)
+    Hook,
+}
+
 /// Subcommands for Gemini CLI utilities
 #[derive(Subcommand)]
 enum GeminiSubcommand {
@@ -151,6 +184,25 @@ enum GeminiSubcommand {
         print: bool,
     },
     /// Run Gemini hook runner (stdin -> Gemini JSON response)
+    Hook,
+}
+
+/// Subcommands for OpenCode CLI utilities
+#[derive(Subcommand)]
+enum OpenCodeSubcommand {
+    /// Install OpenCode hook settings
+    Install {
+        /// Settings scope (project, user)
+        #[arg(long, value_enum, default_value_t = cli::opencode_install::Scope::Project)]
+        scope: cli::opencode_install::Scope,
+        /// Path to CCH binary (auto-detected if not specified)
+        #[arg(short, long)]
+        binary: Option<String>,
+        /// Print JSON snippet without writing
+        #[arg(long, alias = "dry-run")]
+        print: bool,
+    },
+    /// Run OpenCode hook runner (stdin -> RuleZ JSON response)
     Hook,
 }
 
@@ -251,6 +303,17 @@ async fn main() -> Result<()> {
                 }
             }
         }
+        Some(Commands::Copilot { subcommand }) => match subcommand {
+            CopilotSubcommand::Doctor { json } => {
+                cli::copilot_doctor::run(json).await?;
+            }
+            CopilotSubcommand::Install { binary, print } => {
+                cli::copilot_install::run(binary, print).await?;
+            }
+            CopilotSubcommand::Hook => {
+                cli::copilot_hook::run(cli.debug_logs).await?;
+            }
+        },
         Some(Commands::Gemini { subcommand }) => match subcommand {
             GeminiSubcommand::Doctor { json } => {
                 cli::gemini_doctor::run(json).await?;
@@ -264,6 +327,18 @@ async fn main() -> Result<()> {
             }
             GeminiSubcommand::Hook => {
                 cli::gemini_hook::run(cli.debug_logs).await?;
+            }
+        },
+        Some(Commands::OpenCode { subcommand }) => match subcommand {
+            OpenCodeSubcommand::Install {
+                scope,
+                binary,
+                print,
+            } => {
+                cli::opencode_install::run(scope, binary, print).await?;
+            }
+            OpenCodeSubcommand::Hook => {
+                cli::opencode_hook::run(cli.debug_logs).await?;
             }
         },
         None => {
