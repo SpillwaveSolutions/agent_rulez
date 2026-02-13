@@ -1,6 +1,6 @@
 # RuleZ Roadmap
 
-**Current Focus:** v1.6 RuleZ UI — Phase 15 complete, Phase 16 next
+**Current Focus:** v1.6 RuleZ UI — Phase 16 complete, v1.6 milestone DONE
 
 ---
 
@@ -151,8 +151,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 16-01: Onboarding wizard foundation + UI
-- [ ] 16-02: Settings panel integration + verification
+- [x] 16-01: Onboarding wizard foundation + UI
+- [x] 16-02: Settings panel integration + verification
 
 ### Phase 17: E2E Testing
 **Goal**: Comprehensive Playwright E2E test coverage for all UI features
@@ -215,7 +215,7 @@ Phases execute in numeric order: 11 → 12 → 13 → 14 → 15 → 16 → 17
 | 13. Log Viewer | v1.6 | 3/3 | ✅ Complete | 2026-02-12 |
 | 14. Config Management | v1.6 | 3/3 | ✅ Complete | 2026-02-12 |
 | 15. Debug Simulator | v1.6 | 3/3 | Complete | 2026-02-12 |
-| 16. Onboarding | v1.6 | 0/2 | In progress | - |
+| 16. Onboarding | v1.6 | 2/2 | Complete | 2026-02-12 |
 | 17. E2E Testing | v1.6 | 2/2 | ✅ Complete | 2026-02-11 |
 | 18. OpenCode Plugin Integration | v1.7 | 0/TBD | Not started | - |
 | 19. Gemini CLI Hook Integration | v1.7 | 0/TBD | Not started | - |

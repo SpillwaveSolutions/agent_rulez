@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** LLMs do not enforce policy. LLMs are subject to policy.
-**Current focus:** v1.6 RuleZ UI — Phase 16 (Onboarding) next
+**Current focus:** v1.6 RuleZ UI — COMPLETE (all phases 11-17 done)
 **v1.7 planned:** Multi-Platform Hook Support (OpenCode, Gemini CLI, GitHub Copilot) — Phases 18-21
 
 ## Current Position
 
 Milestone: v1.6 RuleZ UI
-Phase: 15 of 17 (Debug Simulator) — COMPLETE
-Plan: 3 of 3
-Status: Phase 15 complete, ready for Phase 16
-Last activity: 2026-02-12 — Completed Phase 15 Plan 03 (Integration wiring + E2E test fixes)
+Phase: 16 of 17 (Onboarding) — COMPLETE
+Plan: 2 of 2
+Status: v1.6 milestone complete (Phases 11-17 all done)
+Last activity: 2026-02-12 — Completed Phase 16 Plan 02 (Settings panel integration)
 
-Progress: [██████████████░░░] 16/21 phases complete (76%)
+Progress: [███████████████░░] 17/21 phases complete (81%)
 
 ## Performance Metrics
 
 **Velocity (all milestones):**
-- Total plans completed: 42 (6 v1.2 + 10 v1.3 + 9 v1.4 + 17 v1.6)
+- Total plans completed: 44 (6 v1.2 + 10 v1.3 + 9 v1.4 + 19 v1.6)
 - Average duration: ~5min per plan (Phases 4-10)
 - v1.5.0 released 2026-02-11 (first successful cross-platform binary release)
 
@@ -32,7 +32,7 @@ Progress: [██████████████░░░] 16/21 phases com
 | v1.2 | 3 | 6 | Complete |
 | v1.3 | 3 | 10 | Complete |
 | v1.4 | 4 | 9 | Complete |
-| v1.6 | 7 | 17/TBD | In progress |
+| v1.6 | 7 | 19/19 | Complete |
 | v1.7 | 4 | TBD | Planned |
 
 **Recent Trend:**
@@ -43,6 +43,8 @@ Progress: [██████████████░░░] 16/21 phases com
 
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
+| Phase 16 P01 | 1 min | 4 tasks | 7 files |
+| Phase 16 P02 | 1 min | 1 task | 1 file |
 | Phase 15 P01 | 1 min | 4 tasks | 2 files |
 | Phase 15 P02 | 1 min | 4 tasks | 5 files |
 | Phase 15 P03 | 1 min | 3 tasks | 2 files |
@@ -109,7 +111,7 @@ None active.
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed Phase 15 (Debug Simulator) — all 3 plans done
+Stopped at: Completed Phase 16 (Onboarding) — v1.6 milestone DONE
 Resume file: None
 
-Next action: Plan Phase 16 (Onboarding)
+Next action: v1.7 Multi-Platform Hook Support (Phase 18: OpenCode Plugin Integration)
