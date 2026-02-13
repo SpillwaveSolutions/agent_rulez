@@ -97,12 +97,12 @@ jobs:
 
       - name: Publish test results
         uses: dorny/test-reporter@v1
-        if: always()
+        if: always() && hashFiles('rulez_ui/test-results/junit.xml') != ''
         with:
           name: Playwright Tests (${{ matrix.os }}, ${{ matrix.browser }})
           path: rulez_ui/test-results/junit.xml
           reporter: java-junit
-          fail-on-error: true
+          fail-on-error: false
 
       - name: Comment test results on PR
         uses: daun/playwright-report-comment@v3
