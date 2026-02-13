@@ -148,11 +148,11 @@ Plans:
   3. Wizard generates a sample `hooks.yaml` config with documented example rules
   4. Wizard guides user through a test simulation to verify setup works
   5. User can re-run onboarding wizard from settings panel
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 16-01: TBD
-- [ ] 16-02: TBD
+- [ ] 16-01: Onboarding wizard foundation + UI
+- [ ] 16-02: Settings panel integration + verification
 
 ### Phase 17: E2E Testing
 **Goal**: Comprehensive Playwright E2E test coverage for all UI features
@@ -215,7 +215,7 @@ Phases execute in numeric order: 11 → 12 → 13 → 14 → 15 → 16 → 17
 | 13. Log Viewer | v1.6 | 3/3 | ✅ Complete | 2026-02-12 |
 | 14. Config Management | v1.6 | 3/3 | ✅ Complete | 2026-02-12 |
 | 15. Debug Simulator | v1.6 | 3/3 | Complete | 2026-02-12 |
-| 16. Onboarding | v1.6 | 0/TBD | Not started | - |
+| 16. Onboarding | v1.6 | 0/2 | In progress | - |
 | 17. E2E Testing | v1.6 | 2/2 | ✅ Complete | 2026-02-11 |
 | 18. OpenCode Plugin Integration | v1.7 | 0/TBD | Not started | - |
 | 19. Gemini CLI Hook Integration | v1.7 | 0/TBD | Not started | - |
