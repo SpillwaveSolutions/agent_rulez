@@ -80,7 +80,7 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="w-56 flex-shrink-0 border-r border-gray-200 dark:border-gray-700 bg-surface dark:bg-surface-dark overflow-y-auto">
+    <aside data-testid="sidebar" className="w-56 flex-shrink-0 border-r border-gray-200 dark:border-gray-700 bg-surface dark:bg-surface-dark overflow-y-auto">
       <div className="p-3">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
           Files
@@ -113,6 +113,7 @@ export function Sidebar() {
                 exists={globalConfig.exists}
                 isActive={activeFile === globalConfig.path}
                 onClick={() => handleFileClick(globalConfig.path)}
+                scope="global"
               />
               {globalConfig.exists && (
                 <ExportButton
@@ -153,6 +154,7 @@ export function Sidebar() {
                 exists={projectConfig.exists}
                 isActive={activeFile === projectConfig.path}
                 onClick={() => handleFileClick(projectConfig.path)}
+                scope="project"
               />
               {projectConfig.exists && (
                 <ExportButton
@@ -290,15 +292,17 @@ interface FileItemProps {
   exists: boolean;
   isActive: boolean;
   onClick: () => void;
+  scope: "global" | "project";
 }
 
-function FileItem({ path, exists, isActive, onClick }: FileItemProps) {
+function FileItem({ path, exists, isActive, onClick, scope }: FileItemProps) {
   const fileName = path.split("/").pop() || path;
 
   return (
     <button
       type="button"
       onClick={onClick}
+      data-testid={`sidebar-${scope}-file-${fileName}`}
       className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-left transition-colors ${
         isActive
           ? "bg-accent/10 text-accent dark:text-accent-dark"
