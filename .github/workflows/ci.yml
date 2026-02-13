@@ -1,4 +1,4 @@
-# Fast CI Pipeline for CCH (Claude Code Hooks)
+# Fast CI Pipeline for RuleZ (AI Policy Engine)
 #
 # This workflow provides rapid feedback during daily development:
 # - Formatting check (rustfmt)

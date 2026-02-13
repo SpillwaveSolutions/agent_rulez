@@ -20,7 +20,7 @@ PROJECT_ROOT="$(cd "$INTEGRATION_DIR/../.." && pwd)"
 CCH_CLI_DIR="$PROJECT_ROOT/cch_cli"
 # Note: Cargo workspace builds to PROJECT_ROOT/target, not CCH_CLI_DIR/target
 CCH_BINARY="$PROJECT_ROOT/target/release/cch"
-CCH_LOG="$HOME/.claude/logs/cch.log"
+CCH_LOG="$HOME/.claude/logs/rulez.log"
 RESULTS_DIR="$INTEGRATION_DIR/results"
 
 # Test state

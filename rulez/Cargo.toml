@@ -1,0 +1,38 @@
+[package]
+name = "rulez"
+description = "RuleZ - High-performance AI policy engine for development workflows"
+keywords = ["claude", "hooks", "policy", "security", "ai", "rules"]
+categories = ["development-tools"]
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+
+# Binaries
+[[bin]]
+name = "rulez"
+path = "src/main.rs"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml.workspace = true
+clap.workspace = true
+regex.workspace = true
+tokio.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+chrono.workspace = true
+dirs.workspace = true
+uuid = { version = "1.0", features = ["v4"] }
+evalexpr = "13.1"
+schemars.workspace = true
+jsonschema.workspace = true
+lru.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+assert_cmd.workspace = true
+predicates.workspace = true

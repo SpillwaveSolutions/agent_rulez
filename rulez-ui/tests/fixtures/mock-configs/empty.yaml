@@ -1,0 +1,4 @@
+# Empty configuration file
+version: "1"
+
+hooks: []

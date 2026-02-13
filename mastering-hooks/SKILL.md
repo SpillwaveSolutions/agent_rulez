@@ -2,9 +2,9 @@
 name: mastering-hooks
 description: Master Claude Context Hooks (CCH), the Rust-based runtime for controlling Claude Code behavior through hooks.yaml configuration. Use when asked to "install CCH", "create hooks", "debug hooks", "hook not firing", "configure context injection", "validate hooks.yaml", "PreToolUse", "PostToolUse", or "block dangerous commands". Covers installation, rule creation, troubleshooting, and optimization.
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
   author: CCH Team
-  api_version: "0.2.1"
+  api_version: "1.1.0"
 ---
 
 # mastering-hooks
@@ -66,7 +66,7 @@ What do you need?
 
 **Expected output** from `cch --version --json`:
 ```json
-{"version": "0.2.1", "api_version": "0.2.1", "git_sha": "abc1234"}
+{"version": "1.1.0", "api_version": "1.1.0", "git_sha": "abc1234"}
 ```
 
 **Reference**: [cli-commands.md](references/cli-commands.md)

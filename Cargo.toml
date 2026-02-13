@@ -1,17 +1,22 @@
-# CCH Workspace - Claude Code Hooks Policy Engine
+# RuleZ Workspace - AI Policy Engine Monorepo
 #
-# This workspace contains the CCH binary and related packages.
+# This workspace contains the RuleZ policy engine and related packages.
 # The binary is a POLICY ENGINE that EXECUTES user-configured YAML rules.
 # It does NOT have built-in blocking/injection features - all behavior
 # is defined by user YAML configuration in .claude/hooks.yaml.
+#
+# Components:
+# - rulez/           Core policy engine binary (Rust)
+# - mastering-hooks/ Claude Code skill for RuleZ mastery
+# - rulez-ui/        Tauri desktop app for visual configuration
 
 [workspace]
-members = ["cch_cli"]
-exclude = ["rulez_ui/src-tauri"]
+members = ["rulez"]
+exclude = ["rulez-ui/src-tauri"]
 resolver = "2"
 
 [workspace.package]
-version = "1.0.2"
+version = "1.5.0"
 authors = ["Rick Hightower <rick@spillwave.com>"]
 license = "MIT OR Apache-2.0"
 edition = "2024"
@@ -27,6 +32,7 @@ clap = { version = "4.0", features = ["derive"] }
 
 # Patterns
 regex = "1.10"
+lru = "0.12"
 
 # Async (minimal features for performance)
 tokio = { version = "1.0", features = ["process", "time", "fs", "io-std", "io-util", "rt", "macros"] }
@@ -44,6 +50,10 @@ chrono = { version = "0.4", features = ["serde"] }
 
 # System
 dirs = "5.0"
+
+# JSON Schema
+schemars = { version = "1.2", features = ["derive"] }
+jsonschema = "0.28"
 
 # Testing (used as dev-dependencies in member crates)
 tempfile = "3.24"

@@ -1,0 +1,22 @@
+# Valid basic configuration for testing
+version: "1"
+
+hooks:
+  - name: block-force-push
+    event: PreToolUse
+    match:
+      tools: [Bash]
+      command_match: "git push.*--force"
+    action:
+      type: block
+      reason: "Force push requires explicit approval."
+
+  - name: python-standards
+    event: PreToolUse
+    match:
+      tools: [Write, Edit]
+      extensions: [.py]
+    action:
+      type: inject
+      source: file
+      path: .claude/context/python-standards.md

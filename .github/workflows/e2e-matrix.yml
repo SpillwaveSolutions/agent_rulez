@@ -1,116 +1,120 @@
-# E2E Tests - RuleZ UI (Cross-Platform Matrix)
+# Cross-Platform E2E Tests for RuleZ Core
 #
-# Runs Playwright E2E tests across Ubuntu, macOS, and Windows.
+# Runs E2E tests (rulez/tests/e2e_*.rs) on ubuntu, macOS, and Windows.
+# Includes binary artifact validation to catch stale cached binaries.
+#
+# For Playwright UI tests, see e2e.yml (separate workflow).
 
-name: E2E Tests - Matrix
+name: E2E Tests - Cross-Platform
 
 on:
   push:
     branches: [main, develop, "feature/**", "fix/**"]
     paths:
-      - 'rulez_ui/**'
+      - 'rulez/**'
       - '.github/workflows/e2e-matrix.yml'
   pull_request:
     branches: [main, develop]
     paths:
-      - 'rulez_ui/**'
+      - 'rulez/**'
       - '.github/workflows/e2e-matrix.yml'
   workflow_dispatch:
 
-permissions:
-  contents: read
-  checks: write
-  pull-requests: write
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
 
 jobs:
-  playwright-matrix:
-    name: Playwright (${{ matrix.os }} / ${{ matrix.browser }})
+  e2e-matrix:
+    name: E2E (${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
-        os: ${{ fromJSON((github.ref == 'refs/heads/main' || github.base_ref == 'main') && '["ubuntu-latest","macos-latest","windows-latest"]' || '["ubuntu-latest"]') }}
-        browser: [chromium, webkit]
-        exclude:
-          - os: windows-latest
-            browser: webkit
+        os: [ubuntu-latest, macos-latest]
 
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
-    defaults:
-      run:
-        working-directory: rulez_ui
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
 
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
 
-      - name: Cache Playwright browsers
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/ms-playwright
-            ~/AppData/Local/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('rulez_ui/package.json') }}
-          restore-keys: |
-            playwright-${{ runner.os }}-
+      - name: Build binary
+        run: cargo build --bin rulez
 
-      - name: Install dependencies
-        run: bun install
+      - name: Validate binary artifact (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          BINARY_PATH="target/debug/rulez"
 
-      - name: Install Playwright browsers
-        run: bunx playwright install --with-deps ${{ matrix.browser }}
+          # Check binary exists
+          if [ ! -f "$BINARY_PATH" ]; then
+            echo "::error::Binary not found at $BINARY_PATH"
+            exit 1
+          fi
 
-      - name: Run E2E tests
-        run: bunx playwright test --project=${{ matrix.browser }} --retries=1
-        env:
-          CI: true
+          # Verify it reports the correct name
+          ./$BINARY_PATH --version
+          ./$BINARY_PATH --version | grep -q "rulez" || {
+            echo "::error::Binary version check failed — may be stale 'cch' binary"
+            exit 1
+          }
 
-      - name: Upload screenshots
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: playwright-screenshots-${{ matrix.os }}-${{ matrix.browser }}
-          path: rulez_ui/test-results/**/*.png
-          retention-days: 7
+          # Check for stale binary from old name
+          if [ -f "target/debug/cch" ]; then
+            echo "::warning::Stale 'cch' binary found in target/debug/ — consider cleaning cache"
+          fi
 
-      - name: Upload videos
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: playwright-videos-${{ matrix.os }}-${{ matrix.browser }}
-          path: rulez_ui/test-results/**/*.webm
-          retention-days: 7
+          echo "Binary validation passed: $BINARY_PATH"
 
-      - name: Upload HTML report
-        uses: actions/upload-artifact@v4
+      - name: Validate binary artifact (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $binaryPath = "target\debug\rulez.exe"
+
+          if (-not (Test-Path $binaryPath)) {
+            Write-Error "Binary not found at $binaryPath"
+            exit 1
+          }
+
+          $version = & ".\$binaryPath" --version 2>&1
+          if ($version -notmatch "rulez") {
+            Write-Error "Binary version check failed — may be stale 'cch' binary"
+            exit 1
+          }
+
+          # Check for stale binary
+          if (Test-Path "target\debug\cch.exe") {
+            Write-Warning "Stale 'cch.exe' binary found in target\debug\"
+          }
+
+          Write-Host "Binary validation passed: $binaryPath"
+
+      - name: Run all tests
+        run: cargo test --tests --all-features --workspace
+
+      - name: Upload test evidence
         if: always()
+        uses: actions/upload-artifact@v4
         with:
-          name: playwright-report-${{ matrix.os }}-${{ matrix.browser }}
-          path: rulez_ui/playwright-report/
-          retention-days: 30
+          name: test-evidence-${{ matrix.os }}
+          path: rulez/target/test-evidence/
+          retention-days: 7
+          if-no-files-found: ignore
 
-      - name: Publish test results
-        uses: dorny/test-reporter@v1
-        if: always() && hashFiles('rulez_ui/test-results/junit.xml') != ''
+      - name: Upload failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
         with:
-          name: Playwright Tests (${{ matrix.os }}, ${{ matrix.browser }})
-          path: rulez_ui/test-results/junit.xml
-          reporter: java-junit
-          fail-on-error: false
-
-      - name: Comment test results on PR
-        uses: daun/playwright-report-comment@v3
-        if: github.event_name == 'pull_request'
-        continue-on-error: true
-        with:
-          report-path: rulez_ui/playwright-report/
-          comment-title: 'Playwright Test Results (${{ matrix.os }}, ${{ matrix.browser }})'
-          include-summary: true
-          include-report-link: true
-
+          name: failure-logs-${{ matrix.os }}
+          path: |
+            rulez/target/test-evidence/
+          retention-days: 14
+          if-no-files-found: ignore

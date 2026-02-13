@@ -1,0 +1,35 @@
+{
+  "name": "monaco-types",
+  "version": "0.1.1",
+  "description": "Type-only exports of Monaco editor",
+  "repository": "remcohaszing/monaco-types",
+  "author": "Remco Haszing <remcohaszing@gmail.com>",
+  "funding": "https://github.com/sponsors/remcohaszing",
+  "license": "MIT",
+  "bugs": "https://github.com/remcohaszing/monaco-types/issues",
+  "homepage": "https://github.com/remcohaszing/monaco-types#readme",
+  "exports": "./index.js",
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "monaco-editor.d.ts"
+  ],
+  "scripts": {
+    "test": "tsc"
+  },
+  "keywords": [
+    "monaco",
+    "monaco-editor",
+    "monaco-editor-core",
+    "types",
+    "typescript"
+  ],
+  "devDependencies": {
+    "monaco-editor": "*",
+    "monaco-editor-core": "*",
+    "prettier": "^3.0.0",
+    "remark-cli": "^12.0.0",
+    "remark-preset-remcohaszing": "^3.0.0",
+    "typescript": "^5.0.0"
+  }
+}

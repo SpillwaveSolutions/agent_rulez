@@ -1,21 +1,35 @@
-# Taskfile.yml - CCH (Claude Context Hooks) Project
+# Taskfile.yml - RuleZ (AI Policy Engine) Project
 #
-# Task runner for building, testing, and managing CCH.
+# Task runner for building, testing, and managing RuleZ.
 # Install Task: https://taskfile.dev/installation/
 #
 # Quick start:
-#   task --list        # Show all available tasks
-#   task build         # Build CCH binary
-#   task test          # Run all tests
-#   task integration-test  # Run integration tests
+#   task --list            # Show all available tasks
+#   task build             # Build both CLI and UI
+#   task test              # Run all unit tests
+#   task test:all          # All tests including integration and E2E
+#   task dev               # Start full dev environment
+#   task ci                # Run full CI pipeline locally
 
 version: '3'
 
+# ===========================================================================
+# Subproject Includes
+# ===========================================================================
+
+includes:
+  cli:
+    taskfile: ./rulez/Taskfile.yml
+    dir: ./rulez
+  ui:
+    taskfile: ./rulez-ui/Taskfile.yml
+    dir: ./rulez-ui
+
 vars:
-  PROJECT_NAME: cch
-  CCH_CLI_DIR: cch_cli
+  PROJECT_NAME: rulez
+  RULEZ_CLI_DIR: rulez
   INTEGRATION_DIR: test/integration
-  CCH_BINARY: "{{.CCH_CLI_DIR}}/target/release/cch"
+  RULEZ_BINARY: "{{.RULEZ_CLI_DIR}}/target/release/rulez"
 
 tasks:
   # ===========================================================================
@@ -28,31 +42,37 @@ tasks:
       - task --list
 
   build:
-    desc: Build CCH binary (release mode)
-    dir: "{{.CCH_CLI_DIR}}"
+    desc: Build both CLI and UI
+    cmds:
+      - task: cli:build
+      - task: ui:build
+
+  build-cli:
+    desc: Build RuleZ binary (release mode)
+    dir: "{{.RULEZ_CLI_DIR}}"
     cmds:
       - cargo build --release
     sources:
       - src/**/*.rs
       - Cargo.toml
     generates:
-      - target/release/cch
+      - target/release/rulez
 
   build-debug:
-    desc: Build CCH binary (debug mode)
-    dir: "{{.CCH_CLI_DIR}}"
+    desc: Build RuleZ binary (debug mode)
+    dir: "{{.RULEZ_CLI_DIR}}"
     cmds:
       - cargo build
     sources:
       - src/**/*.rs
       - Cargo.toml
     generates:
-      - target/debug/cch
+      - target/debug/rulez
 
   clean:
     desc: Remove build artifacts and test results
     cmds:
-      - rm -rf {{.CCH_CLI_DIR}}/target
+      - rm -rf {{.RULEZ_CLI_DIR}}/target
       - rm -rf {{.INTEGRATION_DIR}}/results/*.json
       - echo "Cleaned build artifacts and test results"
 
@@ -62,18 +82,18 @@ tasks:
 
   test:
     desc: Run all Rust unit tests
-    dir: "{{.CCH_CLI_DIR}}"
+    dir: "{{.RULEZ_CLI_DIR}}"
     cmds:
       - cargo test
 
   test-verbose:
     desc: Run Rust tests with verbose output
-    dir: "{{.CCH_CLI_DIR}}"
+    dir: "{{.RULEZ_CLI_DIR}}"
     cmds:
       - cargo test -- --nocapture
 
   integration-test:
-    desc: Run CCH + Claude CLI integration tests
+    desc: Run RuleZ + Claude CLI integration tests
     aliases: [itest]
     deps: [build]
     cmds:
@@ -113,10 +133,12 @@ tasks:
       TEST_NAME: '{{.TEST_NAME | default "01-block-force-push"}}'
 
   test-all:
-    desc: Run all tests (unit + integration)
+    desc: Run all tests (unit + integration + E2E)
     cmds:
       - task: test
+      - task: ui:test
       - task: integration-test
+      - task: ui:e2e
 
   # ===========================================================================
   # IQ/OQ/PQ Validation Tasks
@@ -152,7 +174,7 @@ tasks:
 
   coverage:
     desc: Generate test coverage report
-    dir: "{{.CCH_CLI_DIR}}"
+    dir: "{{.RULEZ_CLI_DIR}}"
     cmds:
       - cargo tarpaulin --out Html --output-dir target/coverage
     status:
@@ -164,19 +186,19 @@ tasks:
 
   lint:
     desc: Run clippy linter
-    dir: "{{.CCH_CLI_DIR}}"
+    dir: "{{.RULEZ_CLI_DIR}}"
     cmds:
       - cargo clippy --all-targets --all-features -- -D warnings
 
   format:
     desc: Format code with rustfmt
-    dir: "{{.CCH_CLI_DIR}}"
+    dir: "{{.RULEZ_CLI_DIR}}"
     cmds:
       - cargo fmt
 
   format-check:
     desc: Check code formatting without changes
-    dir: "{{.CCH_CLI_DIR}}"
+    dir: "{{.RULEZ_CLI_DIR}}"
     cmds:
       - cargo fmt --check
 
@@ -192,62 +214,95 @@ tasks:
   # ===========================================================================
 
   install:
-    desc: Install CCH globally via cargo
-    dir: "{{.CCH_CLI_DIR}}"
+    desc: Install RuleZ globally via cargo
+    dir: "{{.RULEZ_CLI_DIR}}"
     cmds:
       - cargo install --path .
 
   install-local:
-    desc: Install CCH for current project
+    desc: Install RuleZ for current project
     deps: [build]
     cmds:
-      - ./{{.CCH_BINARY}} install --binary ./{{.CCH_BINARY}}
+      - ./{{.RULEZ_BINARY}} install --binary ./{{.RULEZ_BINARY}}
 
   uninstall-local:
-    desc: Uninstall CCH from current project
+    desc: Uninstall RuleZ from current project
     deps: [build]
     cmds:
-      - ./{{.CCH_BINARY}} uninstall
+      - ./{{.RULEZ_BINARY}} uninstall
 
   # ===========================================================================
   # Development Utilities
   # ===========================================================================
 
   run:
-    desc: Run CCH with arguments
+    desc: Run RuleZ with arguments
     deps: [build-debug]
     cmds:
-      - ./{{.CCH_CLI_DIR}}/target/debug/cch {{.CLI_ARGS}}
+      - ./{{.RULEZ_CLI_DIR}}/target/debug/rulez {{.CLI_ARGS}}
     vars:
       CLI_ARGS: '{{.CLI_ARGS | default "--help"}}'
 
   debug:
-    desc: Run CCH debug mode with test event
+    desc: Run RuleZ debug mode with test event
     deps: [build-debug]
     cmds:
-      - ./{{.CCH_CLI_DIR}}/target/debug/cch debug PreToolUse --tool Bash --command "echo test" --verbose
+      - ./{{.RULEZ_CLI_DIR}}/target/debug/rulez debug PreToolUse --tool Bash --command "echo test" --verbose
 
   repl:
-    desc: Start CCH interactive REPL
+    desc: Start RuleZ interactive REPL
     deps: [build-debug]
     cmds:
-      - ./{{.CCH_CLI_DIR}}/target/debug/cch repl
+      - ./{{.RULEZ_CLI_DIR}}/target/debug/rulez repl
 
   logs:
-    desc: Show recent CCH logs
+    desc: Show recent RuleZ logs
     cmds:
-      - "{{.CCH_BINARY}} logs --limit 20 2>/dev/null || tail -20 ~/.claude/logs/cch.log"
+      - "{{.RULEZ_BINARY}} logs --limit 20 2>/dev/null || tail -20 ~/.claude/logs/rulez.log"
 
   logs-tail:
-    desc: Tail CCH logs in real-time
+    desc: Tail RuleZ logs in real-time
     cmds:
-      - tail -f ~/.claude/logs/cch.log
+      - tail -f ~/.claude/logs/rulez.log
 
   validate:
     desc: Validate hooks.yaml configuration
     deps: [build]
     cmds:
-      - ./{{.CCH_BINARY}} validate
+      - ./{{.RULEZ_BINARY}} validate
+
+  # ===========================================================================
+  # Development Environment Tasks
+  # ===========================================================================
+
+  dev:
+    desc: Start full dev environment (CLI watch + UI dev server)
+    cmds:
+      - echo "Starting development environment..."
+      - echo "Run 'task cli:watch' in one terminal"
+      - echo "Run 'task ui:dev' in another terminal"
+      - task: ui:dev
+
+  dev-cli:
+    desc: Start CLI development with auto-rebuild
+    cmds:
+      - task: cli:watch
+
+  dev-ui:
+    desc: Start UI development server
+    cmds:
+      - task: ui:dev
+
+  dev-ui-tauri:
+    desc: Start Tauri desktop development
+    cmds:
+      - task: ui:dev:tauri
+
+  run-app:
+    desc: Run the RuleZ UI desktop app
+    cmds:
+      - lsof -ti:1420 | xargs kill -9 2>/dev/null || true
+      - task: ui:dev:tauri
 
   # ===========================================================================
   # CI/CD Tasks
@@ -257,16 +312,19 @@ tasks:
     desc: Run full CI pipeline locally
     cmds:
       - task: clean
-      - task: build
+      - task: build-cli
       - task: check
       - task: test
       - echo "CI pipeline completed successfully"
 
   ci-full:
-    desc: Run full CI pipeline including integration tests
+    desc: Run full CI pipeline including integration and E2E tests
     cmds:
       - task: ci
+      - task: ui:check
+      - task: ui:build
       - task: integration-test
+      - task: ui:e2e
 
   # ===========================================================================
   # Documentation Tasks
@@ -274,7 +332,7 @@ tasks:
 
   doc:
     desc: Generate Rust documentation
-    dir: "{{.CCH_CLI_DIR}}"
+    dir: "{{.RULEZ_CLI_DIR}}"
     cmds:
       - cargo doc --no-deps --open
 
@@ -284,14 +342,14 @@ tasks:
 
   release-build:
     desc: Build release binary with optimizations
-    dir: "{{.CCH_CLI_DIR}}"
+    dir: "{{.RULEZ_CLI_DIR}}"
     env:
       RUSTFLAGS: "-C target-cpu=native"
     cmds:
       - cargo build --release
 
   version:
-    desc: Show CCH version
+    desc: Show RuleZ version
     deps: [build]
     cmds:
-      - ./{{.CCH_BINARY}} --version
+      - ./{{.RULEZ_BINARY}} --version

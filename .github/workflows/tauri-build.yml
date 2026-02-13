@@ -15,11 +15,11 @@ on:
   push:
     branches: [main, develop, 'release/**']
     paths:
-      - 'rulez_ui/**'
+      - 'rulez-ui/**'
       - '.github/workflows/tauri-build.yml'
   pull_request:
     paths:
-      - 'rulez_ui/**'
+      - 'rulez-ui/**'
   workflow_dispatch:
 
 permissions:
@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: rulez_ui
+        working-directory: rulez-ui
 
     steps:
       - uses: actions/checkout@v4
@@ -57,7 +57,7 @@ jobs:
         if: always()
         with:
           name: playwright-report-tauri-gate
-          path: rulez_ui/playwright-report/
+          path: rulez-ui/playwright-report/
           retention-days: 30
 
       - name: Upload failure artifacts
@@ -66,8 +66,8 @@ jobs:
         with:
           name: playwright-failures-tauri-gate
           path: |
-            rulez_ui/test-results/**/*.png
-            rulez_ui/test-results/**/*.webm
+            rulez-ui/test-results/**/*.png
+            rulez-ui/test-results/**/*.webm
           retention-days: 7
 
   build-tauri:
@@ -95,23 +95,32 @@ jobs:
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y             libwebkit2gtk-4.1-dev             build-essential             curl             wget             file             libxdo-dev             libssl-dev             libayatana-appindicator3-dev             librsvg2-dev
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
-          workspaces: rulez_ui/src-tauri -> target
+          workspaces: rulez-ui/src-tauri -> target
 
       - name: Install frontend dependencies
         run: bun install
-        working-directory: rulez_ui
+        working-directory: rulez-ui
 
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          projectPath: rulez_ui
+          projectPath: rulez-ui
           tagName: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
           releaseName: ${{ startsWith(github.ref, 'refs/tags/v') && format('RuleZ UI {0}', github.ref_name) || '' }}
           releaseBody: ${{ startsWith(github.ref, 'refs/tags/v') && 'See CHANGELOG.md for details.' || '' }}
