@@ -9,6 +9,7 @@ export function SettingsPanel() {
   const setEditorFontSize = useSettingsStore((s) => s.setEditorFontSize);
   const setEditorTabSize = useSettingsStore((s) => s.setEditorTabSize);
   const setRulezBinaryPath = useSettingsStore((s) => s.setRulezBinaryPath);
+  const setOnboardingComplete = useSettingsStore((s) => s.setOnboardingComplete);
 
   const handleFontSizeChange = (value: string) => {
     const next = Number.parseInt(value, 10);
@@ -108,6 +109,19 @@ export function SettingsPanel() {
           />
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
             Leave blank to use the default PATH lookup.
+          </p>
+        </div>
+
+        <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+          <button
+            type="button"
+            onClick={() => void setOnboardingComplete(false)}
+            className="w-full px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-[#1A1A1A] border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+          >
+            Run Onboarding Wizard
+          </button>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Re-run the setup wizard to reconfigure binary path and generate sample config.
           </p>
         </div>
       </div>
