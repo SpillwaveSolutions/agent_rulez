@@ -19,6 +19,7 @@ interface SettingsActions {
   setEditorFontSize: (size: number) => Promise<void>;
   setEditorTabSize: (size: number) => Promise<void>;
   setRulezBinaryPath: (path: string | null) => Promise<void>;
+  setOnboardingComplete: (complete: boolean) => Promise<void>;
 }
 
 export const useSettingsStore = create<SettingsState & SettingsActions>((set) => ({
@@ -52,6 +53,11 @@ export const useSettingsStore = create<SettingsState & SettingsActions>((set) =>
 
   setRulezBinaryPath: async (rulezBinaryPath) => {
     const settings = await persistSettings({ rulezBinaryPath });
+    set({ settings, isLoaded: true });
+  },
+
+  setOnboardingComplete: async (onboardingComplete) => {
+    const settings = await persistSettings({ onboardingComplete });
     set({ settings, isLoaded: true });
   },
 }));

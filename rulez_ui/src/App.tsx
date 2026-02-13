@@ -1,9 +1,11 @@
 import { useEffect } from "react";
 import { AppShell } from "./components/layout/AppShell";
+import { OnboardingWizard } from "./components/onboarding/OnboardingWizard";
 import { useSettingsStore } from "./stores/settingsStore";
 
 function App() {
   const settings = useSettingsStore((s) => s.settings);
+  const isLoaded = useSettingsStore((s) => s.isLoaded);
   const loadSettings = useSettingsStore((s) => s.loadSettings);
 
   // Load persisted settings on startup
@@ -40,7 +42,12 @@ function App() {
     }
   }, [settings.theme]);
 
-  return <AppShell />;
+  return (
+    <>
+      <AppShell />
+      {isLoaded && !settings.onboardingComplete && <OnboardingWizard />}
+    </>
+  );
 }
 
 export default App;

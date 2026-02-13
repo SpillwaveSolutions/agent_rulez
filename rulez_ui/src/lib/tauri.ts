@@ -77,6 +77,28 @@ export async function validateConfig(path: string): Promise<{ valid: boolean; er
 }
 
 /**
+ * Check if the RuleZ binary is installed and accessible
+ */
+export async function checkBinary(): Promise<{ found: boolean; path: string | null }> {
+  if (isTauri()) {
+    const { invoke } = await import("@tauri-apps/api/core");
+    return invoke<{ found: boolean; path: string | null }>("check_binary");
+  }
+  return mockCheckBinary();
+}
+
+/**
+ * Generate a sample hooks.yaml config and write it to the global config path.
+ * Returns the path where the config was written.
+ */
+export async function generateSampleConfig(): Promise<string> {
+  const configPath = "~/.claude/hooks.yaml";
+  const content = SAMPLE_HOOKS_YAML;
+  await writeConfig(configPath, content);
+  return configPath;
+}
+
+/**
  * Read and filter log entries from rulez.log
  */
 export async function readLogs(params: LogQueryParams): Promise<LogEntryDto[]> {
@@ -207,6 +229,11 @@ async function mockValidateConfig(_path: string): Promise<{ valid: boolean; erro
   return { valid: true, errors: [] };
 }
 
+async function mockCheckBinary(): Promise<{ found: boolean; path: string | null }> {
+  await delay(50);
+  return { found: true, path: "/usr/local/bin/rulez" };
+}
+
 async function mockImportConfigFile(): Promise<{ path: string; content: string } | null> {
   await delay(100);
   // In browser mode, simulate importing the global config
@@ -299,3 +326,47 @@ async function mockGetLogStats(): Promise<LogStats> {
     newestEntry: new Date().toISOString(),
   };
 }
+
+// ============================================================================
+// Sample config template for onboarding
+// ============================================================================
+
+const SAMPLE_HOOKS_YAML = `# RuleZ Configuration
+# Location: ~/.claude/hooks.yaml
+# Documentation: https://github.com/SpillwaveSolutions/code_agent_context_hooks
+
+version: "1.0"
+
+# Global settings
+settings:
+  debug_logs: false
+  log_level: info
+  fail_open: true
+  script_timeout: 5
+
+# Policy rules
+rules:
+  # Block force push to protected branches
+  - name: block-force-push
+    description: Prevent force push to main/master
+    matchers:
+      tools: [Bash]
+      command_match: "git push.*(--force|-f).*(main|master)"
+    actions:
+      block: true
+    metadata:
+      priority: 100
+      enabled: true
+
+  # Block hard reset on protected branches
+  - name: block-hard-reset
+    description: Prevent destructive git reset operations
+    matchers:
+      tools: [Bash]
+      command_match: "git reset --hard"
+    actions:
+      block: true
+    metadata:
+      priority: 90
+      enabled: true
+`;

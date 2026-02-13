@@ -7,6 +7,7 @@ export interface Settings {
   editorFontSize: number;
   editorTabSize: number;
   rulezBinaryPath: string | null;
+  onboardingComplete: boolean;
 }
 
 export const SETTINGS_DEFAULTS: Settings = {
@@ -14,6 +15,7 @@ export const SETTINGS_DEFAULTS: Settings = {
   editorFontSize: 14,
   editorTabSize: 2,
   rulezBinaryPath: null,
+  onboardingComplete: false,
 };
 
 const STORE_FILE = "settings.json";

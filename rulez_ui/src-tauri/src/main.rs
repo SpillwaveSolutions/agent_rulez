@@ -18,6 +18,7 @@ fn main() {
             config::write_config,
             debug::run_debug,
             debug::validate_config,
+            debug::check_binary,
             logs::read_logs,
             logs::get_log_stats,
         ])

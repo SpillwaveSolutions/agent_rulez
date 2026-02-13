@@ -171,3 +171,24 @@ fn resolve_rulez_from_path_env() -> Option<String> {
 fn is_executable(path: &PathBuf) -> bool {
     path.is_file()
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BinaryCheckResult {
+    pub found: bool,
+    pub path: Option<String>,
+}
+
+/// Check if the RuleZ binary is installed and accessible
+#[tauri::command]
+pub async fn check_binary(app_handle: tauri::AppHandle) -> Result<BinaryCheckResult, String> {
+    match resolve_rulez_binary_path(&app_handle) {
+        Ok(path) => Ok(BinaryCheckResult {
+            found: true,
+            path: Some(path),
+        }),
+        Err(_) => Ok(BinaryCheckResult {
+            found: false,
+            path: None,
+        }),
+    }
+}
