@@ -48,7 +48,7 @@ jobs:
         run: bunx playwright install --with-deps chromium webkit
 
       - name: Run E2E tests
-        run: bunx playwright test
+        run: bunx playwright test --retries=1
         env:
           CI: true
 

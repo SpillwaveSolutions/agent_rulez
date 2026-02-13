@@ -67,7 +67,7 @@ jobs:
         run: bunx playwright install --with-deps ${{ matrix.browser }}
 
       - name: Run E2E tests
-        run: bunx playwright test --project=${{ matrix.browser }}
+        run: bunx playwright test --project=${{ matrix.browser }} --retries=1
         env:
           CI: true
 

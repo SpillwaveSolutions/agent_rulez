@@ -57,7 +57,7 @@ test.describe("RuleZ UI Application", () => {
     await page.getByRole("button", { name: "Rules" }).click();
 
     // Check that rules content is shown
-    await expect(page.getByText("Rule Tree")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Rule Tree" })).toBeVisible();
 
     // Click back to Simulator tab
     await page.getByRole("button", { name: "Simulator" }).click();
