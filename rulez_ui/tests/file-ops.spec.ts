@@ -1,7 +1,9 @@
 import { expect, test } from "@playwright/test";
+import { dismissOnboarding } from "./utils/dismiss-onboarding";
 
 test.describe("File Operations", () => {
   test.beforeEach(async ({ page }) => {
+    await dismissOnboarding(page);
     await page.goto("/");
     await page.waitForTimeout(500);
   });
@@ -13,7 +15,7 @@ test.describe("File Operations", () => {
     await page.waitForTimeout(300);
 
     // Tab should appear
-    await expect(page.getByText("hooks.yaml")).toBeVisible();
+    await expect(page.getByText("hooks.yaml").first()).toBeVisible();
   });
 
   test("should show file content in tab bar", async ({ page }) => {
@@ -69,7 +71,7 @@ test.describe("File Operations", () => {
     await page.waitForTimeout(300);
 
     // Check if project config exists and open it
-    const projectSection = page.getByText("Project");
+    const projectSection = page.getByText("Project", { exact: true }).first();
     if (await projectSection.isVisible()) {
       const projectFile = page.getByRole("button", { name: /hooks\.yaml/i }).nth(1);
       if (await projectFile.isVisible()) {

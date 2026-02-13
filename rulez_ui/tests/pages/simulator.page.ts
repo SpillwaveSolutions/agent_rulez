@@ -1,11 +1,7 @@
-import { expect, type Locator, type Page } from "@playwright/test";
+import { type Locator, expect } from "@playwright/test";
 import { BasePage } from "./base.page";
 
 export class SimulatorPage extends BasePage {
-  constructor(page: Page) {
-    super(page);
-  }
-
   async openSimulator(): Promise<void> {
     await this.openSimulatorTab();
     await expect(this.page.getByText("Debug Simulator")).toBeVisible();

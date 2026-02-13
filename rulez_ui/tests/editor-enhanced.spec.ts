@@ -1,12 +1,16 @@
 import { expect, test } from "@playwright/test";
 import { EditorPage } from "./pages";
+import { dismissOnboarding } from "./utils/dismiss-onboarding";
 import { resetAppState } from "./utils/reset-app-state";
 
 test.describe("Enhanced Editor", () => {
   test.beforeEach(async ({ page }) => {
+    await dismissOnboarding(page);
+    await page.goto("/");
     await resetAppState(page);
+    await page.reload();
+    await page.getByText("RuleZ UI").waitFor();
     const editorPage = new EditorPage(page);
-    await editorPage.goto();
     await editorPage.openDefaultFile();
   });
 

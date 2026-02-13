@@ -1,12 +1,15 @@
 import { expect, test } from "@playwright/test";
 import { SettingsPage } from "./pages";
+import { dismissOnboarding } from "./utils/dismiss-onboarding";
 import { resetAppState } from "./utils/reset-app-state";
 
 test.describe("Settings Panel", () => {
   test.beforeEach(async ({ page }) => {
+    await dismissOnboarding(page);
+    await page.goto("/");
     await resetAppState(page);
-    const settingsPage = new SettingsPage(page);
-    await settingsPage.goto();
+    await page.reload();
+    await page.getByText("RuleZ UI").waitFor();
   });
 
   test("should open settings panel from toolbar", async ({ page }) => {

@@ -1,7 +1,9 @@
 import { expect, test } from "@playwright/test";
+import { dismissOnboarding } from "./utils/dismiss-onboarding";
 
 test.describe("Monaco Editor", () => {
   test.beforeEach(async ({ page }) => {
+    await dismissOnboarding(page);
     await page.goto("/");
     // Load a file to show the editor
     await page.waitForTimeout(500);

@@ -1,7 +1,9 @@
 import { expect, test } from "@playwright/test";
+import { dismissOnboarding } from "./utils/dismiss-onboarding";
 
 test.describe("Rule Tree View", () => {
   test.beforeEach(async ({ page }) => {
+    await dismissOnboarding(page);
     await page.goto("/");
     // Load a file first to populate the tree view
     await page.waitForTimeout(500);

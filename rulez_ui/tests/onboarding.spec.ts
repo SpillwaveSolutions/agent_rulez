@@ -4,9 +4,11 @@ import { resetAppState } from "./utils/reset-app-state";
 
 test.describe("Onboarding Wizard", () => {
   test.beforeEach(async ({ page }) => {
+    // Navigate first so localStorage is accessible, then reset state and reload
+    await page.goto("/");
     await resetAppState(page);
-    const onboardingPage = new OnboardingPage(page);
-    await onboardingPage.goto();
+    await page.reload();
+    await page.getByText("RuleZ UI").waitFor();
   });
 
   test("should show wizard on first launch (clean state)", async ({ page }) => {
@@ -47,6 +49,8 @@ test.describe("Onboarding Wizard", () => {
   test("should re-run wizard from settings panel", async ({ page }) => {
     await page.getByRole("button", { name: /settings/i }).click();
     await page.getByRole("button", { name: /run onboarding|get started/i }).click();
-    await expect(page.getByRole("dialog", { name: /onboarding|welcome|get started/i })).toBeVisible();
+    await expect(
+      page.getByRole("dialog", { name: /onboarding|welcome|get started/i }),
+    ).toBeVisible();
   });
 });

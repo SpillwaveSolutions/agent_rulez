@@ -1,11 +1,7 @@
-import type { Locator, Page } from "@playwright/test";
+import type { Locator } from "@playwright/test";
 import { BasePage } from "./base.page";
 
 export class ConfigManagerPage extends BasePage {
-  constructor(page: Page) {
-    super(page);
-  }
-
   async switchScope(scope: "global" | "project"): Promise<void> {
     await this.page.getByRole("button", { name: new RegExp(scope, "i") }).click();
   }

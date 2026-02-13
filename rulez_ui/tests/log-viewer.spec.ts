@@ -2,6 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
 import { LogViewerPage } from "./pages";
+import { dismissOnboarding } from "./utils/dismiss-onboarding";
 import { resetAppState } from "./utils/reset-app-state";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -10,9 +11,12 @@ const fixturesDir = path.join(__dirname, "fixtures");
 
 test.describe("Log Viewer", () => {
   test.beforeEach(async ({ page }) => {
+    await dismissOnboarding(page);
+    await page.goto("/");
     await resetAppState(page);
+    await page.reload();
+    await page.getByText("RuleZ UI").waitFor();
     const logViewerPage = new LogViewerPage(page);
-    await logViewerPage.goto();
     await logViewerPage.openLogViewer();
   });
 

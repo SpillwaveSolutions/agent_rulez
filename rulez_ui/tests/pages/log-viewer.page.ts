@@ -1,11 +1,6 @@
-import type { Locator, Page } from "@playwright/test";
 import { BasePage } from "./base.page";
 
 export class LogViewerPage extends BasePage {
-  constructor(page: Page) {
-    super(page);
-  }
-
   async openLogViewer(): Promise<void> {
     await this.page.getByRole("button", { name: /log viewer|logs/i }).click();
   }

@@ -1,11 +1,7 @@
-import type { Locator, Page } from "@playwright/test";
+import type { Locator } from "@playwright/test";
 import { BasePage } from "./base.page";
 
 export class OnboardingPage extends BasePage {
-  constructor(page: Page) {
-    super(page);
-  }
-
   wizard(): Locator {
     return this.page.getByRole("dialog", { name: /onboarding|welcome|get started/i });
   }

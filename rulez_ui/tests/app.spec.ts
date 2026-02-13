@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test";
+import { dismissOnboarding } from "./utils/dismiss-onboarding";
 
 test.describe("RuleZ UI Application", () => {
+  test.beforeEach(async ({ page }) => {
+    await dismissOnboarding(page);
+  });
+
   test("should load the application", async ({ page }) => {
     await page.goto("/");
 
@@ -15,10 +20,10 @@ test.describe("RuleZ UI Application", () => {
     await page.goto("/");
 
     // Check for global config section
-    await expect(page.getByText("Global")).toBeVisible();
+    await expect(page.getByText("Global", { exact: true })).toBeVisible();
 
     // Check for project config section
-    await expect(page.getByText("Project")).toBeVisible();
+    await expect(page.getByText("Project", { exact: true }).first()).toBeVisible();
   });
 
   test("should toggle theme", async ({ page }) => {
@@ -68,7 +73,7 @@ test.describe("RuleZ UI Application", () => {
     await expect(page.getByText(/Ln \d+, Col \d+/)).toBeVisible();
 
     // Check for file type
-    await expect(page.getByText("YAML")).toBeVisible();
+    await expect(page.getByText("YAML", { exact: true })).toBeVisible();
 
     // Check for encoding
     await expect(page.getByText("UTF-8")).toBeVisible();
@@ -88,6 +93,6 @@ test.describe("RuleZ UI Application", () => {
     await page.waitForTimeout(200);
 
     // Check that file tab appears
-    await expect(page.getByText("hooks.yaml")).toBeVisible();
+    await expect(page.getByText("hooks.yaml").first()).toBeVisible();
   });
 });

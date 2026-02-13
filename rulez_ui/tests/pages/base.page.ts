@@ -13,7 +13,9 @@ export class BasePage {
   }
 
   async openFileByName(fileName: string, index = 0): Promise<void> {
-    const fileButton = this.page.getByRole("button", { name: new RegExp(fileName, "i") }).nth(index);
+    const fileButton = this.page
+      .getByRole("button", { name: new RegExp(fileName, "i") })
+      .nth(index);
     await fileButton.click();
   }
 

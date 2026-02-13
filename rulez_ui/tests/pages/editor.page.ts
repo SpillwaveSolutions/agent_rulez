@@ -1,11 +1,7 @@
-import { expect, type Locator, type Page } from "@playwright/test";
+import { type Locator, expect } from "@playwright/test";
 import { BasePage } from "./base.page";
 
 export class EditorPage extends BasePage {
-  constructor(page: Page) {
-    super(page);
-  }
-
   editorContainer(): Locator {
     return this.page.locator(".monaco-editor");
   }

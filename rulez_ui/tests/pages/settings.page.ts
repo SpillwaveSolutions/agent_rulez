@@ -1,11 +1,7 @@
-import type { Locator, Page } from "@playwright/test";
+import type { Locator } from "@playwright/test";
 import { BasePage } from "./base.page";
 
 export class SettingsPage extends BasePage {
-  constructor(page: Page) {
-    super(page);
-  }
-
   async openSettings(): Promise<void> {
     await this.page.getByRole("button", { name: /settings/i }).click();
   }
