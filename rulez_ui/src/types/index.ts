@@ -80,6 +80,15 @@ export interface DebugResult {
   evaluations: RuleEvaluation[];
 }
 
+// Test case types (Phase 15)
+export interface TestCase {
+  id: string;
+  name: string;
+  createdAt: string;
+  params: DebugParams;
+  lastResult?: DebugResult;
+}
+
 // RuleZ Configuration types
 export interface HooksSettings {
   log_level?: "debug" | "info" | "warn" | "error";
