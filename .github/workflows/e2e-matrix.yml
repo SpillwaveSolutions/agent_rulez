@@ -107,6 +107,7 @@ jobs:
       - name: Comment test results on PR
         uses: daun/playwright-report-comment@v3
         if: github.event_name == 'pull_request'
+        continue-on-error: true
         with:
           report-path: rulez_ui/playwright-report/
           comment-title: 'Playwright Test Results (${{ matrix.os }}, ${{ matrix.browser }})'
