@@ -1,13 +1,13 @@
 #!/bin/bash
 # Integration Test - Context Injection
 #
-# Verifies that CCH injects context files when Claude operates on specific file types.
+# Verifies that RuleZ injects context files when Claude operates on specific file types.
 #
 # Test Flow:
 #   1. Setup workspace with context injection hooks.yaml
-#   2. Install CCH in the workspace
+#   2. Install RuleZ in the workspace
 #   3. Run Claude with a prompt to read/edit a .cdk.ts file
-#   4. Verify CCH injected the CDK context file
+#   4. Verify RuleZ injected the CDK context file
 #   5. Verify logs show the injection
 
 set -euo pipefail
@@ -24,7 +24,7 @@ check_prerequisites
 # Setup
 section "Setup"
 WORKSPACE=$(setup_workspace "$SCRIPT_DIR")
-install_cch "$WORKSPACE"
+install_rulez "$WORKSPACE"
 
 # Record log position before test
 LOG_LINE_BEFORE=$(get_log_line_count)
@@ -46,7 +46,7 @@ section "Verification"
 
 # Check for context injection in logs
 assert_log_contains_since "$LOG_LINE_BEFORE" "cdk-context-injection" \
-    "CCH log should contain cdk-context-injection rule match"
+    "RuleZ log should contain cdk-context-injection rule match"
 
 # Check for injected_files in the log
 if log_contains_since "$LOG_LINE_BEFORE" "injected_files"; then
@@ -59,11 +59,11 @@ else
     # Check if there's any matching log entry
     NEW_ENTRIES=$(get_new_log_entries "$LOG_LINE_BEFORE" | wc -l | tr -d ' ')
     if [ "$NEW_ENTRIES" -gt 0 ]; then
-        echo -e "  ${YELLOW}!${NC} INFO - CCH processed event (injection may be in response)"
+        echo -e "  ${YELLOW}!${NC} INFO - RuleZ processed event (injection may be in response)"
         ASSERTIONS_PASSED=$((ASSERTIONS_PASSED + 1))
     else
         ASSERTIONS_FAILED=$((ASSERTIONS_FAILED + 1))
-        echo -e "  ${RED}x${NC} FAIL - No CCH log entries for context injection"
+        echo -e "  ${RED}x${NC} FAIL - No RuleZ log entries for context injection"
     fi
 fi
 

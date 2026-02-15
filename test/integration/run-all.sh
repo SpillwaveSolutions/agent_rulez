@@ -1,5 +1,5 @@
 #!/bin/bash
-# Run all CCH integration tests
+# Run all RuleZ integration tests
 #
 # Usage:
 #   ./run-all.sh              # Run all tests (soft assertions)
@@ -48,7 +48,7 @@ done
 # Banner
 echo ""
 echo -e "${BLUE}+============================================================+${NC}"
-echo -e "${BLUE}|       CCH Integration Test Suite                           |${NC}"
+echo -e "${BLUE}|       RuleZ Integration Test Suite                         |${NC}"
 echo -e "${BLUE}+============================================================+${NC}"
 if [ "${STRICT_MODE:-0}" = "1" ]; then
     echo -e "${YELLOW}|       MODE: STRICT (fail-fast on first assertion failure) |${NC}"
