@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test";
+import { dismissOnboarding } from "./utils/dismiss-onboarding";
 
 test.describe("RuleZ UI Application", () => {
+  test.beforeEach(async ({ page }) => {
+    await dismissOnboarding(page);
+  });
+
   test("should load the application", async ({ page }) => {
     await page.goto("/");
 
@@ -15,10 +20,10 @@ test.describe("RuleZ UI Application", () => {
     await page.goto("/");
 
     // Check for global config section
-    await expect(page.getByText("Global")).toBeVisible();
+    await expect(page.getByText("Global", { exact: true })).toBeVisible();
 
     // Check for project config section
-    await expect(page.getByText("Project", { exact: true })).toBeVisible();
+    await expect(page.getByText("Project", { exact: true }).first()).toBeVisible();
   });
 
   test("should toggle theme", async ({ page }) => {
@@ -81,13 +86,13 @@ test.describe("RuleZ UI Application", () => {
     await page.waitForTimeout(500);
 
     // Click on the global hooks.yaml file
-    const globalFile = page.locator('[data-testid="sidebar-global-file-hooks.yaml"]');
+    const globalFile = page.getByRole("button", { name: /hooks\.yaml/i }).first();
     await globalFile.click();
 
     // Wait for file to load
     await page.waitForTimeout(200);
 
     // Check that file tab appears
-    await expect(page.locator('[data-testid="file-tab-hooks.yaml"]')).toBeVisible();
+    await expect(page.getByText("hooks.yaml").first()).toBeVisible();
   });
 });

@@ -1,10 +1,50 @@
-import { listConfigFiles, readConfig } from "@/lib/tauri";
+import { ImportConfigDialog } from "@/components/config/ImportConfigDialog";
+import { exportConfigFile, importConfigFile, listConfigFiles, readConfig } from "@/lib/tauri";
 import { useConfigStore } from "@/stores/configStore";
-import { useEffect } from "react";
+import type { ScopeInfo } from "@/stores/configStore";
+import { useCallback, useEffect, useState } from "react";
 
 export function Sidebar() {
-  const { globalConfig, projectConfig, setGlobalConfig, setProjectConfig, openFile, activeFile } =
-    useConfigStore();
+  const {
+    globalConfig,
+    projectConfig,
+    setGlobalConfig,
+    setProjectConfig,
+    openFile,
+    activeFile,
+    getScopeInfo,
+  } = useConfigStore();
+  const scopeInfo: ScopeInfo = getScopeInfo();
+  const [importData, setImportData] = useState<{ content: string; sourcePath: string } | null>(
+    null,
+  );
+  const [exportFeedback, setExportFeedback] = useState<string | null>(null);
+
+  const handleImport = useCallback(async () => {
+    try {
+      const result = await importConfigFile();
+      if (result) {
+        setImportData({ content: result.content, sourcePath: result.path });
+      }
+    } catch (err) {
+      console.error("Import failed:", err);
+    }
+  }, []);
+
+  const handleExport = useCallback(async (path: string) => {
+    try {
+      const fileState = useConfigStore.getState().openFiles.get(path);
+      const content = fileState?.content ?? (await readConfig(path));
+      const fileName = path.split("/").pop() ?? "hooks.yaml";
+      const exported = await exportConfigFile(content, fileName);
+      if (exported) {
+        setExportFeedback(path);
+        setTimeout(() => setExportFeedback(null), 2000);
+      }
+    } catch (err) {
+      console.error("Export failed:", err);
+    }
+  }, []);
 
   // Load config files on mount
   useEffect(() => {
@@ -40,10 +80,7 @@ export function Sidebar() {
   };
 
   return (
-    <aside
-      data-testid="sidebar"
-      className="w-56 flex-shrink-0 border-r border-gray-200 dark:border-gray-700 bg-surface dark:bg-surface-dark overflow-y-auto"
-    >
+    <aside data-testid="sidebar" className="w-56 flex-shrink-0 border-r border-gray-200 dark:border-gray-700 bg-surface dark:bg-surface-dark overflow-y-auto">
       <div className="p-3">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
           Files
@@ -67,15 +104,24 @@ export function Sidebar() {
               />
             </svg>
             <span>Global</span>
+            <ScopeBadge status={scopeInfo.globalStatus} type="global" />
           </div>
           {globalConfig ? (
-            <FileItem
-              path={globalConfig.path}
-              exists={globalConfig.exists}
-              isActive={activeFile === globalConfig.path}
-              onClick={() => handleFileClick(globalConfig.path)}
-              section="global"
-            />
+            <div className="flex items-center gap-1">
+              <FileItem
+                path={globalConfig.path}
+                exists={globalConfig.exists}
+                isActive={activeFile === globalConfig.path}
+                onClick={() => handleFileClick(globalConfig.path)}
+                scope="global"
+              />
+              {globalConfig.exists && (
+                <ExportButton
+                  onClick={() => handleExport(globalConfig.path)}
+                  feedback={exportFeedback === globalConfig.path}
+                />
+              )}
+            </div>
           ) : (
             <div className="text-sm text-gray-400 dark:text-gray-500 italic pl-5">Loading...</div>
           )}
@@ -99,23 +145,145 @@ export function Sidebar() {
               />
             </svg>
             <span>Project</span>
+            <ScopeBadge status={scopeInfo.projectStatus} type="project" />
           </div>
           {projectConfig ? (
-            <FileItem
-              path={projectConfig.path}
-              exists={projectConfig.exists}
-              isActive={activeFile === projectConfig.path}
-              onClick={() => handleFileClick(projectConfig.path)}
-              section="project"
-            />
+            <div className="flex items-center gap-1">
+              <FileItem
+                path={projectConfig.path}
+                exists={projectConfig.exists}
+                isActive={activeFile === projectConfig.path}
+                onClick={() => handleFileClick(projectConfig.path)}
+                scope="project"
+              />
+              {projectConfig.exists && (
+                <ExportButton
+                  onClick={() => handleExport(projectConfig.path)}
+                  feedback={exportFeedback === projectConfig.path}
+                />
+              )}
+            </div>
           ) : (
             <div className="text-sm text-gray-400 dark:text-gray-500 italic pl-5">
               No project config
             </div>
           )}
         </div>
+
+        {/* Import button */}
+        <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
+          <button
+            type="button"
+            onClick={handleImport}
+            className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs rounded border border-dashed border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-400 dark:hover:border-gray-500 transition-colors"
+            aria-label="Import config"
+          >
+            <svg
+              className="w-3.5 h-3.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+              />
+            </svg>
+            Import Config
+          </button>
+        </div>
       </div>
+
+      {/* Import dialog */}
+      {importData && (
+        <ImportConfigDialog
+          content={importData.content}
+          sourcePath={importData.sourcePath}
+          onClose={() => setImportData(null)}
+        />
+      )}
     </aside>
+  );
+}
+
+interface ExportButtonProps {
+  onClick: () => void;
+  feedback: boolean;
+}
+
+function ExportButton({ onClick, feedback }: ExportButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex-shrink-0"
+      aria-label="Export config"
+      title={feedback ? "Exported!" : "Export config"}
+    >
+      {feedback ? (
+        <svg
+          className="w-3.5 h-3.5 text-green-500"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+        </svg>
+      ) : (
+        <svg
+          className="w-3.5 h-3.5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+          />
+        </svg>
+      )}
+    </button>
+  );
+}
+
+interface ScopeBadgeProps {
+  status: "active" | "overridden" | "missing";
+  type: "global" | "project";
+}
+
+function ScopeBadge({ status, type }: ScopeBadgeProps) {
+  if (status === "missing") return null;
+
+  const isActive = status === "active";
+  const label = isActive ? "Active" : "Overridden";
+  const tooltip =
+    isActive && type === "project"
+      ? "This project config takes priority over the global config"
+      : isActive && type === "global"
+        ? "No project config found — using this global config"
+        : "This global config is overridden by the project config";
+
+  return (
+    <span
+      title={tooltip}
+      className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium leading-none ${
+        isActive
+          ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+          : "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300"
+      }`}
+    >
+      {label}
+    </span>
   );
 }
 
@@ -124,17 +292,17 @@ interface FileItemProps {
   exists: boolean;
   isActive: boolean;
   onClick: () => void;
-  section: "global" | "project";
+  scope: "global" | "project";
 }
 
-function FileItem({ path, exists, isActive, onClick, section }: FileItemProps) {
+function FileItem({ path, exists, isActive, onClick, scope }: FileItemProps) {
   const fileName = path.split("/").pop() || path;
 
   return (
     <button
       type="button"
-      data-testid={`sidebar-${section}-file-${fileName}`}
       onClick={onClick}
+      data-testid={`sidebar-${scope}-file-${fileName}`}
       className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-left transition-colors ${
         isActive
           ? "bg-accent/10 text-accent dark:text-accent-dark"

@@ -1,5 +1,5 @@
 import type { DebugParams, EventType } from "@/types";
-import { useState } from "react";
+import { forwardRef, useImperativeHandle, useState } from "react";
 
 const EVENT_TYPES: EventType[] = [
   "PreToolUse",
@@ -16,11 +16,27 @@ interface EventFormProps {
   isLoading: boolean;
 }
 
-export function EventForm({ onSubmit, isLoading }: EventFormProps) {
+export interface EventFormHandle {
+  setParams: (params: DebugParams) => void;
+}
+
+export const EventForm = forwardRef<EventFormHandle, EventFormProps>(function EventForm(
+  { onSubmit, isLoading },
+  ref,
+) {
   const [eventType, setEventType] = useState<EventType | "">("");
   const [tool, setTool] = useState("");
   const [command, setCommand] = useState("");
   const [path, setPath] = useState("");
+
+  useImperativeHandle(ref, () => ({
+    setParams(params: DebugParams) {
+      setEventType(params.eventType);
+      setTool(params.tool ?? "");
+      setCommand(params.command ?? "");
+      setPath(params.path ?? "");
+    },
+  }));
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -126,4 +142,4 @@ export function EventForm({ onSubmit, isLoading }: EventFormProps) {
       </button>
     </form>
   );
-}
+});

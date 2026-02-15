@@ -2322,6 +2322,11 @@ pub enum EventType {
     PostToolUse,
     PermissionRequest,
     UserPromptSubmit,
+    BeforeAgent,
+    AfterAgent,
+    BeforeModel,
+    AfterModel,
+    BeforeToolSelection,
     SessionStart,
     SessionEnd,
     PreCompact,
@@ -2340,6 +2345,11 @@ impl std::fmt::Display for EventType {
             EventType::PostToolUse => write!(f, "PostToolUse"),
             EventType::PermissionRequest => write!(f, "PermissionRequest"),
             EventType::UserPromptSubmit => write!(f, "UserPromptSubmit"),
+            EventType::BeforeAgent => write!(f, "BeforeAgent"),
+            EventType::AfterAgent => write!(f, "AfterAgent"),
+            EventType::BeforeModel => write!(f, "BeforeModel"),
+            EventType::AfterModel => write!(f, "AfterModel"),
+            EventType::BeforeToolSelection => write!(f, "BeforeToolSelection"),
             EventType::SessionStart => write!(f, "SessionStart"),
             EventType::SessionEnd => write!(f, "SessionEnd"),
             EventType::PreCompact => write!(f, "PreCompact"),
@@ -2374,6 +2384,70 @@ pub struct Response {
     /// Performance metrics
     #[serde(skip_serializing_if = "Option::is_none")]
     pub timing: Option<Timing>,
+}
+
+/// Gemini CLI output structure for hook responses
+///
+/// Gemini expects a strict JSON object with decision semantics.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+#[allow(dead_code)]
+pub enum GeminiDecision {
+    Allow,
+    Deny,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[allow(dead_code)]
+pub struct GeminiHookResponse {
+    /// Whether the operation is allowed or denied
+    pub decision: GeminiDecision,
+
+    /// Explanation for blocking or warnings
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+
+    /// Whether to continue the agent loop
+    #[serde(rename = "continue", skip_serializing_if = "Option::is_none")]
+    pub continue_: Option<bool>,
+
+    /// Hook-specific system message override
+    #[serde(rename = "systemMessage", skip_serializing_if = "Option::is_none")]
+    pub system_message: Option<String>,
+
+    /// Hook-specific tool input override
+    #[serde(rename = "tool_input", skip_serializing_if = "Option::is_none")]
+    pub tool_input: Option<serde_json::Value>,
+}
+
+/// GitHub Copilot CLI output structure for hook responses
+///
+/// Copilot expects a strict JSON object with permission decisions.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+#[allow(dead_code)]
+pub enum CopilotDecision {
+    Allow,
+    Deny,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[allow(dead_code)]
+pub struct CopilotHookResponse {
+    /// Whether the tool execution is allowed or denied
+    #[serde(rename = "permissionDecision")]
+    pub permission_decision: CopilotDecision,
+
+    /// Explanation for blocking decisions
+    #[serde(
+        rename = "permissionDecisionReason",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub permission_decision_reason: Option<String>,
+
+    /// Optional tool input override
+    #[serde(rename = "tool_input", skip_serializing_if = "Option::is_none")]
+    pub tool_input: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

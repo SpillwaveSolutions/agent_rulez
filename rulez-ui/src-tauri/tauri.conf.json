@@ -13,7 +13,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "RuleZ UI - Agent RuleZ Configuration Editor",
+        "title": "RuleZ UI - RuleZ Configuration Editor",
         "width": 1280,
         "height": 800,
         "minWidth": 800,

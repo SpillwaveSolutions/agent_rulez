@@ -3,11 +3,13 @@ use clap::{Parser, Subcommand};
 use std::io::{self, Read};
 use tracing::{error, info};
 
+mod adapters;
 mod cli;
 mod config;
 mod hooks;
 mod logging;
 mod models;
+mod opencode;
 mod schema;
 
 #[derive(Parser)]
@@ -51,7 +53,7 @@ enum Commands {
     },
     /// Simulate an event to test rules
     Debug {
-        /// Event type: PreToolUse, PostToolUse, SessionStart, PermissionRequest, UserPromptSubmit
+        /// Event type: PreToolUse, PostToolUse, SessionStart, PermissionRequest, UserPromptSubmit, SessionEnd, PreCompact
         event_type: String,
         /// Tool name (e.g., Bash, Write, Read)
         #[arg(short, long)]
@@ -68,6 +70,9 @@ enum Commands {
         /// Show verbose rule evaluation
         #[arg(short, long)]
         verbose: bool,
+        /// Output structured JSON (for programmatic consumption)
+        #[arg(long)]
+        json: bool,
     },
     /// Start interactive debug mode
     Repl,
@@ -99,6 +104,22 @@ enum Commands {
         /// Event/session ID to explain (legacy usage)
         event_id: Option<String>,
     },
+    /// Gemini CLI utilities
+    Gemini {
+        #[command(subcommand)]
+        subcommand: GeminiSubcommand,
+    },
+    /// Copilot CLI utilities
+    Copilot {
+        #[command(subcommand)]
+        subcommand: CopilotSubcommand,
+    },
+    /// OpenCode CLI utilities
+    #[command(name = "opencode")]
+    OpenCode {
+        #[command(subcommand)]
+        subcommand: OpenCodeSubcommand,
+    },
 }
 
 /// Subcommands for the explain command
@@ -122,6 +143,78 @@ enum ExplainSubcommand {
         /// Session/event ID
         event_id: String,
     },
+}
+
+/// Subcommands for Copilot CLI utilities
+#[derive(Subcommand)]
+enum CopilotSubcommand {
+    /// Diagnose Copilot hook installation and configuration
+    Doctor {
+        /// Output machine-readable JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// Install Copilot hook files into .github/hooks
+    Install {
+        /// Path to CCH binary (auto-detected if not specified)
+        #[arg(short, long)]
+        binary: Option<String>,
+        /// Print JSON snippet without writing
+        #[arg(long, alias = "dry-run")]
+        print: bool,
+    },
+    /// Run Copilot hook runner (stdin -> Copilot JSON response)
+    Hook,
+}
+
+/// Subcommands for Gemini CLI utilities
+#[derive(Subcommand)]
+enum GeminiSubcommand {
+    /// Diagnose Gemini hook installation and configuration
+    Doctor {
+        /// Output machine-readable JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// Install Gemini hook settings
+    Install {
+        /// Settings scope (project, user, system)
+        #[arg(long, value_enum, default_value_t = cli::gemini_install::Scope::Project)]
+        scope: cli::gemini_install::Scope,
+        /// Path to CCH binary (auto-detected if not specified)
+        #[arg(short, long)]
+        binary: Option<String>,
+        /// Print JSON snippet without writing
+        #[arg(long, alias = "dry-run")]
+        print: bool,
+    },
+    /// Run Gemini hook runner (stdin -> Gemini JSON response)
+    Hook,
+}
+
+/// Subcommands for OpenCode CLI utilities
+#[derive(Subcommand)]
+enum OpenCodeSubcommand {
+    /// Diagnose OpenCode hook installation and configuration
+    Doctor {
+        /// Output machine-readable JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// Install OpenCode hook settings
+    Install {
+        /// Settings scope (project, user)
+        #[arg(long, value_enum, default_value_t = cli::opencode_install::Scope::Project)]
+        scope: cli::opencode_install::Scope,
+        /// Path to CCH binary (auto-detected if not specified)
+        #[arg(short, long)]
+        binary: Option<String>,
+        /// Print JSON snippet without writing
+        #[arg(long, alias = "dry-run")]
+        print: bool,
+    },
+    /// Run OpenCode hook runner (stdin -> RuleZ JSON response)
+    Hook,
 }
 
 #[tokio::main(flavor = "current_thread")]
@@ -171,8 +264,9 @@ async fn main() -> Result<()> {
             path,
             prompt,
             verbose,
+            json,
         }) => {
-            cli::debug::run(event_type, tool, command, path, prompt, verbose).await?;
+            cli::debug::run(event_type, tool, command, path, prompt, verbose, json).await?;
         }
         Some(Commands::Repl) => {
             cli::debug::interactive().await?;
@@ -221,6 +315,47 @@ async fn main() -> Result<()> {
                 }
             }
         }
+        Some(Commands::Copilot { subcommand }) => match subcommand {
+            CopilotSubcommand::Doctor { json } => {
+                cli::copilot_doctor::run(json).await?;
+            }
+            CopilotSubcommand::Install { binary, print } => {
+                cli::copilot_install::run(binary, print).await?;
+            }
+            CopilotSubcommand::Hook => {
+                cli::copilot_hook::run(cli.debug_logs).await?;
+            }
+        },
+        Some(Commands::Gemini { subcommand }) => match subcommand {
+            GeminiSubcommand::Doctor { json } => {
+                cli::gemini_doctor::run(json).await?;
+            }
+            GeminiSubcommand::Install {
+                scope,
+                binary,
+                print,
+            } => {
+                cli::gemini_install::run(scope, binary, print).await?;
+            }
+            GeminiSubcommand::Hook => {
+                cli::gemini_hook::run(cli.debug_logs).await?;
+            }
+        },
+        Some(Commands::OpenCode { subcommand }) => match subcommand {
+            OpenCodeSubcommand::Doctor { json } => {
+                cli::opencode_doctor::run(json).await?;
+            }
+            OpenCodeSubcommand::Install {
+                scope,
+                binary,
+                print,
+            } => {
+                cli::opencode_install::run(scope, binary, print).await?;
+            }
+            OpenCodeSubcommand::Hook => {
+                cli::opencode_hook::run(cli.debug_logs).await?;
+            }
+        },
         None => {
             // No subcommand provided, read from stdin for hook processing
             process_hook_event(&cli, &config).await?;

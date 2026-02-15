@@ -1,0 +1,65 @@
+{
+  "name": "copilot-rulez-vscode",
+  "displayName": "RuleZ Copilot Chat",
+  "description": "RuleZ policy checks for GitHub Copilot chat",
+  "version": "0.0.1",
+  "publisher": "rulez",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "AI",
+    "Other"
+  ],
+  "activationEvents": [
+    "onChat:rulez.participant"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "chatParticipants": [
+      {
+        "id": "rulez.participant",
+        "name": "rulez",
+        "fullName": "RuleZ",
+        "description": "Policy checks for Copilot",
+        "commands": [
+          {
+            "name": "validate",
+            "description": "Validate a proposed change against RuleZ policies"
+          },
+          {
+            "name": "explain",
+            "description": "Explain the RuleZ policy decision"
+          }
+        ]
+      }
+    ],
+    "configuration": {
+      "title": "RuleZ Copilot",
+      "properties": {
+        "rulez.binaryPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the rulez binary. Leave empty to use rulez from PATH.",
+          "scope": "resource"
+        },
+        "rulez.useLmSummary": {
+          "type": "boolean",
+          "default": false,
+          "description": "Use Copilot language model to summarize RuleZ decisions.",
+          "scope": "resource"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p .",
+    "watch": "tsc -watch -p ."
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "@types/vscode": "^1.90.0",
+    "typescript": "^5.4.0"
+  }
+}

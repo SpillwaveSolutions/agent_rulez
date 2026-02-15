@@ -1,23 +1,21 @@
 import { useEffect } from "react";
 import { AppShell } from "./components/layout/AppShell";
-import { useUIStore } from "./stores/uiStore";
+import { OnboardingWizard } from "./components/onboarding/OnboardingWizard";
+import { useSettingsStore } from "./stores/settingsStore";
 
 function App() {
-  const { theme, setTheme } = useUIStore();
+  const settings = useSettingsStore((s) => s.settings);
+  const isLoaded = useSettingsStore((s) => s.isLoaded);
+  const loadSettings = useSettingsStore((s) => s.loadSettings);
 
-  // Initialize theme from system preference or localStorage
+  // Load persisted settings on startup
   useEffect(() => {
-    const stored = localStorage.getItem("rulez-ui-theme");
-    if (stored === "light" || stored === "dark" || stored === "system") {
-      setTheme(stored);
-    } else {
-      // Default to system preference
-      setTheme("system");
-    }
-  }, [setTheme]);
+    void loadSettings();
+  }, [loadSettings]);
 
   // Apply theme class to document
   useEffect(() => {
+    const theme = settings.theme;
     const root = document.documentElement;
     const isDark =
       theme === "dark" ||
@@ -42,9 +40,14 @@ function App() {
       mediaQuery.addEventListener("change", handler);
       return () => mediaQuery.removeEventListener("change", handler);
     }
-  }, [theme]);
+  }, [settings.theme]);
 
-  return <AppShell />;
+  return (
+    <>
+      <AppShell />
+      {isLoaded && !settings.onboardingComplete && <OnboardingWizard />}
+    </>
+  );
 }
 
 export default App;

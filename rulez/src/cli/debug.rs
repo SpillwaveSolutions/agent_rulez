@@ -4,6 +4,7 @@
 
 use anyhow::{Context, Result};
 use chrono::Utc;
+use serde::Serialize;
 use serde_json::json;
 use std::io::Write;
 
@@ -19,6 +20,8 @@ pub enum SimEventType {
     SessionStart,
     PermissionRequest,
     UserPromptSubmit,
+    SessionEnd,
+    PreCompact,
 }
 
 impl SimEventType {
@@ -29,6 +32,8 @@ impl SimEventType {
             SimEventType::SessionStart => ModelEventType::SessionStart,
             SimEventType::PermissionRequest => ModelEventType::PermissionRequest,
             SimEventType::UserPromptSubmit => ModelEventType::UserPromptSubmit,
+            SimEventType::SessionEnd => ModelEventType::SessionEnd,
+            SimEventType::PreCompact => ModelEventType::PreCompact,
         }
     }
 
@@ -41,9 +46,37 @@ impl SimEventType {
             "userpromptsubmit" | "prompt" | "user-prompt" | "user-prompt-submit" => {
                 Some(SimEventType::UserPromptSubmit)
             }
+            "sessionend" | "end" | "session-end" => Some(SimEventType::SessionEnd),
+            "precompact" | "compact" | "pre-compact" => Some(SimEventType::PreCompact),
             _ => None,
         }
     }
+}
+
+/// JSON output structures matching the Tauri DebugResult type
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct JsonDebugResult {
+    outcome: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    reason: Option<String>,
+    matched_rules: Vec<String>,
+    evaluation_time_ms: f64,
+    evaluations: Vec<JsonRuleEvaluation>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct JsonRuleEvaluation {
+    rule_name: String,
+    matched: bool,
+    time_ms: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    details: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pattern: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    input: Option<String>,
 }
 
 /// Run the debug command
@@ -54,6 +87,7 @@ pub async fn run(
     path: Option<String>,
     prompt: Option<String>,
     verbose: bool,
+    json_output: bool,
 ) -> Result<()> {
     // Clear regex cache for state isolation between debug invocations
     {
@@ -62,18 +96,12 @@ pub async fn run(
     }
 
     let event_type = SimEventType::from_str(&event_type).context(format!(
-        "Unknown event type: '{}'\nValid types: PreToolUse, PostToolUse, SessionStart, PermissionRequest, UserPromptSubmit",
+        "Unknown event type: '{}'\nValid types: PreToolUse, PostToolUse, SessionStart, PermissionRequest, UserPromptSubmit, SessionEnd, PreCompact",
         event_type
     ))?;
 
-    println!("RuleZ Debug Mode");
-    println!("{}", "=".repeat(60));
-    println!();
-
     // Load configuration
     let config = Config::load(None)?;
-    println!("Loaded {} rules from configuration", config.rules.len());
-    println!();
 
     // Build simulated event
     let event = build_event(
@@ -83,8 +111,19 @@ pub async fn run(
         path.clone(),
         prompt.clone(),
     );
-    let event_json = serde_json::to_string_pretty(&event)?;
 
+    if json_output {
+        return run_json_mode(event, &config).await;
+    }
+
+    // Human-readable mode
+    println!("RuleZ Debug Mode");
+    println!("{}", "=".repeat(60));
+    println!();
+    println!("Loaded {} rules from configuration", config.rules.len());
+    println!();
+
+    let event_json = serde_json::to_string_pretty(&event)?;
     println!("Simulated Event:");
     println!("{}", "-".repeat(40));
     println!("{}", event_json);
@@ -139,6 +178,181 @@ pub async fn run(
     }
 
     Ok(())
+}
+
+/// Run debug in JSON output mode — single structured JSON object to stdout
+async fn run_json_mode(event: Event, config: &Config) -> Result<()> {
+    let start = std::time::Instant::now();
+
+    // Evaluate each rule individually to build per-rule traces
+    let mut evaluations: Vec<JsonRuleEvaluation> = Vec::new();
+    let mut matched_rules: Vec<String> = Vec::new();
+
+    for rule in &config.rules {
+        let rule_start = std::time::Instant::now();
+        let matches = rule_matches_event(rule, &event);
+        let rule_time = rule_start.elapsed().as_secs_f64() * 1000.0;
+
+        let details = if matches {
+            Some("Rule matched".to_string())
+        } else {
+            Some("No match".to_string())
+        };
+
+        // Extract pattern info from the rule for display
+        let pattern = extract_rule_pattern(rule);
+        let input = extract_event_input(&event);
+
+        if matches {
+            matched_rules.push(rule.name.clone());
+        }
+
+        evaluations.push(JsonRuleEvaluation {
+            rule_name: rule.name.clone(),
+            matched: matches,
+            time_ms: rule_time,
+            details,
+            pattern,
+            input: input.clone(),
+        });
+    }
+
+    // Process the event to get the actual response
+    let debug_config = DebugConfig::new(true, config.settings.debug_logs);
+    let response = hooks::process_event(event, &debug_config).await?;
+    let total_time = start.elapsed().as_secs_f64() * 1000.0;
+
+    // Determine outcome
+    let outcome = if !response.continue_ {
+        "Block".to_string()
+    } else if response.context.is_some() {
+        "Inject".to_string()
+    } else {
+        "Allow".to_string()
+    };
+
+    let result = JsonDebugResult {
+        outcome,
+        reason: response.reason.clone(),
+        matched_rules,
+        evaluation_time_ms: total_time,
+        evaluations,
+    };
+
+    println!("{}", serde_json::to_string(&result)?);
+    Ok(())
+}
+
+/// Check if a single rule matches the given event (simplified version for JSON trace)
+fn rule_matches_event(rule: &crate::models::Rule, event: &Event) -> bool {
+    let matchers = &rule.matchers;
+
+    // Check operations (event types)
+    if let Some(ref operations) = matchers.operations {
+        let event_name = event.hook_event_name.to_string();
+        if !operations.contains(&event_name) {
+            return false;
+        }
+    }
+
+    // Check tool filter
+    if let Some(ref tools) = matchers.tools {
+        if let Some(ref tool_name) = event.tool_name {
+            if !tools.contains(tool_name) {
+                return false;
+            }
+        } else {
+            return false;
+        }
+    }
+
+    // Check command_match pattern
+    if let Some(ref cmd_pattern) = matchers.command_match {
+        if let Some(ref tool_input) = event.tool_input {
+            let cmd = tool_input
+                .get("command")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            if let Ok(re) = regex::Regex::new(cmd_pattern) {
+                if !re.is_match(cmd) {
+                    return false;
+                }
+            }
+        } else {
+            return false;
+        }
+    }
+
+    // Check file extensions
+    if let Some(ref extensions) = matchers.extensions {
+        if let Some(ref tool_input) = event.tool_input {
+            let file_path = tool_input
+                .get("filePath")
+                .or_else(|| tool_input.get("file_path"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let path_ext = std::path::Path::new(file_path)
+                .extension()
+                .and_then(|ext| ext.to_str())
+                .unwrap_or("");
+            if !extensions
+                .iter()
+                .any(|ext| ext == &format!(".{}", path_ext))
+            {
+                return false;
+            }
+        } else {
+            return false;
+        }
+    }
+
+    // Check directory patterns
+    if let Some(ref directories) = matchers.directories {
+        if let Some(ref tool_input) = event.tool_input {
+            let file_path = tool_input
+                .get("filePath")
+                .or_else(|| tool_input.get("file_path"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            if !directories.iter().any(|dir| {
+                file_path.contains(dir.trim_end_matches("/**"))
+                    || file_path.contains(dir.trim_end_matches("/*"))
+            }) {
+                return false;
+            }
+        } else {
+            return false;
+        }
+    }
+
+    true
+}
+
+/// Extract the primary matching pattern from a rule for display
+fn extract_rule_pattern(rule: &crate::models::Rule) -> Option<String> {
+    if let Some(ref pattern) = rule.matchers.command_match {
+        return Some(pattern.clone());
+    }
+    if let Some(ref tools) = rule.matchers.tools {
+        return Some(tools.join(", "));
+    }
+    if let Some(ref ops) = rule.matchers.operations {
+        return Some(ops.join(", "));
+    }
+    None
+}
+
+/// Extract the relevant input from an event for display
+fn extract_event_input(event: &Event) -> Option<String> {
+    if let Some(ref tool_input) = event.tool_input {
+        if let Some(cmd) = tool_input.get("command").and_then(|v| v.as_str()) {
+            return Some(cmd.to_string());
+        }
+        if let Some(path) = tool_input.get("file_path").and_then(|v| v.as_str()) {
+            return Some(path.to_string());
+        }
+    }
+    None
 }
 
 /// Build a simulated event
@@ -273,6 +487,7 @@ pub async fn interactive() -> Result<()> {
                     None,
                     None,
                     false,
+                    false,
                 )
                 .await?;
             }
@@ -285,6 +500,7 @@ pub async fn interactive() -> Result<()> {
                     Some(path),
                     None,
                     false,
+                    false,
                 )
                 .await?;
             }
@@ -296,6 +512,7 @@ pub async fn interactive() -> Result<()> {
                     None,
                     Some(path),
                     None,
+                    false,
                     false,
                 )
                 .await?;

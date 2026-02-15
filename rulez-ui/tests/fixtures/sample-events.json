@@ -1,0 +1,20 @@
+[
+  {
+    "eventType": "PreToolUse",
+    "tool": "Bash",
+    "command": "git push --force origin main",
+    "path": "/repo"
+  },
+  {
+    "eventType": "PostToolUse",
+    "tool": "Write",
+    "command": "Write README.md",
+    "path": "/repo/README.md"
+  },
+  {
+    "eventType": "PermissionRequest",
+    "tool": "Edit",
+    "command": "Edit src/main.ts",
+    "path": "/repo/src/main.ts"
+  }
+]

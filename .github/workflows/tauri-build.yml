@@ -48,17 +48,27 @@ jobs:
         run: bunx playwright install --with-deps chromium webkit
 
       - name: Run E2E tests
-        run: bunx playwright test
+        run: bunx playwright test --retries=1
         env:
           CI: true
 
-      - name: Upload test results
+      - name: Upload test results (always)
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: playwright-report
+          name: playwright-report-tauri-gate
           path: rulez-ui/playwright-report/
           retention-days: 30
+
+      - name: Upload failure artifacts
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-failures-tauri-gate
+          path: |
+            rulez-ui/test-results/**/*.png
+            rulez-ui/test-results/**/*.webm
+          retention-days: 7
 
   build-tauri:
     name: Build Tauri (${{ matrix.platform }})

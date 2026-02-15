@@ -61,6 +61,39 @@ bun run test:e2e
 bun run build:tauri
 ```
 
+
+## CI Testing
+
+E2E tests run automatically on:
+- **PRs to develop**: Fast CI (ubuntu-latest, chromium + webkit) ~3-5 min
+- **PRs to main**: Full matrix (ubuntu, macOS, Windows × chromium/webkit) ~15-20 min
+
+### Test Reports
+
+- HTML reports: Check "Artifacts" in GitHub Actions run
+- Test summaries: Auto-posted as PR comments
+- Failure artifacts: Screenshots and videos uploaded on test failures
+
+### Running Locally
+
+```bash
+# Run all tests (mirrors CI)
+CI=true bunx playwright test
+
+# Run with retries (like CI)
+bunx playwright test --retries=2
+
+# Debug failing tests
+bunx playwright test --debug
+```
+
+### Flaky Tests
+
+Tests automatically retry 2 times on CI. If a test is consistently flaky:
+1. Mark with `test.fixme()` and file an issue
+2. Add `test.slow()` if timing-dependent
+3. Increase explicit waits (avoid `waitForTimeout`)
+
 ## Architecture
 
 ### Dual-Mode Architecture

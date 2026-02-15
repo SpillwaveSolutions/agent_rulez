@@ -1,0 +1,8 @@
+version "1.0"
+
+settings:
+  log_level: "info"
+
+rules:
+  - name: missing-colon
+    description "This line is invalid"

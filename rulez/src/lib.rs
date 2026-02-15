@@ -26,8 +26,10 @@
 #![allow(clippy::if_not_else)]
 #![allow(clippy::redundant_closure_for_method_calls)]
 
+pub mod adapters;
 pub mod cli;
 pub mod config;
 pub mod hooks;
 pub mod logging;
 pub mod models;
+pub mod opencode;

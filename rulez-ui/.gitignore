@@ -15,7 +15,7 @@ coverage
 *.lcov
 
 # Logs
-logs
+/logs
 *.log
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
