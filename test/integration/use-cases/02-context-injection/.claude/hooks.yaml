@@ -1,4 +1,4 @@
-# CCH Integration Test - Context Injection
+# RuleZ Integration Test - Context Injection
 # This configuration injects context files when editing specific file types.
 
 version: "1.0"
@@ -8,19 +8,17 @@ rules:
     description: "Inject CDK best practices when editing CDK files"
     matchers:
       tools: ["Write", "Edit", "Read"]
-      path_match: ".*\\.cdk\\.ts$"
+      directories: ["**/*.cdk.ts"]
     actions:
-      inject_context:
-        - ".claude/context/cdk-best-practices.md"
+      inject: ".claude/context/cdk-best-practices.md"
 
   - name: terraform-context-injection
     description: "Inject Terraform guidelines when editing TF files"
     matchers:
       tools: ["Write", "Edit", "Read"]
-      path_match: ".*\\.tf$"
+      directories: ["**/*.tf"]
     actions:
-      inject_context:
-        - ".claude/context/terraform-guidelines.md"
+      inject: ".claude/context/terraform-guidelines.md"
 
 settings:
   log_level: "debug"

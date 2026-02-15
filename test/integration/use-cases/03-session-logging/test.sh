@@ -1,11 +1,11 @@
 #!/bin/bash
 # Integration Test - Session Logging
 #
-# Verifies that CCH creates proper audit logs with timing information.
+# Verifies that RuleZ creates proper audit logs with timing information.
 #
 # Test Flow:
 #   1. Setup workspace with logging-enabled hooks.yaml
-#   2. Install CCH in the workspace
+#   2. Install RuleZ in the workspace
 #   3. Clear existing logs
 #   4. Run Claude with a simple command
 #   5. Verify logs were created with proper structure
@@ -24,19 +24,19 @@ check_prerequisites
 # Setup
 section "Setup"
 WORKSPACE=$(setup_workspace "$SCRIPT_DIR")
-install_cch "$WORKSPACE"
+install_rulez "$WORKSPACE"
 
 # Clear logs before test
-clear_cch_logs
+clear_rulez_logs
 
 # Record initial state
 LOG_LINE_BEFORE=0
-echo -e "  ${GREEN}+${NC} Cleared CCH logs, starting fresh"
+echo -e "  ${GREEN}+${NC} Cleared RuleZ logs, starting fresh"
 
 # Test 1 - Run a command and verify logging
 section "Test 1 - Basic Logging"
 
-PROMPT="Run the command: echo 'CCH logging test' and show me the output."
+PROMPT="Run the command: echo 'RuleZ logging test' and show me the output."
 
 run_claude "$WORKSPACE" "$PROMPT" "Bash" 3 || true
 
@@ -47,7 +47,7 @@ sleep 2
 section "Verification - Log Structure"
 
 # Check that log file exists and has content
-assert_file_exists "$CCH_LOG" "CCH log file should exist"
+assert_file_exists "$RULEZ_LOG" "RuleZ log file should exist"
 
 # Count new log entries
 NEW_ENTRIES=$(get_new_log_entries "$LOG_LINE_BEFORE" | wc -l | tr -d ' ')
