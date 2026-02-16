@@ -108,6 +108,8 @@ fn map_event_type(hook_event_name: &str) -> (EventType, bool) {
         "promptSubmit" => (EventType::UserPromptSubmit, false),
         "sessionStart" => (EventType::SessionStart, false),
         "sessionEnd" => (EventType::SessionEnd, false),
+        "errorOccurred" => (EventType::PostToolUseFailure, false),
+        "preCompact" => (EventType::PreCompact, false),
         _ => (EventType::Notification, false),
     }
 }
