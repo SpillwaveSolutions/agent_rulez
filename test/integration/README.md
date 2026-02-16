@@ -1,6 +1,6 @@
-# CCH Integration Test Suite
+# RuleZ Integration Test Suite
 
-End-to-end integration tests that verify CCH (Claude Context Hooks) works correctly when invoked by the real Claude CLI.
+End-to-end integration tests that verify RuleZ (AI Policy Engine) works correctly when invoked by the real Claude CLI.
 
 ## Prerequisites
 
@@ -9,9 +9,9 @@ End-to-end integration tests that verify CCH (Claude Context Hooks) works correc
    claude --version
    ```
 
-2. **CCH Binary** - Built automatically by the test runner
+2. **RuleZ Binary** - Built automatically by the test runner
    ```bash
-   cd cch_cli && cargo build --release
+   cd rulez && cargo build --release
    ```
 
 3. **Bash** - Tests use bash scripts
@@ -37,10 +37,10 @@ task itest  # alias
 
 | Test | Description | What It Verifies |
 |------|-------------|------------------|
-| `01-block-force-push` | Block dangerous git operations | CCH blocks `git push --force` |
-| `02-context-injection` | Inject context for file types | CCH injects CDK context for `.cdk.ts` files |
-| `03-session-logging` | Audit log creation | CCH creates JSON Lines logs with timing |
-| `04-permission-explanations` | Permission request context | CCH provides context during permission prompts |
+| `01-block-force-push` | Block dangerous git operations | RuleZ blocks `git push --force` |
+| `02-context-injection` | Inject context for file types | RuleZ injects CDK context for `.cdk.ts` files |
+| `03-session-logging` | Audit log creation | RuleZ creates JSON Lines logs with timing |
+| `04-permission-explanations` | Permission request context | RuleZ provides context during tool use |
 
 ## Directory Structure
 
@@ -73,9 +73,9 @@ test/integration/
 ## How Tests Work
 
 1. **Setup** - Create temp workspace, copy use-case files
-2. **Install** - Run `cch install` in the workspace
+2. **Install** - Run `rulez install` in the workspace
 3. **Execute** - Invoke Claude CLI with specific prompts
-4. **Verify** - Check CCH logs for expected behavior
+4. **Verify** - Check RuleZ logs for expected behavior
 5. **Cleanup** - Remove temp workspace
 
 ## Writing New Tests
@@ -111,7 +111,7 @@ test/integration/
    
    # Setup
    WORKSPACE=$(setup_workspace "$SCRIPT_DIR")
-   install_cch "$WORKSPACE"
+   install_rulez "$WORKSPACE"
    
    # Test
    run_claude "$WORKSPACE" "Your prompt" "Bash" 3
@@ -134,7 +134,7 @@ test/integration/
 ### Setup/Teardown
 - `start_test "name"` - Begin a test
 - `setup_workspace "/path"` - Create temp workspace
-- `install_cch [workspace]` - Install CCH in workspace
+- `install_rulez [workspace]` - Install RuleZ in workspace
 - `cleanup_workspace` - Remove temp workspace
 - `end_test` - Report results
 
@@ -143,7 +143,7 @@ test/integration/
 - `CLAUDE_STDOUT` / `CLAUDE_STDERR` - Captured output
 
 ### Logging
-- `clear_cch_logs` - Clear log file
+- `clear_rulez_logs` - Clear log file
 - `get_log_line_count` - Current log size
 - `log_contains "pattern"` - Check if log has pattern
 - `log_contains_since <line> "pattern"` - Check recent entries
@@ -172,8 +172,8 @@ export PATH="$PATH:/path/to/claude"
 - Use `--max-turns` to limit iterations
 
 ### No log entries
-- Verify CCH is installed: `cch validate`
-- Check log path: `~/.claude/logs/cch.log`
+- Verify RuleZ is installed: `rulez validate`
+- Check log path: `~/.claude/logs/rulez.log`
 - Enable debug: Set `debug_logs: true` in hooks.yaml
 
 ### Permission denied
@@ -213,6 +213,5 @@ Test results are saved to `results/` as JSON files:
 
 ## Related Documentation
 
-- [CCH README](../../cch_cli/README.md) - CCH binary documentation
-- [Hooks Configuration](../../cch_cli/docs/hooks-config.md) - hooks.yaml reference
+- [RuleZ README](../../rulez/README.md) - RuleZ binary documentation
 - [Using Claude Code CLI Skill](../../.opencode/skill/using-claude-code-cli/SKILL.md) - CLI automation patterns

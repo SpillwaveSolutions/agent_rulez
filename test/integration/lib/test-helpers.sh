@@ -1,5 +1,5 @@
 #!/bin/bash
-# Shared test helpers for CCH integration tests
+# Shared test helpers for RuleZ integration tests
 #
 # Usage: source this file from test scripts
 #   source "$(dirname "$0")/../lib/test-helpers.sh"
@@ -17,10 +17,10 @@ NC='\033[0m' # No Color
 LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INTEGRATION_DIR="$(cd "$LIB_DIR/.." && pwd)"
 PROJECT_ROOT="$(cd "$INTEGRATION_DIR/../.." && pwd)"
-CCH_CLI_DIR="$PROJECT_ROOT/cch_cli"
-# Note: Cargo workspace builds to PROJECT_ROOT/target, not CCH_CLI_DIR/target
-CCH_BINARY="$PROJECT_ROOT/target/release/cch"
-CCH_LOG="$HOME/.claude/logs/rulez.log"
+RULEZ_CLI_DIR="$PROJECT_ROOT/rulez"
+# Note: Cargo workspace builds to PROJECT_ROOT/target, not RULEZ_CLI_DIR/target
+RULEZ_BINARY="$PROJECT_ROOT/target/release/rulez"
+RULEZ_LOG="$HOME/.claude/logs/rulez.log"
 RESULTS_DIR="$INTEGRATION_DIR/results"
 
 # Test state
@@ -85,30 +85,30 @@ check_prerequisites() {
     fi
     echo -e "  ${GREEN}+${NC} Claude CLI found - $(which claude)"
     
-    # Check/build CCH binary
-    if [ ! -f "$CCH_BINARY" ]; then
-        echo -e "  ${YELLOW}!${NC} CCH binary not found, building..."
-        build_cch
+    # Check/build RuleZ binary
+    if [ ! -f "$RULEZ_BINARY" ]; then
+        echo -e "  ${YELLOW}!${NC} RuleZ binary not found, building..."
+        build_rulez
     else
-        echo -e "  ${GREEN}+${NC} CCH binary found - $CCH_BINARY"
+        echo -e "  ${GREEN}+${NC} RuleZ binary found - $RULEZ_BINARY"
     fi
     
     # Ensure log directory exists
-    mkdir -p "$(dirname "$CCH_LOG")"
-    echo -e "  ${GREEN}+${NC} Log directory ready - $(dirname "$CCH_LOG")"
+    mkdir -p "$(dirname "$RULEZ_LOG")"
+    echo -e "  ${GREEN}+${NC} Log directory ready - $(dirname "$RULEZ_LOG")"
     
     echo ""
 }
 
-build_cch() {
-    echo -e "${BLUE}Building CCH binary...${NC}"
+build_rulez() {
+    echo -e "${BLUE}Building RuleZ binary...${NC}"
     # Build from project root (Cargo workspace)
     (cd "$PROJECT_ROOT" && cargo build --release)
-    if [ ! -f "$CCH_BINARY" ]; then
-        echo -e "${RED}ERROR - Failed to build CCH binary${NC}"
+    if [ ! -f "$RULEZ_BINARY" ]; then
+        echo -e "${RED}ERROR - Failed to build RuleZ binary${NC}"
         exit 1
     fi
-    echo -e "  ${GREEN}+${NC} CCH binary built successfully"
+    echo -e "  ${GREEN}+${NC} RuleZ binary built successfully"
 }
 
 # ============================================================================
@@ -141,7 +141,7 @@ start_test() {
 setup_workspace() {
     local use_case_dir="${1:-.}"
     
-    TEST_TEMP_DIR=$(mktemp -d "/tmp/cch-integration-test-XXXXXX")
+    TEST_TEMP_DIR=$(mktemp -d "/tmp/rulez-integration-test-XXXXXX")
     
     # Copy use case files to temp dir
     cp -r "$use_case_dir"/* "$TEST_TEMP_DIR/" 2>/dev/null || true
@@ -154,20 +154,20 @@ setup_workspace() {
     echo "$TEST_TEMP_DIR"
 }
 
-# Install CCH in the test workspace
-# Usage: install_cch [workspace_dir]
-install_cch() {
+# Install RuleZ in the test workspace
+# Usage: install_rulez [workspace_dir]
+install_rulez() {
     local workspace="${1:-$TEST_TEMP_DIR}"
     
-    echo -e "  ${BLUE}*${NC} Installing CCH in workspace..."
+    echo -e "  ${BLUE}*${NC} Installing RuleZ in workspace..."
     
-    # Run cch install in the workspace
-    (cd "$workspace" && "$CCH_BINARY" install --binary "$CCH_BINARY") > /dev/null 2>&1
+    # Run rulez install in the workspace
+    (cd "$workspace" && "$RULEZ_BINARY" install --binary "$RULEZ_BINARY") > /dev/null 2>&1
     
     if [ $? -eq 0 ]; then
-        echo -e "  ${GREEN}+${NC} CCH installed successfully"
+        echo -e "  ${GREEN}+${NC} RuleZ installed successfully"
     else
-        echo -e "  ${YELLOW}!${NC} CCH install returned non-zero (may already be installed)"
+        echo -e "  ${YELLOW}!${NC} RuleZ install returned non-zero (may already be installed)"
     fi
 }
 
@@ -184,18 +184,18 @@ cleanup_workspace() {
 # Log Management
 # ============================================================================
 
-# Clear CCH logs before a test
-clear_cch_logs() {
-    if [ -f "$CCH_LOG" ]; then
-        : > "$CCH_LOG"
+# Clear RuleZ logs before a test
+clear_rulez_logs() {
+    if [ -f "$RULEZ_LOG" ]; then
+        : > "$RULEZ_LOG"
     fi
-    echo -e "  ${GREEN}+${NC} Cleared CCH logs"
+    echo -e "  ${GREEN}+${NC} Cleared RuleZ logs"
 }
 
-# Get the number of lines in the CCH log
+# Get the number of lines in the RuleZ log
 get_log_line_count() {
-    if [ -f "$CCH_LOG" ]; then
-        wc -l < "$CCH_LOG" | tr -d ' '
+    if [ -f "$RULEZ_LOG" ]; then
+        wc -l < "$RULEZ_LOG" | tr -d ' '
     else
         echo "0"
     fi
@@ -205,8 +205,8 @@ get_log_line_count() {
 # Usage: get_new_log_entries <start_line>
 get_new_log_entries() {
     local start_line="${1:-0}"
-    if [ -f "$CCH_LOG" ]; then
-        tail -n "+$((start_line + 1))" "$CCH_LOG"
+    if [ -f "$RULEZ_LOG" ]; then
+        tail -n "+$((start_line + 1))" "$RULEZ_LOG"
     fi
 }
 
@@ -214,8 +214,8 @@ get_new_log_entries() {
 # Usage: get_recent_logs [count]
 get_recent_logs() {
     local count="${1:-10}"
-    if [ -f "$CCH_LOG" ]; then
-        tail -n "$count" "$CCH_LOG"
+    if [ -f "$RULEZ_LOG" ]; then
+        tail -n "$count" "$RULEZ_LOG"
     fi
 }
 
@@ -223,7 +223,7 @@ get_recent_logs() {
 # Usage: log_contains "pattern"
 log_contains() {
     local pattern="$1"
-    grep -q "$pattern" "$CCH_LOG" 2>/dev/null
+    grep -q "$pattern" "$RULEZ_LOG" 2>/dev/null
 }
 
 # Check if log contains pattern in entries after a specific line

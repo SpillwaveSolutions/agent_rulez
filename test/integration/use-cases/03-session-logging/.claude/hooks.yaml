@@ -1,5 +1,6 @@
-# CCH Integration Test - Session Logging
+# RuleZ Integration Test - Session Logging
 # This configuration enables comprehensive logging for audit trails.
+# Rules match all tool operations so they appear in the RuleZ log file.
 
 version: "1.0"
 
@@ -9,14 +10,14 @@ rules:
     matchers:
       tools: ["Bash"]
     actions:
-      log_level: "debug"
+      inject_inline: "<!-- audit: bash command logged -->"
 
   - name: log-file-operations
     description: "Log all file operations"
     matchers:
       tools: ["Write", "Edit", "Read"]
     actions:
-      log_level: "debug"
+      inject_inline: "<!-- audit: file operation logged -->"
 
 settings:
   log_level: "debug"

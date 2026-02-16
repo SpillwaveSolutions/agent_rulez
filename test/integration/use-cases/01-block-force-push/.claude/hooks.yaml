@@ -1,4 +1,4 @@
-# CCH Integration Test - Block Force Push
+# RuleZ Integration Test - Block Force Push
 # This configuration blocks dangerous git operations like force push and hard reset.
 
 version: "1.0"

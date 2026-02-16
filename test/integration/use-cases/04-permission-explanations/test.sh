@@ -1,13 +1,13 @@
 #!/bin/bash
 # Integration Test - Permission Explanations
 #
-# Verifies that CCH provides context during permission request events.
+# Verifies that RuleZ provides context during permission request events.
 #
 # Test Flow:
 #   1. Setup workspace with permission explanation hooks.yaml
-#   2. Install CCH in the workspace
+#   2. Install RuleZ in the workspace
 #   3. Run Claude WITHOUT pre-approving tools (to trigger permission request)
-#   4. Verify CCH processed PermissionRequest event
+#   4. Verify RuleZ processed PermissionRequest event
 #   5. Verify logs show context injection for permission events
 
 set -euo pipefail
@@ -24,7 +24,7 @@ check_prerequisites
 # Setup
 section "Setup"
 WORKSPACE=$(setup_workspace "$SCRIPT_DIR")
-install_cch "$WORKSPACE"
+install_rulez "$WORKSPACE"
 
 # Record log position before test
 LOG_LINE_BEFORE=$(get_log_line_count)
@@ -50,7 +50,7 @@ sleep 2
 # Verification
 section "Verification"
 
-# Check for any CCH log entries
+# Check for any RuleZ log entries
 NEW_ENTRIES=$(get_new_log_entries "$LOG_LINE_BEFORE" | wc -l | tr -d ' ')
 echo -e "  ${BLUE}*${NC} Found $NEW_ENTRIES new log entries"
 
