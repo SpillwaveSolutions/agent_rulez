@@ -2314,15 +2314,18 @@ pub struct Event {
 
 /// Supported hook event types
 ///
-/// Includes all event types that Claude Code can send to hooks.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
+/// Universal event types across all supported platforms (Claude Code, Gemini, Copilot, OpenCode).
+/// Platform adapters translate platform-specific event names to these types.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, JsonSchema)]
 #[serde(rename_all = "PascalCase")]
 pub enum EventType {
     PreToolUse,
     PostToolUse,
     PermissionRequest,
     UserPromptSubmit,
+    #[serde(alias = "SubagentStart")]
     BeforeAgent,
+    #[serde(alias = "SubagentStop")]
     AfterAgent,
     BeforeModel,
     AfterModel,
@@ -2332,8 +2335,6 @@ pub enum EventType {
     PreCompact,
     Stop,
     PostToolUseFailure,
-    SubagentStart,
-    SubagentStop,
     Notification,
     Setup,
 }
@@ -2355,8 +2356,6 @@ impl std::fmt::Display for EventType {
             EventType::PreCompact => write!(f, "PreCompact"),
             EventType::Stop => write!(f, "Stop"),
             EventType::PostToolUseFailure => write!(f, "PostToolUseFailure"),
-            EventType::SubagentStart => write!(f, "SubagentStart"),
-            EventType::SubagentStop => write!(f, "SubagentStop"),
             EventType::Notification => write!(f, "Notification"),
             EventType::Setup => write!(f, "Setup"),
         }

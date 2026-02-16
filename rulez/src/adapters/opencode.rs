@@ -27,11 +27,20 @@ struct OpenCodeHookInput {
 pub struct OpenCodeEvent {
     pub hook_event_name: String,
     pub event: Event,
+    /// Additional event types to evaluate (dual-fire support)
+    pub additional_event_types: Vec<EventType>,
 }
 
 pub fn parse_event(value: Value) -> Result<OpenCodeEvent> {
     let input: OpenCodeHookInput = serde_json::from_value(value)?;
-    let event_type = map_event_type(&input.hook_event_name);
+    let event_types = map_event_type(
+        &input.hook_event_name,
+        input.tool_input.as_ref(),
+        &input.extra,
+    );
+
+    let primary_event_type = event_types[0];
+    let additional_event_types: Vec<EventType> = event_types.into_iter().skip(1).collect();
 
     let mut tool_input = match input.tool_input {
         Some(Value::Object(map)) => map,
@@ -48,7 +57,7 @@ pub fn parse_event(value: Value) -> Result<OpenCodeEvent> {
     }
 
     let event = Event {
-        hook_event_name: event_type,
+        hook_event_name: primary_event_type,
         tool_name: input.tool_name,
         tool_input: if tool_input.is_empty() {
             None
@@ -68,6 +77,7 @@ pub fn parse_event(value: Value) -> Result<OpenCodeEvent> {
     Ok(OpenCodeEvent {
         hook_event_name: input.hook_event_name,
         event,
+        additional_event_types,
     })
 }
 
@@ -110,10 +120,48 @@ pub fn translate_response(response: &Response, _opencode_event: &OpenCodeEvent) 
     Value::Object(map)
 }
 
-fn map_event_type(hook_event_name: &str) -> EventType {
+/// Map an OpenCode hook event name to one or more RuleZ event types.
+///
+/// Returns a Vec of EventTypes. The first entry is the primary event type;
+/// subsequent entries are dual-fire targets evaluated in addition.
+fn map_event_type(
+    hook_event_name: &str,
+    tool_input: Option<&Value>,
+    extra: &Map<String, Value>,
+) -> Vec<EventType> {
     match hook_event_name {
-        "tool.execute.before" => EventType::PreToolUse,
-        "tool.execute.after" => EventType::PostToolUse,
-        _ => EventType::Notification,
+        "tool.execute.before" => vec![EventType::PreToolUse],
+        "tool.execute.after" => {
+            let mut types = vec![EventType::PostToolUse];
+            // Dual-fire: if payload indicates failure, also fire PostToolUseFailure
+            if is_tool_failure(tool_input, extra) {
+                types.push(EventType::PostToolUseFailure);
+            }
+            types
+        }
+        "session.created" => vec![EventType::SessionStart],
+        "session.deleted" => vec![EventType::SessionEnd],
+        "session.updated" => vec![EventType::UserPromptSubmit],
+        "session.compacted" => vec![EventType::PreCompact],
+        _ => vec![EventType::Notification],
     }
+}
+
+/// Check if a tool execution result indicates failure
+fn is_tool_failure(tool_input: Option<&Value>, extra: &Map<String, Value>) -> bool {
+    if let Some(Value::Object(map)) = tool_input {
+        if let Some(Value::Bool(false)) = map.get("success") {
+            return true;
+        }
+        if map.contains_key("error") {
+            return true;
+        }
+    }
+    if let Some(Value::Bool(false)) = extra.get("success") {
+        return true;
+    }
+    if extra.contains_key("error") {
+        return true;
+    }
+    false
 }
