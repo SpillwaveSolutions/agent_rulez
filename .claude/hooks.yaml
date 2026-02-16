@@ -1,79 +1,45 @@
-# CCH Hook Configuration
-# =====================
-#
-# IMPORTANT: This file defines RULES for the CCH policy engine.
-# The CCH binary is a POLICY ENGINE that EXECUTES these user-defined rules.
-# It does NOT have built-in blocking or injection features.
-#
-# Without this configuration file, CCH allows all operations.
-# All behavior is determined by the rules you define here.
-#
-# Rule Structure:
-#   - name: Unique identifier for the rule
-#   - description: Human-readable explanation
-#   - matchers: Conditions that trigger the rule (tools, extensions, directories, operations, command_match)
-#   - actions: What to do when rule matches (block, inject, run)
-#   - metadata: Optional settings like priority, timeout, enabled
-#
-# For more information, see: docs/RULES.md
-
 version: "1.0"
-
-settings:
-  fail_open: true
-  script_timeout: 5
-  log_level: "info"
 
 rules:
   - name: block-force-push
-    description: Block dangerous git force push operations
+    description: "Prevents destructive force push operations"
     matchers:
-      tools:
-        - Bash
-      command_match: "git push.*(--force|-f)"
+      tools: ["Bash"]
+      command_match: "git push.*--force|git push.*-f"
     actions:
       block: true
 
   - name: block-hard-reset
-    description: Block git hard reset which can destroy work
+    description: "Prevents destructive hard reset operations"
     matchers:
-      tools:
-        - Bash
+      tools: ["Bash"]
       command_match: "git reset --hard"
     actions:
       block: true
 
-  - name: inject-cdk-skill
-    description: Inject CDK skill when editing CDK files
-    matchers:
-      tools:
-        - Edit
-        - Write
-      directories:
-        - "cdk/**"
+  - name: capture-permission-request
+    description: "Logs full PermissionRequest events to debugging/permissions_request.md"
+    enabled_when: 'event_type == "PermissionRequest"'
+    mode: audit
+    matchers: {}
     actions:
-      inject: ".claude/skills/aws-cdk/SKILL.md"
+      inline_script: |
+        #!/bin/bash
+        INPUT=$(cat)
+        mkdir -p debugging
+        TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+        {
+          echo "## Permission Request - $TIMESTAMP"
+          echo ""
+          echo '```json'
+          echo "$INPUT" | python3 -m json.tool 2>/dev/null || echo "$INPUT"
+          echo '```'
+          echo ""
+          echo "---"
+          echo ""
+        } >> debugging/permissions_request.md
 
-  - name: no-console-log
-    description: Block console.log statements in JavaScript/TypeScript files
-    matchers:
-      tools:
-        - Edit
-        - Write
-      extensions:
-        - ".js"
-        - ".ts"
-        - ".jsx"
-        - ".tsx"
-    actions:
-      run: ".claude/validators/no-console-log.py"
-
-  - name: explain-bash-commands
-    description: Require explanation for all Bash commands during permission requests
-    matchers:
-      tools:
-        - Bash
-      operations:
-        - PermissionRequest
-    actions:
-      inject: ".claude/context/explain-command.md"
+settings:
+  log_level: "debug"
+  debug_logs: true
+  fail_open: false

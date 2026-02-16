@@ -72,7 +72,17 @@
       "Bash(xargs kill -9)",
       "Bash(cargo test:*)",
       "Skill(gsd:plan-phase)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(git -C /Users/richardhightower/clients/spillwave/src/rulez_plugin log --oneline -5)",
+      "Bash(git -C /Users/richardhightower/clients/spillwave/src/rulez_plugin log --oneline -10)",
+      "Bash(git -C /Users/richardhightower/clients/spillwave/src/rulez_plugin checkout main)",
+      "Bash(git -C /Users/richardhightower/clients/spillwave/src/rulez_plugin pull origin main)",
+      "Bash(git stash:*)",
+      "Bash(gh pr view:*)",
+      "Bash(node /Users/richardhightower/.claude/get-shit-done/bin/gsd-tools.js commit \"docs: complete project research synthesis\" --files .planning/research/)",
+      "Bash(node /Users/richardhightower/.claude/get-shit-done/bin/gsd-tools.js commit:*)",
+      "Bash(echo:*)",
+      "Bash(chmod:*)"
     ]
   },
   "sandbox": {
