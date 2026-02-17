@@ -22,6 +22,8 @@ pub enum SimEventType {
     UserPromptSubmit,
     SessionEnd,
     PreCompact,
+    BeforeAgent,
+    AfterAgent,
 }
 
 impl SimEventType {
@@ -34,6 +36,8 @@ impl SimEventType {
             SimEventType::UserPromptSubmit => ModelEventType::UserPromptSubmit,
             SimEventType::SessionEnd => ModelEventType::SessionEnd,
             SimEventType::PreCompact => ModelEventType::PreCompact,
+            SimEventType::BeforeAgent => ModelEventType::BeforeAgent,
+            SimEventType::AfterAgent => ModelEventType::AfterAgent,
         }
     }
 
@@ -48,6 +52,10 @@ impl SimEventType {
             }
             "sessionend" | "end" | "session-end" => Some(SimEventType::SessionEnd),
             "precompact" | "compact" | "pre-compact" => Some(SimEventType::PreCompact),
+            "beforeagent" | "before-agent" | "subagentstart" | "subagent" => {
+                Some(SimEventType::BeforeAgent)
+            }
+            "afteragent" | "after-agent" | "subagentstop" => Some(SimEventType::AfterAgent),
             _ => None,
         }
     }
@@ -96,7 +104,7 @@ pub async fn run(
     }
 
     let event_type = SimEventType::from_str(&event_type).context(format!(
-        "Unknown event type: '{}'\nValid types: PreToolUse, PostToolUse, SessionStart, PermissionRequest, UserPromptSubmit, SessionEnd, PreCompact",
+        "Unknown event type: '{}'\nValid types: PreToolUse, PostToolUse, SessionStart, PermissionRequest, UserPromptSubmit, SessionEnd, PreCompact, BeforeAgent, AfterAgent",
         event_type
     ))?;
 
