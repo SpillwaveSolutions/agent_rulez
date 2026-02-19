@@ -1,26 +1,26 @@
-# CCH Troubleshooting Guide
+# RuleZ Troubleshooting Guide
 
-Systematic procedures for diagnosing and fixing CCH issues.
+Systematic procedures for diagnosing and fixing RuleZ issues.
 
 ## Quick Diagnostic Checklist
 
 Run these commands in order when hooks aren't working:
 
 ```bash
-# 1. Is CCH installed?
-cch --version
+# 1. Is RuleZ installed?
+rulez --version
 
 # 2. Is config valid?
-cch validate
+rulez validate
 
-# 3. Is CCH registered with Claude Code?
+# 3. Is RuleZ registered with Claude Code?
 cat .claude/settings.json | grep -A10 hooks
 
 # 4. What rules exist?
-cch explain config
+rulez explain config
 
 # 5. Debug specific event
-cch debug PreToolUse --tool Write --path test.py -v
+rulez debug PreToolUse --tool Write --path test.py -v
 ```
 
 ---
@@ -41,17 +41,17 @@ cch debug PreToolUse --tool Write --path test.py -v
    ```json
    {
      "hooks": {
-       "PreToolUse": [{ "matcher": "*", "hooks": [{ "type": "command", "command": "/path/to/cch", "timeout": 5 }] }],
-       "PostToolUse": [{ "matcher": "*", "hooks": [{ "type": "command", "command": "/path/to/cch", "timeout": 5 }] }],
-       "Stop": [{ "matcher": "*", "hooks": [{ "type": "command", "command": "/path/to/cch", "timeout": 5 }] }],
-       "SessionStart": [{ "matcher": "*", "hooks": [{ "type": "command", "command": "/path/to/cch", "timeout": 5 }] }]
+       "PreToolUse": [{ "matcher": "*", "hooks": [{ "type": "command", "command": "/path/to/rulez", "timeout": 5 }] }],
+       "PostToolUse": [{ "matcher": "*", "hooks": [{ "type": "command", "command": "/path/to/rulez", "timeout": 5 }] }],
+       "Stop": [{ "matcher": "*", "hooks": [{ "type": "command", "command": "/path/to/rulez", "timeout": 5 }] }],
+       "SessionStart": [{ "matcher": "*", "hooks": [{ "type": "command", "command": "/path/to/rulez", "timeout": 5 }] }]
      }
    }
    ```
 
 2. **Re-register if missing**:
    ```bash
-   cch install --project
+   rulez install --project
    ```
 
 3. **Check config location**:
@@ -61,11 +61,11 @@ cch debug PreToolUse --tool Write --path test.py -v
 
 4. **Verify config is valid**:
    ```bash
-   cch validate
+   rulez validate
    ```
 
 **Common causes**:
-- CCH not registered (run `cch install`)
+- RuleZ not registered (run `rulez install`)
 - hooks.yaml in wrong location
 - YAML syntax error preventing load
 
@@ -79,12 +79,12 @@ cch debug PreToolUse --tool Write --path test.py -v
 
 1. **Debug the specific event**:
    ```bash
-   cch debug PreToolUse --tool Write --path src/main.py -vv
+   rulez debug PreToolUse --tool Write --path src/main.py -vv
    ```
 
 2. **Check rule definition**:
    ```bash
-   cch explain rule <rule-name>
+   rulez explain rule <rule-name>
    ```
 
 3. **Verify matchers**:
@@ -118,14 +118,14 @@ cch debug PreToolUse --tool Write --path test.py -v
    ```yaml
    # Correct (relative to project root)
    path: .claude/context/standards.md
-   
+
    # Wrong (absolute path)
    path: /Users/me/project/.claude/context/standards.md
    ```
 
 3. **Check for typos in path**:
    ```bash
-   cch explain rule <rule-name> | grep path
+   rulez explain rule <rule-name> | grep path
    ```
 
 **Resolution**:
@@ -150,7 +150,7 @@ cch debug PreToolUse --tool Write --path test.py -v
    ```bash
    .claude/validators/your-script.sh | jq .
    ```
-   
+
    Must output valid JSON:
    ```json
    {"continue": true, "context": "", "reason": ""}
@@ -228,7 +228,7 @@ chmod +x .claude/validators/new-script.sh
 
 ### Issue: YAML Syntax Error
 
-**Symptoms**: `cch validate` fails with parse error.
+**Symptoms**: `rulez validate` fails with parse error.
 
 **Diagnostic steps**:
 
@@ -274,12 +274,12 @@ hooks:
 
 1. **Check expression syntax**:
    ```bash
-   cch explain rule <rule-name>
+   rulez explain rule <rule-name>
    ```
 
 2. **Verify variable availability**:
    ```bash
-   cch debug PreToolUse --tool Write --path test.py -vvv
+   rulez debug PreToolUse --tool Write --path test.py -vvv
    ```
    Look for available context variables.
 
@@ -316,13 +316,13 @@ enabled_when: "env.CI == 'true'"
 
 ### Issue: Context Not Appearing
 
-**Symptoms**: inject action runs but context not visible to Claude.
+**Symptoms**: inject action runs but context not visible to the AI assistant.
 
 **Diagnostic steps**:
 
 1. **Verify injection happened**:
    ```bash
-   cch logs --tail 5
+   rulez logs --tail 5
    ```
    Look for "injected X bytes context"
 
@@ -347,14 +347,14 @@ enabled_when: "env.CI == 'true'"
 
 **Symptoms**: Every hook call fails with `hook error` and logs show `missing field 'event_type'`.
 
-**Root cause**: Claude Code sends events with the field name `hook_event_name`, not `event_type`. If your CCH binary expects `event_type`, it can't parse the JSON.
+**Root cause**: Claude Code sends events with the field name `hook_event_name`, not `event_type`. If your RuleZ binary expects `event_type`, it can't parse the JSON.
 
 **Resolution**:
-1. Update CCH binary to v1.1.0+ which accepts both `hook_event_name` and `event_type` (via serde alias)
+1. Update RuleZ binary to the latest version which accepts both `hook_event_name` and `event_type` (via serde alias)
 2. Rebuild and reinstall:
    ```bash
-   cargo install --path cch_cli
-   cch install
+   cargo install --path rulez
+   rulez install
    ```
 
 **Protocol reference**: Claude Code's JSON event format:
@@ -371,7 +371,31 @@ enabled_when: "env.CI == 'true'"
 }
 ```
 
-Note: Claude Code does **not** send a `timestamp` field. CCH defaults to `Utc::now()`.
+Note: Claude Code does **not** send a `timestamp` field. RuleZ defaults to `Utc::now()`.
+
+---
+
+### Issue: Events Not Firing on Non-Claude Platforms
+
+**Symptoms**: Rules work on Claude Code but not on Gemini CLI, Copilot, or OpenCode.
+
+**Diagnostic steps**:
+
+1. **Check platform support**: Not all events exist on all platforms. See [platform-adapters.md](platform-adapters.md).
+
+2. **Common platform gaps**:
+
+   | Event | Claude Code | Gemini | Copilot | OpenCode |
+   |-------|-------------|--------|---------|----------|
+   | `BeforeAgent` | Yes | Yes (dual) | No | No |
+   | `AfterAgent` | Yes | Yes | No | No |
+   | `BeforeModel` | No | Yes | No | No |
+   | `PermissionRequest` | Yes | Via dual-fire | No | No |
+   | `Stop` | Yes | No | No | No |
+
+3. **Use universal events** for cross-platform rules: `PreToolUse`, `PostToolUse`, `SessionStart`, `SessionEnd`, `PreCompact`, `UserPromptSubmit`.
+
+4. **Check dual-fire behavior**: On Gemini, `BeforeAgent` also fires `UserPromptSubmit`. If you have rules on both, both will trigger.
 
 ---
 
@@ -394,18 +418,18 @@ Note: Claude Code does **not** send a `timestamp` field. CCH defaults to `Utc::n
          source: inline
          content: "TEST: Hook fired!"
    EOF
-   
-   cch validate --config .claude/hooks-test.yaml
+
+   rulez validate --config .claude/hooks-test.yaml
    ```
 
 2. **Test with debug command**:
    ```bash
-   cch debug PreToolUse --tool Write --path test.txt -vv
+   rulez debug PreToolUse --tool Write --path test.txt -vv
    ```
 
 3. **Check logs**:
    ```bash
-   cch logs --tail 20 --json | jq .
+   rulez logs --tail 20 --json | jq .
    ```
 
 4. **Incrementally add complexity** until you find what breaks.
@@ -417,7 +441,7 @@ Note: Claude Code does **not** send a `timestamp` field. CCH defaults to `Utc::n
 ### Reading Log Output
 
 ```bash
-cch logs --tail 10
+rulez logs --tail 10
 ```
 
 **Log entry format**:
@@ -436,16 +460,16 @@ TIMESTAMP | EVENT | RULE_NAME | STATUS
 
 ```bash
 # Only errors
-cch logs --status error
+rulez logs --status error
 
 # Specific rule
-cch logs --rule python-standards
+rulez logs --rule python-standards
 
 # Last hour
-cch logs --since 1h
+rulez logs --since 1h
 
 # JSON for parsing
-cch logs --json | jq 'select(.status == "error")'
+rulez logs --json | jq 'select(.status == "error")'
 ```
 
 ---
@@ -456,10 +480,10 @@ If you've tried the above and still have issues:
 
 1. **Gather diagnostic info**:
    ```bash
-   cch --version --json > cch-debug.txt
-   cch validate >> cch-debug.txt 2>&1
-   cat .claude/hooks.yaml >> cch-debug.txt
-   cch logs --tail 50 --json >> cch-debug.txt
+   rulez --version --json > rulez-debug.txt
+   rulez validate >> rulez-debug.txt 2>&1
+   cat .claude/hooks.yaml >> rulez-debug.txt
+   rulez logs --tail 50 --json >> rulez-debug.txt
    ```
 
 2. **Check for known issues** in project documentation
@@ -467,8 +491,9 @@ If you've tried the above and still have issues:
 3. **Create minimal reproduction** with test config
 
 4. **Include in bug report**:
-   - CCH version
+   - RuleZ version
    - OS and version
    - hooks.yaml content
    - Expected vs actual behavior
    - Debug command output
+   - Platform (Claude Code, Gemini, Copilot, OpenCode)

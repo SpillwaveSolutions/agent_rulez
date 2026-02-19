@@ -1,11 +1,11 @@
-# CCH CLI Commands Reference
+# RuleZ CLI Commands Reference
 
-Complete reference for all CCH binary commands.
+Complete reference for all RuleZ binary commands.
 
 ## Global Options
 
 ```bash
-cch [OPTIONS] <COMMAND>
+rulez [OPTIONS] <COMMAND>
 
 Options:
   --config <PATH>    Override config file path
@@ -25,11 +25,11 @@ Options:
 Display version and API information.
 
 ```bash
-cch --version
-# Output: cch 0.2.1
+rulez --version
+# Output: rulez 1.8.0
 
-cch --version --json
-# Output: {"version": "0.2.1", "api_version": "0.2.1", "git_sha": "abc1234"}
+rulez --version --json
+# Output: {"version": "1.8.0", "api_version": "1.8.0", "git_sha": "abc1234"}
 ```
 
 **Use case**: Verify installation, check API compatibility.
@@ -38,10 +38,10 @@ cch --version --json
 
 ### init
 
-Initialize CCH configuration in current project.
+Initialize RuleZ configuration in current project.
 
 ```bash
-cch init [OPTIONS]
+rulez init [OPTIONS]
 
 Options:
   --force           Overwrite existing configuration
@@ -52,13 +52,13 @@ Options:
 
 ```bash
 # Create default hooks.yaml
-cch init
+rulez init
 
 # Overwrite existing config
-cch init --force
+rulez init --force
 
 # Use minimal template
-cch init --template minimal
+rulez init --template minimal
 ```
 
 **Created files**:
@@ -90,38 +90,48 @@ hooks:
 
 ### install
 
-Register CCH with Claude Code.
+Register RuleZ with Claude Code.
 
 ```bash
-cch install [OPTIONS]
+rulez install [OPTIONS]
 
 Options:
   --project         Install for current project only (default)
   --user            Install globally for user
-  --uninstall       Remove CCH registration
 ```
 
 **Examples**:
 
 ```bash
 # Install for current project
-cch install --project
+rulez install --project
 
 # Install globally
-cch install --user
-
-# Remove registration
-cch install --uninstall
+rulez install --user
 ```
 
 **What it does**:
 1. Locates `.claude/settings.json`
 2. Adds hook configuration entries
-3. Creates `.claude/cch/install.json` audit trail
+3. Creates `.claude/rulez/install.json` audit trail
 
 **Verification**:
 ```bash
 cat .claude/settings.json | grep -A5 hooks
+```
+
+---
+
+### uninstall
+
+Remove RuleZ registration from Claude Code.
+
+```bash
+rulez uninstall [OPTIONS]
+
+Options:
+  --project         Uninstall from current project (default)
+  --user            Uninstall globally
 ```
 
 ---
@@ -131,7 +141,7 @@ cat .claude/settings.json | grep -A5 hooks
 Validate configuration file.
 
 ```bash
-cch validate [OPTIONS]
+rulez validate [OPTIONS]
 
 Options:
   --config <PATH>   Validate specific file
@@ -142,29 +152,29 @@ Options:
 
 ```bash
 # Validate project config
-cch validate
+rulez validate
 
 # Validate specific file
-cch validate --config /path/to/hooks.yaml
+rulez validate --config /path/to/hooks.yaml
 
 # Strict mode (warnings are errors)
-cch validate --strict
+rulez validate --strict
 ```
 
 **Output examples**:
 
 ```bash
 # Success
-$ cch validate
+$ rulez validate
 Configuration valid: 5 hooks defined
 
 # Error
-$ cch validate
+$ rulez validate
 Error: Invalid event type 'PreTool' at hooks[0]
-  Valid events: PreToolUse, PostToolUse, PermissionRequest, ...
+  Valid events: PreToolUse, PostToolUse, BeforeAgent, AfterAgent, ...
 
 # Warning (non-strict)
-$ cch validate
+$ rulez validate
 Warning: Hook 'unused-rule' has no matching events in typical usage
 Configuration valid: 5 hooks defined (1 warning)
 ```
@@ -176,7 +186,7 @@ Configuration valid: 5 hooks defined (1 warning)
 Analyze and explain configuration.
 
 ```bash
-cch explain <SUBCOMMAND>
+rulez explain <SUBCOMMAND>
 
 Subcommands:
   config            Explain entire configuration
@@ -188,16 +198,16 @@ Subcommands:
 
 ```bash
 # Full configuration overview
-cch explain config
+rulez explain config
 
 # Specific rule
-cch explain rule python-standards
+rulez explain rule python-standards
 
 # Rules for an event
-cch explain event PreToolUse
+rulez explain event PreToolUse
 ```
 
-**Sample output** for `cch explain rule python-standards`:
+**Sample output** for `rulez explain rule python-standards`:
 ```
 Rule: python-standards
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -229,7 +239,7 @@ Effect:
 Debug hook matching and execution.
 
 ```bash
-cch debug <EVENT> [OPTIONS]
+rulez debug <EVENT> [OPTIONS]
 
 Options:
   --tool <NAME>        Simulate tool name
@@ -240,17 +250,39 @@ Options:
   --dry-run            Don't execute actions
 ```
 
+**Event aliases** (case-insensitive):
+
+| Input | Resolves To |
+|-------|-------------|
+| `pre`, `pretooluse`, `pre-tool-use` | `PreToolUse` |
+| `post`, `posttooluse`, `post-tool-use` | `PostToolUse` |
+| `session`, `start`, `sessionstart` | `SessionStart` |
+| `end`, `sessionend`, `session-end` | `SessionEnd` |
+| `permission`, `perm`, `permissionrequest` | `PermissionRequest` |
+| `prompt`, `user-prompt`, `userpromptsubmit`, `user-prompt-submit` | `UserPromptSubmit` |
+| `compact`, `precompact`, `pre-compact` | `PreCompact` |
+| `subagent`, `beforeagent`, `before-agent`, `subagentstart` | `BeforeAgent` |
+| `afteragent`, `after-agent`, `subagentstop` | `AfterAgent` |
+| `idle`, `teammateidle` | `TeammateIdle` |
+| `task`, `taskcompleted` | `TaskCompleted` |
+
 **Examples**:
 
 ```bash
 # Debug Write tool on Python file
-cch debug PreToolUse --tool Write --path src/main.py -v
+rulez debug PreToolUse --tool Write --path src/main.py -v
 
 # Debug Bash command
-cch debug PreToolUse --tool Bash --command "git push --force" -v
+rulez debug pre --tool Bash --command "git push --force" -v
 
 # Debug user prompt
-cch debug UserPromptSubmit --prompt "Deploy to production" -v
+rulez debug prompt --prompt "Deploy to production" -v
+
+# Debug agent events
+rulez debug beforeagent -v
+
+# Use short alias
+rulez debug subagent -v
 ```
 
 **Sample output**:
@@ -279,12 +311,25 @@ Dry run: No actions executed
 
 ---
 
+### repl
+
+Interactive debug mode for testing rules in real-time.
+
+```bash
+rulez repl [OPTIONS]
+
+Options:
+  --config <PATH>   Use specific config file
+```
+
+---
+
 ### logs
 
 Query hook execution logs.
 
 ```bash
-cch logs [OPTIONS]
+rulez logs [OPTIONS]
 
 Options:
   --tail <N>         Show last N entries (default: 10)
@@ -299,27 +344,27 @@ Options:
 
 ```bash
 # Last 10 entries
-cch logs
+rulez logs
 
 # Last 50 entries
-cch logs --tail 50
+rulez logs --tail 50
 
 # Logs from last hour
-cch logs --since 1h
+rulez logs --since 1h
 
 # Only blocked actions
-cch logs --status blocked
+rulez logs --status blocked
 
 # Specific rule
-cch logs --rule python-standards --tail 20
+rulez logs --rule python-standards --tail 20
 
 # JSON output for parsing
-cch logs --json | jq '.[] | select(.status == "error")'
+rulez logs --json | jq '.[] | select(.status == "error")'
 ```
 
 **Sample output**:
 ```
-CCH Execution Log
+RuleZ Execution Log
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 2024-01-15 14:32:01 | PreToolUse | python-standards | matched
   Tool: Write, Path: src/api/handler.py
@@ -340,7 +385,7 @@ CCH Execution Log
 Manually execute a hook for testing.
 
 ```bash
-cch run <RULE_NAME> [OPTIONS]
+rulez run <RULE_NAME> [OPTIONS]
 
 Options:
   --context <JSON>   Provide simulated context
@@ -351,10 +396,10 @@ Options:
 
 ```bash
 # Test a rule manually
-cch run python-standards --context '{"tool": {"name": "Write", "input": {"path": "test.py"}}}'
+rulez run python-standards --context '{"tool": {"name": "Write", "input": {"path": "test.py"}}}'
 
 # Dry run
-cch run security-check --dry-run
+rulez run security-check --dry-run
 ```
 
 ---
@@ -364,11 +409,9 @@ cch run security-check --dry-run
 | Code | Meaning |
 |------|---------|
 | 0 | Success |
-| 1 | General error |
-| 2 | Configuration error |
-| 3 | Validation failed |
-| 4 | Hook blocked action |
-| 5 | Script execution failed |
+| 1 | Configuration error |
+| 2 | Validation error |
+| 3 | Runtime error |
 
 ---
 
@@ -376,10 +419,10 @@ cch run security-check --dry-run
 
 | Variable | Purpose | Default |
 |----------|---------|---------|
-| `CCH_CONFIG` | Override config path | `.claude/hooks.yaml` |
-| `CCH_LOG_LEVEL` | Log verbosity | `info` |
-| `CCH_LOG_FILE` | Log file path | `~/.claude/cch/logs/` |
-| `CCH_TIMEOUT` | Default script timeout | `30` |
+| `RULEZ_CONFIG` | Override config path | `.claude/hooks.yaml` |
+| `RULEZ_LOG_LEVEL` | Log verbosity | `info` |
+| `RULEZ_LOG_FILE` | Log file path | `~/.claude/logs/rulez.log` |
+| `RULEZ_TIMEOUT` | Default script timeout | `30` |
 | `NO_COLOR` | Disable colored output | (unset) |
 
 ---
@@ -390,11 +433,11 @@ Generate shell completions:
 
 ```bash
 # Bash
-cch completions bash > /etc/bash_completion.d/cch
+rulez completions bash > /etc/bash_completion.d/rulez
 
 # Zsh
-cch completions zsh > ~/.zsh/completions/_cch
+rulez completions zsh > ~/.zsh/completions/_rulez
 
 # Fish
-cch completions fish > ~/.config/fish/completions/cch.fish
+rulez completions fish > ~/.config/fish/completions/rulez.fish
 ```

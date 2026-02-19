@@ -1,6 +1,6 @@
 # Hook Rule Patterns and Recipes
 
-Common patterns for solving real-world problems with CCH.
+Common patterns for solving real-world problems with RuleZ.
 
 ## Table of Contents
 
@@ -9,7 +9,9 @@ Common patterns for solving real-world problems with CCH.
 3. [Workflow Automation Patterns](#workflow-automation-patterns)
 4. [Validation Patterns](#validation-patterns)
 5. [Conditional Logic Patterns](#conditional-logic-patterns)
-6. [Optimization Patterns](#optimization-patterns)
+6. [Agent Lifecycle Patterns](#agent-lifecycle-patterns)
+7. [Cross-Platform Patterns](#cross-platform-patterns)
+8. [Optimization Patterns](#optimization-patterns)
 
 ---
 
@@ -188,7 +190,7 @@ Focus: Performance optimization for search
 #!/bin/bash
 # Check for potential secrets in file content
 
-CONTENT="$CCH_TOOL_INPUT_CONTENT"
+CONTENT="$RULEZ_TOOL_INPUT_CONTENT"
 
 # Patterns that might indicate secrets
 PATTERNS=(
@@ -258,7 +260,7 @@ echo '{"continue": true}'
       # Run linting
       npm run lint 2>&1
       LINT_EXIT=$?
-      
+
       if [ $LINT_EXIT -ne 0 ]; then
         echo '{"continue": false, "reason": "Linting failed. Please fix errors before committing."}'
       else
@@ -278,7 +280,7 @@ echo '{"continue": true}'
   action:
     type: run
     command: |
-      FILE="$CCH_TOOL_INPUT_PATH"
+      FILE="$RULEZ_TOOL_INPUT_PATH"
       black "$FILE" 2>&1
       isort "$FILE" 2>&1
       echo '{"continue": true, "context": "File formatted with black and isort."}'
@@ -319,8 +321,8 @@ echo '{"continue": true}'
     type: run
     command: |
       # Extract commit message
-      MSG=$(echo "$CCH_TOOL_INPUT_COMMAND" | grep -oP '(?<=-m\s?["\x27])[^"\x27]+')
-      
+      MSG=$(echo "$RULEZ_TOOL_INPUT_COMMAND" | grep -oP '(?<=-m\s?["\x27])[^"\x27]+')
+
       # Check conventional commit format
       if echo "$MSG" | grep -qE '^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?: .+'; then
         echo '{"continue": true}'
@@ -340,7 +342,7 @@ echo '{"continue": true}'
   action:
     type: run
     command: |
-      echo "$CCH_TOOL_INPUT_CONTENT" | jq . > /dev/null 2>&1
+      echo "$RULEZ_TOOL_INPUT_CONTENT" | jq . > /dev/null 2>&1
       if [ $? -eq 0 ]; then
         echo '{"continue": true}'
       else
@@ -355,7 +357,7 @@ echo '{"continue": true}'
   action:
     type: run
     command: |
-      echo "$CCH_TOOL_INPUT_CONTENT" | python -c "import sys, yaml; yaml.safe_load(sys.stdin)" 2>&1
+      echo "$RULEZ_TOOL_INPUT_CONTENT" | python -c "import sys, yaml; yaml.safe_load(sys.stdin)" 2>&1
       if [ $? -eq 0 ]; then
         echo '{"continue": true}'
       else
@@ -407,7 +409,7 @@ echo '{"continue": true}'
     type: inject
     source: inline
     content: |
-      **Warning**: You are on a protected branch. 
+      **Warning**: You are on a protected branch.
       All changes require code review.
 ```
 
@@ -428,6 +430,96 @@ echo '{"continue": true}'
 
 ---
 
+## Agent Lifecycle Patterns
+
+### Inject Policy Before Agent Tasks
+
+Control what subagents/agents can do by injecting policy context.
+
+```yaml
+# Inject project conventions before any agent runs
+- name: agent-policy
+  event: BeforeAgent
+  description: Ensure agents follow project conventions
+  match: {}
+  action:
+    type: inject
+    source: file
+    path: .claude/context/agent-policy.md
+
+# Log when agents complete
+- name: agent-completed
+  event: AfterAgent
+  description: Track agent completion for audit
+  match: {}
+  action:
+    type: run
+    command: |
+      echo '{"continue": true, "context": "Agent task completed. Review changes before proceeding."}'
+```
+
+### Restrict Agent Scope
+
+```yaml
+# Block agents from modifying production configs
+- name: agent-no-prod-config
+  event: BeforeAgent
+  priority: 10
+  match:
+    enabled_when: "tool.input.path =~ '(production|prod)\\.'"
+  action:
+    type: block
+    reason: "Agents cannot modify production configuration files."
+```
+
+---
+
+## Cross-Platform Patterns
+
+### Rules That Work Everywhere
+
+These patterns use only events available on all platforms:
+
+```yaml
+# Works on Claude Code, Gemini, Copilot, and OpenCode
+- name: universal-safety
+  event: PreToolUse
+  match:
+    tools: [Bash]
+    command_match: "rm -rf /"
+  action:
+    type: block
+    reason: "Dangerous operation blocked."
+
+# Session context works on all platforms
+- name: session-context
+  event: SessionStart
+  match: {}
+  action:
+    type: inject
+    source: file
+    path: .claude/context/project-overview.md
+```
+
+### Dual-Fire Aware Rules
+
+On Gemini, `BeforeAgent` also fires `UserPromptSubmit`. Write rules knowing both may trigger:
+
+```yaml
+# This fires on Gemini's BeforeAgent AND as a dual-fire UserPromptSubmit
+- name: prompt-policy
+  event: UserPromptSubmit
+  match:
+    prompt_match: "(?i)deploy"
+  action:
+    type: inject
+    source: inline
+    content: |
+      **Deploy detected**: Follow the deployment checklist.
+```
+
+---
+
 ## Optimization Patterns
 
 ### Consolidate Similar Rules
@@ -437,11 +529,11 @@ echo '{"continue": true}'
 - name: python-lint
   match: { extensions: [.py] }
   action: { type: inject, path: lint.md }
-  
+
 - name: js-lint
   match: { extensions: [.js] }
   action: { type: inject, path: lint.md }
-  
+
 - name: ts-lint
   match: { extensions: [.ts] }
   action: { type: inject, path: lint.md }
@@ -510,3 +602,6 @@ Avoid expensive checks when not needed.
 | Conventional commits | Consistency | run + validation |
 | CI-specific | Environment awareness | enabled_when |
 | Branch protection | Workflow enforcement | enabled_when + regex |
+| Agent policy | Agent governance | BeforeAgent + inject |
+| Agent completion | Audit trail | AfterAgent + run |
+| Cross-platform safety | Universal rules | PreToolUse (all platforms) |
