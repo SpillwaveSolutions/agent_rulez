@@ -1,6 +1,6 @@
 # hooks.yaml Schema Reference
 
-Complete reference for the CCH configuration file format.
+Complete reference for the RuleZ configuration file format.
 
 ## File Location
 
@@ -33,21 +33,39 @@ hooks:
 
 ## Event Types
 
-| Event | Description | Available Context |
-|-------|-------------|-------------------|
-| `PreToolUse` | Before tool executes | tool_name, tool_input, file_path |
-| `PostToolUse` | After tool completes | tool_name, tool_input, tool_output, file_path |
-| `Stop` | Session stop event | session_id |
-| `PostToolUseFailure` | After tool fails | tool_name, error |
-| `SubagentStart` | Subagent launched | agent_type |
-| `SubagentStop` | Subagent completed | agent_type |
-| `Notification` | System notification | message |
-| `Setup` | Initial setup event | configuration |
-| `PermissionRequest` | User approval requested | tool_name, permission_type |
-| `UserPromptSubmit` | User sends message | prompt_text |
-| `SessionStart` | New session begins | session_id, project_path |
-| `SessionEnd` | Session terminates | session_id, duration |
-| `PreCompact` | Before context compaction | current_tokens, max_tokens |
+RuleZ supports 16 event types. All platforms translate their native events into these unified types via adapters.
+
+| Event | Description | Available Context | Platforms |
+|-------|-------------|-------------------|-----------|
+| `PreToolUse` | Before tool executes | tool_name, tool_input, file_path | All |
+| `PostToolUse` | After tool completes | tool_name, tool_input, tool_output, file_path | All |
+| `PostToolUseFailure` | After tool fails | tool_name, error | All |
+| `PermissionRequest` | User approval requested | tool_name, permission_type | Claude Code, Gemini (dual) |
+| `UserPromptSubmit` | User sends message | prompt_text | All |
+| `BeforeAgent` | Agent/subagent launched | agent_type | Claude Code, Gemini (dual) |
+| `AfterAgent` | Agent/subagent completed | agent_type | Claude Code, Gemini |
+| `BeforeModel` | Before model inference | model_id | Gemini only |
+| `AfterModel` | After model inference | model_id, response | Gemini only |
+| `BeforeToolSelection` | Before tool selection | candidates | Gemini only |
+| `SessionStart` | New session begins | session_id, project_path | All |
+| `SessionEnd` | Session terminates | session_id, duration | All |
+| `PreCompact` | Before context compaction | current_tokens, max_tokens | All |
+| `Stop` | Session stop event | session_id | Claude Code only |
+| `Notification` | System notification | message | All (fallback) |
+| `Setup` | Initial setup event | configuration | Claude Code only |
+
+### Deprecated Aliases
+
+These event names still work in hooks.yaml but are deprecated. Use the new names instead.
+
+| Deprecated Name | Use Instead | Notes |
+|----------------|-------------|-------|
+| `SubagentStart` | `BeforeAgent` | Serde alias, fully backward-compatible |
+| `SubagentStop` | `AfterAgent` | Serde alias, fully backward-compatible |
+
+### Platform Compatibility
+
+Not all events fire on all platforms. See [platform-adapters.md](platform-adapters.md) for the full cross-platform mapping table and dual-fire behavior.
 
 ### Event Context Variables
 
@@ -174,21 +192,21 @@ match:
 
 ### inject
 
-Inject markdown content into Claude's context.
+Inject markdown content into the AI assistant's context.
 
 ```yaml
 action:
   type: inject
   source: file | inline | command
-  
+
   # For source: file
   path: .claude/context/standards.md
-  
+
   # For source: inline
   content: |
     ## Important Note
     Always follow these guidelines...
-  
+
   # For source: command
   command: cat VERSION
   timeout: 10                    # Optional: seconds (default: 30)
@@ -306,6 +324,16 @@ hooks:
       type: inject
       source: file
       path: .claude/context/project-overview.md
+
+  # Agent lifecycle: Inject policy before agent runs
+  - name: agent-policy
+    event: BeforeAgent
+    description: Inject project conventions before agent tasks
+    match: {}
+    action:
+      type: inject
+      source: file
+      path: .claude/context/agent-policy.md
 ```
 
 ---
@@ -315,7 +343,7 @@ hooks:
 Validate your configuration:
 
 ```bash
-cch validate
+rulez validate
 ```
 
 Common validation errors:
@@ -323,7 +351,7 @@ Common validation errors:
 | Error | Cause | Fix |
 |-------|-------|-----|
 | `unknown field` | Typo in field name | Check spelling |
-| `invalid event type` | Wrong event name | Use exact event names |
+| `invalid event type` | Wrong event name | Use exact event names from table above |
 | `file not found` | Bad path in action | Verify file exists |
 | `invalid regex` | Bad regex syntax | Test regex separately |
 | `duplicate rule name` | Same name used twice | Use unique names |

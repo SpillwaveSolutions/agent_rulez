@@ -1,17 +1,17 @@
 #!/bin/bash
-# CCH Validator Script: Secret Detection
+# RuleZ Validator Script: Secret Detection
 # Location: .claude/validators/check-secrets.sh
 #
 # Checks for potential secrets in file content before writing.
-# Returns JSON response for CCH action handler.
+# Returns JSON response for RuleZ action handler.
 #
-# Usage: Called automatically by CCH on PreToolUse events
-# Environment: CCH_TOOL_INPUT_CONTENT contains file content
+# Usage: Called automatically by RuleZ on PreToolUse events
+# Environment: RULEZ_TOOL_INPUT_CONTENT contains file content
 
 set -e
 
-# Get content from CCH environment variable
-CONTENT="${CCH_TOOL_INPUT_CONTENT:-}"
+# Get content from RuleZ environment variable
+CONTENT="${RULEZ_TOOL_INPUT_CONTENT:-}"
 
 # If no content provided, allow operation
 if [ -z "$CONTENT" ]; then

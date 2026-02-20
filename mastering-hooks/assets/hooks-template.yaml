@@ -1,8 +1,9 @@
-# CCH Configuration Template
+# RuleZ Configuration Template
 # Location: .claude/hooks.yaml
 #
-# This template provides a starting point for CCH configuration.
+# This template provides a starting point for RuleZ configuration.
 # Uncomment and customize rules as needed.
+# Works with Claude Code, Gemini CLI, GitHub Copilot, and OpenCode.
 
 version: "1"
 
@@ -10,7 +11,7 @@ hooks:
   # ============================================================
   # SESSION HOOKS
   # ============================================================
-  
+
   # Load project context at session start
   # - name: project-context
   #   event: SessionStart
@@ -24,7 +25,7 @@ hooks:
   # ============================================================
   # CODE QUALITY HOOKS
   # ============================================================
-  
+
   # Inject Python coding standards
   - name: python-standards
     event: PreToolUse
@@ -52,7 +53,7 @@ hooks:
   # ============================================================
   # SECURITY HOOKS
   # ============================================================
-  
+
   # Block force push to main/master
   - name: block-force-push
     event: PreToolUse
@@ -82,7 +83,7 @@ hooks:
   # ============================================================
   # VALIDATION HOOKS
   # ============================================================
-  
+
   # Run secret scanner before commits
   # - name: pre-commit-secrets
   #   event: PreToolUse
@@ -98,7 +99,7 @@ hooks:
   # ============================================================
   # PERMISSION HOOKS
   # ============================================================
-  
+
   # Auto-approve read operations
   # - name: auto-approve-read
   #   event: PermissionRequest
@@ -111,9 +112,24 @@ hooks:
   #     content: "Auto-approved: read-only operation"
 
   # ============================================================
+  # AGENT LIFECYCLE HOOKS
+  # ============================================================
+
+  # Inject policy before agent/subagent tasks
+  # Works on Claude Code (SubagentStart) and Gemini CLI (BeforeAgent)
+  # - name: agent-policy
+  #   event: BeforeAgent
+  #   description: Ensure agents follow project conventions
+  #   match: {}
+  #   action:
+  #     type: inject
+  #     source: file
+  #     path: .claude/context/agent-policy.md
+
+  # ============================================================
   # WORKFLOW HOOKS
   # ============================================================
-  
+
   # Remind about tests after source changes
   # - name: test-reminder
   #   event: PostToolUse

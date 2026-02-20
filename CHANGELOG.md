@@ -5,6 +5,34 @@ All notable changes to RuleZ (AI Policy Engine) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-02-19
+
+### Added
+
+- **Multi-platform adapter documentation** — New `platform-adapters.md` reference covering Gemini CLI, GitHub Copilot, and OpenCode event mappings
+- **Dual-fire event documentation** — Complete coverage of dual-fire triggers across Gemini and OpenCode adapters
+- **Agent lifecycle patterns** — New BeforeAgent/AfterAgent rule patterns for agent governance
+- **Cross-platform rule writing guide** — Tips for writing rules that work across all supported platforms
+- **Debug CLI alias table** — All 11 event types with their shorthand aliases documented
+
+### Changed
+
+- **Mastering-hooks skill v2.0.0** — Complete rewrite of the Claude Code skill with multi-platform support
+- **CCH → RuleZ rename** — All remaining CCH references in skill docs, templates, and scripts updated to RuleZ
+- **Event types table** — Expanded from 13 to 16 event types (added BeforeAgent, AfterAgent, BeforeModel, AfterModel, BeforeToolSelection)
+- **SubagentStart/SubagentStop deprecated** — Marked as deprecated aliases for BeforeAgent/AfterAgent
+- **Environment variables** — CCH_CONFIG, CCH_LOG_LEVEL, CCH_LOG_FILE, CCH_TIMEOUT renamed to RULEZ_* equivalents
+- **Hooks template** — Updated with BeforeAgent example and multi-platform compatibility note
+
+## [1.7.0] - 2026-02-17
+
+### Added
+
+- **Event type unification** — 16 canonical event types with serde aliases for backward compatibility
+- **Multi-platform adapters** — Gemini CLI, GitHub Copilot, and OpenCode adapter implementations
+- **Dual-fire events** — Platform events that map to multiple RuleZ event types
+- **TeammateIdle and TaskCompleted** — Claude Code-specific event types
+
 ## [1.5.0] - 2026-02-10
 
 ### Renamed
