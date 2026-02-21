@@ -221,6 +221,7 @@ Phases execute in numeric order: 11 → 12 → 13 → 14 → 15 → 16 → 17 �
 | 19. Gemini Hook Support | v1.7 | 0/3 | Superseded by Phase 20 | - |
 | 20. Gemini CLI Support | v1.7 | 5/5 | ✅ Complete | 2026-02-12 |
 | 21. Copilot CLI Support | v1.7 | 4/4 | ✅ Complete | 2026-02-13 |
+| 22. Tool Name Canonicalization | v1.8 | 2/2 | ✅ Complete | 2026-02-20 |
 
 ### Phase 19: Gemini hooks support (Superseded)
 
@@ -265,8 +266,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 22-01-PLAN.md — Fix adapter compile errors, correct Gemini mappings, update all adapter tests
-- [ ] 22-02-PLAN.md — Create TOOL-MAPPING.md cross-platform reference documentation
+- [x] 22-01-PLAN.md — Fix adapter compile errors, correct Gemini mappings, update all adapter tests
+- [x] 22-02-PLAN.md — Create TOOL-MAPPING.md cross-platform reference documentation
 
 ---
 

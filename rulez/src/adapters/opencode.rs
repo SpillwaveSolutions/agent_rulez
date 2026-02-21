@@ -56,9 +56,31 @@ pub fn parse_event(value: Value) -> Result<OpenCodeEvent> {
         tool_input.entry(k).or_insert(v);
     }
 
+    // Canonicalize tool name and preserve original platform name
+    let (canonical_tool_name, original_tool_name) = match input.tool_name {
+        Some(ref name) => {
+            let canonical = map_tool_name(name);
+            let original = if canonical != *name {
+                Some(name.clone())
+            } else {
+                None
+            };
+            (Some(canonical), original)
+        }
+        None => (None, None),
+    };
+
+    // Inject platform_tool_name into tool_input if the name was mapped
+    if let Some(ref orig) = original_tool_name {
+        tool_input.insert(
+            "platform_tool_name".to_string(),
+            Value::String(orig.clone()),
+        );
+    }
+
     let event = Event {
         hook_event_name: primary_event_type,
-        tool_name: input.tool_name,
+        tool_name: canonical_tool_name,
         tool_input: if tool_input.is_empty() {
             None
         } else {
@@ -144,6 +166,23 @@ fn map_event_type(
         "session.updated" => vec![EventType::UserPromptSubmit],
         "session.compacted" => vec![EventType::PreCompact],
         _ => vec![EventType::Notification],
+    }
+}
+
+/// Map an OpenCode tool name to the canonical (Claude Code) tool name.
+///
+/// Unknown tool names pass through unchanged.
+fn map_tool_name(platform_name: &str) -> String {
+    match platform_name {
+        "bash" => "Bash".to_string(),
+        "write" => "Write".to_string(),
+        "edit" => "Edit".to_string(),
+        "read" => "Read".to_string(),
+        "glob" => "Glob".to_string(),
+        "grep" => "Grep".to_string(),
+        "task" => "Task".to_string(),
+        "webfetch" | "fetch" => "WebFetch".to_string(),
+        _ => platform_name.to_string(),
     }
 }
 

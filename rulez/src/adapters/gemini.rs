@@ -51,16 +51,57 @@ pub fn parse_event(value: Value) -> Result<GeminiEvent> {
 
     let preserve_name = input.hook_event_name != primary_event_type.to_string();
 
-    let tool_input = merge_tool_input(
-        input.tool_input,
-        input.extra,
-        preserve_name.then(|| input.hook_event_name.clone()),
-    );
+    // Map-first pattern: unwrap tool_input to Map, merge extra, then wrap back
+    let mut tool_input_map = match input.tool_input {
+        Some(Value::Object(map)) => map,
+        Some(value) => {
+            let mut map = Map::new();
+            map.insert("tool_input".to_string(), value);
+            map
+        }
+        None => Map::new(),
+    };
+
+    for (key, value) in input.extra {
+        tool_input_map.entry(key).or_insert(value);
+    }
+
+    if preserve_name {
+        tool_input_map
+            .entry("gemini_hook_event_name".to_string())
+            .or_insert(Value::String(input.hook_event_name.clone()));
+    }
+
+    // Canonicalize tool name and preserve original platform name
+    let (canonical_tool_name, original_tool_name) = match input.tool_name {
+        Some(ref name) => {
+            let canonical = map_tool_name(name);
+            let original = if canonical != *name {
+                Some(name.clone())
+            } else {
+                None
+            };
+            (Some(canonical), original)
+        }
+        None => (None, None),
+    };
+
+    // Inject platform_tool_name into tool_input if the name was mapped
+    if let Some(ref orig) = original_tool_name {
+        tool_input_map.insert(
+            "platform_tool_name".to_string(),
+            Value::String(orig.clone()),
+        );
+    }
 
     let event = Event {
         hook_event_name: primary_event_type,
-        tool_name: input.tool_name,
-        tool_input,
+        tool_name: canonical_tool_name,
+        tool_input: if tool_input_map.is_empty() {
+            None
+        } else {
+            Some(Value::Object(tool_input_map))
+        },
         session_id: input.session_id,
         timestamp: input.timestamp.unwrap_or_else(Utc::now),
         user_id: input.user_id,
@@ -197,36 +238,18 @@ fn is_tool_permission_notification(tool_input: Option<&Value>, extra: &Map<Strin
     false
 }
 
-fn merge_tool_input(
-    tool_input: Option<Value>,
-    extra: Map<String, Value>,
-    preserve_name: Option<String>,
-) -> Option<Value> {
-    let mut merged = match tool_input {
-        Some(Value::Object(map)) => map,
-        Some(value) => {
-            let mut map = Map::new();
-            map.insert("tool_input".to_string(), value);
-            map
-        }
-        None => Map::new(),
-    };
-
-    for (key, value) in extra {
-        if !merged.contains_key(&key) {
-            merged.insert(key, value);
-        }
-    }
-
-    if let Some(name) = preserve_name {
-        merged
-            .entry("gemini_hook_event_name".to_string())
-            .or_insert(Value::String(name));
-    }
-
-    if merged.is_empty() {
-        None
-    } else {
-        Some(Value::Object(merged))
+/// Map a Gemini CLI tool name to the canonical (Claude Code) tool name.
+///
+/// Unknown tool names pass through unchanged.
+fn map_tool_name(platform_name: &str) -> String {
+    match platform_name {
+        "run_shell_command" | "execute_code" => "Bash".to_string(),
+        "write_file" => "Write".to_string(),
+        "replace" => "Edit".to_string(),
+        "read_file" => "Read".to_string(),
+        "glob" => "Glob".to_string(),
+        "search_file_content" | "grep_search" => "Grep".to_string(),
+        "web_fetch" => "WebFetch".to_string(),
+        _ => platform_name.to_string(),
     }
 }
