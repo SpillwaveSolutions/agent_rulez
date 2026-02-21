@@ -258,6 +258,16 @@ Plans:
 - [x] 21-03-PLAN.md — Copilot hook install + doctor + wrapper scripts + docs
 - [x] 21-04-PLAN.md — VS Code Copilot chat participant + LM summary
 
+### Phase 22: Tool Name Canonicalization Across Platforms
+
+**Goal:** Normalize platform-specific tool names to Claude Code's PascalCase canonical names at adapter ingestion time, so rules with `tools:` matchers work identically across all platforms
+**Depends on:** Phase 21
+**Plans:** 2 plans
+
+Plans:
+- [ ] 22-01-PLAN.md — Fix adapter compile errors, correct Gemini mappings, update all adapter tests
+- [ ] 22-02-PLAN.md — Create TOOL-MAPPING.md cross-platform reference documentation
+
 ---
 
-*Created 2026-02-06 — Updated 2026-02-13 v1.7 COMPLETE — all phases 18-21 done*
+*Created 2026-02-06 — Updated 2026-02-20 Phase 22 planned*
