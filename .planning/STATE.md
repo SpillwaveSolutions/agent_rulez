@@ -5,23 +5,24 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** LLMs do not enforce policy. LLMs are subject to policy.
-**Current focus:** v1.7 Multi-Platform Hook Support — COMPLETE (all phases 18-21 done)
+**Current focus:** v1.8 — Phase 22 Tool Name Canonicalization COMPLETE
+**v1.7:** Multi-Platform Hook Support — COMPLETE (all phases 18-21 done)
 **v1.6:** RuleZ UI — COMPLETE (all phases 11-17 done)
 
 ## Current Position
 
-Milestone: v1.7 Multi-Platform Hook Support — COMPLETE
-Phase: 21 of 21
+Milestone: v1.8
+Phase: 22 of 22
 Plan: All plans complete
-Status: All phases complete (18 OpenCode, 19 superseded, 20 Gemini CLI, 21 Copilot CLI)
-Last activity: 2026-02-13 — Completed Phase 18 (OpenCode doctor, tests, docs)
+Status: Phase 22 complete (tool name canonicalization across all adapters)
+Last activity: 2026-02-20 — Completed Phase 22 (adapter tool name mapping + TOOL-MAPPING.md)
 
-Progress: [█████████████████] 21/21 phases complete (100%)
+Progress: [██████████████████] 22/22 phases complete (100%)
 
 ## Performance Metrics
 
 **Velocity (all milestones):**
-- Total plans completed: 56 (6 v1.2 + 10 v1.3 + 9 v1.4 + 19 v1.6 + 12 v1.7)
+- Total plans completed: 58 (6 v1.2 + 10 v1.3 + 9 v1.4 + 19 v1.6 + 12 v1.7 + 2 v1.8)
 - Average duration: ~5min per plan (Phases 4-10)
 - v1.5.0 released 2026-02-11 (first successful cross-platform binary release)
 
@@ -71,6 +72,7 @@ Progress: [█████████████████] 21/21 phases com
 - Phase 19 added: Gemini hooks support
 - Phase 20 added: Gemini CLI support and Gemini hooks support
 - Phase 21 added: Copilot CLI support and Copilot hooks support
+- Phase 22 added: Tool Name Canonicalization Across Platforms
 
 ### Decisions
 
@@ -119,8 +121,8 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-02-13
-Stopped at: v1.7 COMPLETE — all phases 18-21 done (228 tests passing)
+Last session: 2026-02-20
+Stopped at: Phase 22 COMPLETE — tool name canonicalization across all adapters
 Resume file: None
 
-Next action: Plan v1.8 milestone or release v1.7
+Next action: Commit Phase 22 changes and create PR

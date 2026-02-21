@@ -221,6 +221,7 @@ Phases execute in numeric order: 11 → 12 → 13 → 14 → 15 → 16 → 17 �
 | 19. Gemini Hook Support | v1.7 | 0/3 | Superseded by Phase 20 | - |
 | 20. Gemini CLI Support | v1.7 | 5/5 | ✅ Complete | 2026-02-12 |
 | 21. Copilot CLI Support | v1.7 | 4/4 | ✅ Complete | 2026-02-13 |
+| 22. Tool Name Canonicalization | v1.8 | 2/2 | ✅ Complete | 2026-02-20 |
 
 ### Phase 19: Gemini hooks support (Superseded)
 
@@ -258,6 +259,16 @@ Plans:
 - [x] 21-03-PLAN.md — Copilot hook install + doctor + wrapper scripts + docs
 - [x] 21-04-PLAN.md — VS Code Copilot chat participant + LM summary
 
+### Phase 22: Tool Name Canonicalization Across Platforms
+
+**Goal:** Normalize platform-specific tool names to Claude Code's PascalCase canonical names at adapter ingestion time, so rules with `tools:` matchers work identically across all platforms
+**Depends on:** Phase 21
+**Plans:** 2 plans
+
+Plans:
+- [x] 22-01-PLAN.md — Fix adapter compile errors, correct Gemini mappings, update all adapter tests
+- [x] 22-02-PLAN.md — Create TOOL-MAPPING.md cross-platform reference documentation
+
 ---
 
-*Created 2026-02-06 — Updated 2026-02-13 v1.7 COMPLETE — all phases 18-21 done*
+*Created 2026-02-06 — Updated 2026-02-20 Phase 22 planned*

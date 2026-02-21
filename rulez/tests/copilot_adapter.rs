@@ -16,7 +16,8 @@ fn test_parse_tool_event_maps_pre_tool_use() {
 
     let parsed = parse_event(input).expect("parse event");
     assert_eq!(parsed.event.hook_event_name, EventType::PreToolUse);
-    assert_eq!(parsed.event.tool_name.as_deref(), Some("shell"));
+    // shell is canonicalized to Bash
+    assert_eq!(parsed.event.tool_name.as_deref(), Some("Bash"));
 
     let tool_input = parsed.event.tool_input.expect("tool input");
     let map = tool_input.as_object().expect("tool input object");
@@ -25,6 +26,48 @@ fn test_parse_tool_event_maps_pre_tool_use() {
         map.get("copilot_hook_event_name").and_then(|v| v.as_str()),
         Some("preToolUse")
     );
+    // Original platform tool name preserved
+    assert_eq!(
+        map.get("platform_tool_name").and_then(|v| v.as_str()),
+        Some("shell")
+    );
+}
+
+#[test]
+fn test_unknown_tool_passes_through() {
+    let input = json!({
+        "session_id": "sess-unk",
+        "hook_event_name": "preToolUse",
+        "tool_name": "custom_tool",
+        "tool_input": {"arg": "val"}
+    });
+
+    let parsed = parse_event(input).expect("parse event");
+    assert_eq!(parsed.event.tool_name.as_deref(), Some("custom_tool"));
+
+    let tool_input = parsed.event.tool_input.expect("tool input");
+    let map = tool_input.as_object().expect("tool input object");
+    // No platform_tool_name for pass-through tools
+    assert!(map.get("platform_tool_name").is_none());
+}
+
+#[test]
+fn test_pascal_case_tool_passes_through() {
+    // Copilot tools already in PascalCase should pass through unchanged
+    let input = json!({
+        "session_id": "sess-pc",
+        "hook_event_name": "preToolUse",
+        "tool_name": "Write",
+        "tool_input": {"path": "/tmp/f.txt"}
+    });
+
+    let parsed = parse_event(input).expect("parse event");
+    assert_eq!(parsed.event.tool_name.as_deref(), Some("Write"));
+
+    let tool_input = parsed.event.tool_input.expect("tool input");
+    let map = tool_input.as_object().expect("tool input object");
+    // No platform_tool_name since it's already canonical
+    assert!(map.get("platform_tool_name").is_none());
 }
 
 #[test]
