@@ -13,10 +13,10 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 ## Current Position
 
 Milestone: v1.9
-Phase: 23 of 27
-Plan: 02 complete (Claude Code CLI scenarios done)
-Status: In progress — Phase 23 Plan 02 complete, remaining CLI phases pending
-Last activity: 2026-02-23 — Phase 23 Plan 02 complete: Claude Code adapter, fixtures, and 4 E2E scenarios created
+Phase: 24 of 27
+Plan: 01 complete (Gemini CLI adapter, fixtures, run.sh integration done)
+Status: In progress — Phase 24 Plan 01 complete, Gemini E2E scenarios pending
+Last activity: 2026-02-23 — Phase 24 Plan 01 complete: Gemini adapter, fixtures, and run.sh integration created
 
 Progress: [██████████████████░░░░░] 22/27 phases complete (81%)
 
@@ -45,6 +45,7 @@ Progress: [██████████████████░░░░░
 
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
+| Phase 24 P01 | 2 min | 2 tasks | 5 files |
 | Phase 23 P02 | 5 min | 2 tasks | 9 files |
 | Phase 23 P01 | 5 min | 2 tasks | 5 files |
 | Phase 16 P01 | 1 min | 4 tasks | 7 files |
@@ -79,6 +80,13 @@ Progress: [██████████████████░░░░░
 - Phases 23-27 added: Multi-CLI E2E Testing (Claude Code, Gemini, Copilot, OpenCode, Codex)
 
 ### Decisions
+
+Phase 24 decisions:
+- Timeout exit (124) maps to skip (77) in invoke_gemini_headless — Gemini --yolo flag has known intermittent behavior
+- Gemini fixture files identical to claude-code fixtures — canonical tool names (Bash) work for both CLIs via RuleZ canonicalization
+- GEMINI_API_KEY check is part of gemini_adapter_check (unlike Claude) because Gemini CLI requires API key at launch
+- Gemini BeforeTool hook uses regex matcher ".*" (not glob "*" like Claude Code)
+- Hook command format: "${abs_rulez} gemini hook"
 
 Phase 23 decisions:
 - Pure bash harness with no Node/Python dependencies (locked from CONTEXT.md)
@@ -139,7 +147,7 @@ None active.
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 23-02-PLAN.md (Claude Code CLI adapter, fixtures, 4 E2E scenarios)
+Stopped at: Completed 24-01-PLAN.md (Gemini adapter, fixtures, run.sh gemini integration)
 Resume file: None
 
-Next action: Execute Phase 23 Plan 03 or next applicable CLI testing phase
+Next action: Execute Phase 24 Plan 02 (Gemini E2E scenarios)
