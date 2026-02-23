@@ -299,8 +299,12 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Gemini CLI passes all 4 core scenarios (install, hook-fire, deny, inject)
   2. Headless invocation works reliably in CI
-  3. Reports include Gemini row in CLI × scenario matrix
-**Plans**: TBD
+  3. Reports include Gemini row in CLI x scenario matrix
+**Plans**: 2 plans
+
+Plans:
+- [ ] 24-01-PLAN.md — Gemini adapter library, fixtures, and run.sh integration
+- [ ] 24-02-PLAN.md — 4 Gemini E2E scenarios (install, hook-fire, deny, inject)
 
 ### Phase 25: Copilot CLI E2E Testing
 **Goal**: Add Copilot CLI adapter + scenarios to the existing E2E harness
@@ -308,7 +312,7 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Copilot CLI passes all 4 core scenarios (install, hook-fire, deny, inject)
   2. Headless invocation works reliably in CI
-  3. Reports include Copilot row in CLI × scenario matrix
+  3. Reports include Copilot row in CLI x scenario matrix
 **Plans**: TBD
 
 ### Phase 26: OpenCode CLI E2E Testing
@@ -317,7 +321,7 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. OpenCode CLI passes all 4 core scenarios (install, hook-fire, deny, inject)
   2. Headless invocation works reliably in CI
-  3. Reports include OpenCode row in CLI × scenario matrix
+  3. Reports include OpenCode row in CLI x scenario matrix
 **Plans**: TBD
 
 ### Phase 27: Codex CLI E2E Testing
@@ -332,7 +336,7 @@ Plans:
 ---
 
 | 23. Claude Code CLI E2E Testing | v1.9 | 2/2 | ✅ Complete | 2026-02-23 |
-| 24. Gemini CLI E2E Testing | v1.9 | 0/TBD | Pending | - |
+| 24. Gemini CLI E2E Testing | v1.9 | 0/2 | In Progress | - |
 | 25. Copilot CLI E2E Testing | v1.9 | 0/TBD | Pending | - |
 | 26. OpenCode CLI E2E Testing | v1.9 | 0/TBD | Pending | - |
 | 27. Codex CLI E2E Testing | v1.9 | 0/TBD | Pending | - |
