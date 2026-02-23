@@ -1,0 +1,11 @@
+version: "1.0"
+settings:
+  log_level: "info"
+  fail_open: true
+rules:
+  - name: e2e-inject-marker
+    description: "E2E test: inject command writes marker file"
+    matchers:
+      tools: ["Bash"]
+    actions:
+      inject_command: "touch __WORKSPACE__/e2e-inject-fired.marker && echo 'E2E-INJECTED'"
