@@ -132,6 +132,15 @@ tasks:
     vars:
       TEST_NAME: '{{.TEST_NAME | default "01-block-force-push"}}'
 
+  e2e:
+    desc: Run CLI E2E integration tests
+    deps: [build-cli]
+    cmds:
+      - ./e2e/run.sh
+    preconditions:
+      - sh: test -f e2e/run.sh
+        msg: "E2E harness not found. Expected e2e/run.sh"
+
   test-all:
     desc: Run all tests (unit + integration + E2E)
     cmds:
