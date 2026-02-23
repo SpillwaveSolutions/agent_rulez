@@ -7,7 +7,7 @@
 #   COPILOT_CLI_NAME — constant string "copilot" for reporting
 #
 # Functions:
-#   copilot_adapter_check()                              — verify copilot is in PATH (OAuth login, no API key needed)
+#   copilot_adapter_check()                              — verify copilot is in PATH and authenticated via GitHub OAuth
 #   require_copilot_cli()                                — return 77 (skip) if copilot CLI not available
 #   setup_copilot_hooks(workspace, rulez_binary)        — write .github/hooks/rulez.json with preToolUse hook
 #   invoke_copilot_headless(workspace, prompt, timeout) — run copilot -p headlessly
@@ -18,9 +18,18 @@ export COPILOT_CLI_NAME
 
 # ---------------------------------------------------------------------------
 # copilot_adapter_check
-# Verifies `copilot` is in PATH. Copilot uses OAuth login — no API key check.
-# Returns 1 with error message if not found.
-# Prints copilot version on success.
+# Verifies `copilot` is in PATH and that GitHub OAuth authentication is active.
+# Copilot CLI requires GitHub OAuth login — no API key, but must be authenticated.
+#
+# Two-stage auth check:
+#   Stage 1 (preferred): If `gh` is in PATH, run `gh auth status`. Zero exit =
+#     GitHub OAuth active (sufficient for Copilot CLI). Non-zero = unauthenticated.
+#   Stage 2 (fallback): If `gh` is NOT in PATH, probe with a short timeout:
+#     `timeout 5 copilot -p "ping" --allow-all-tools`. Exit 1 immediately = unauthenticated.
+#     Timeout (124) or exit 0 = likely authenticated (just slow), continue.
+#
+# Returns 1 with error message if copilot not found or unauthenticated.
+# Prints copilot version and auth confirmation on success.
 # ---------------------------------------------------------------------------
 copilot_adapter_check() {
   if ! command -v copilot > /dev/null 2>&1; then
@@ -33,6 +42,27 @@ copilot_adapter_check() {
   local version
   version="$(copilot --version 2>&1 || true)"
   echo "copilot_adapter: found copilot CLI: ${version}"
+
+  # Stage 1: Use gh CLI auth status if available (reliable OAuth check)
+  if command -v gh > /dev/null 2>&1; then
+    if ! gh auth status > /dev/null 2>&1; then
+      echo "ERROR: GitHub not authenticated (copilot requires GitHub OAuth)." >&2
+      echo "  Run: copilot auth login" >&2
+      return 1
+    fi
+  else
+    # Stage 2: No gh CLI — probe copilot directly with short timeout
+    local probe_exit=0
+    timeout 5 copilot -p "ping" --allow-all-tools > /dev/null 2>&1 || probe_exit=$?
+    if [[ "${probe_exit}" -eq 1 ]]; then
+      echo "ERROR: Copilot CLI unauthenticated (probe exited 1)." >&2
+      echo "  Run: copilot auth login" >&2
+      return 1
+    fi
+    # probe_exit 0 (success) or 124 (timeout = likely authenticated, just slow) => continue
+  fi
+
+  echo "copilot_adapter: authentication check passed"
   return 0
 }
 
