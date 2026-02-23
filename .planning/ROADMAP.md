@@ -290,8 +290,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 23-01-PLAN.md — E2E harness framework (workspace isolation, assertions, reporting, Taskfile integration)
-- [ ] 23-02-PLAN.md — Claude Code adapter, fixtures, and 4 E2E scenarios (install, hook-fire, deny, inject)
+- [x] 23-01-PLAN.md — E2E harness framework (workspace isolation, assertions, reporting, Taskfile integration)
+- [x] 23-02-PLAN.md — Claude Code adapter, fixtures, and 4 E2E scenarios (install, hook-fire, deny, inject)
 
 ### Phase 24: Gemini CLI E2E Testing
 **Goal**: Add Gemini CLI adapter + scenarios to the existing E2E harness
@@ -331,7 +331,7 @@ Plans:
 
 ---
 
-| 23. Claude Code CLI E2E Testing | v1.9 | 0/TBD | Pending | - |
+| 23. Claude Code CLI E2E Testing | v1.9 | 2/2 | ✅ Complete | 2026-02-23 |
 | 24. Gemini CLI E2E Testing | v1.9 | 0/TBD | Pending | - |
 | 25. Copilot CLI E2E Testing | v1.9 | 0/TBD | Pending | - |
 | 26. OpenCode CLI E2E Testing | v1.9 | 0/TBD | Pending | - |
