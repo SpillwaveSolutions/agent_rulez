@@ -27,6 +27,8 @@ export E2E_ROOT
 source "${E2E_ROOT}/lib/harness.sh"
 # shellcheck source=lib/reporting.sh
 source "${E2E_ROOT}/lib/reporting.sh"
+# shellcheck source=lib/claude_adapter.sh
+source "${E2E_ROOT}/lib/claude_adapter.sh"
 
 # ---------------------------------------------------------------------------
 # Initialize harness and reporting
@@ -101,6 +103,23 @@ for cli_name in "${CLI_NAMES[@]}"; do
   cli_dir="${SCENARIOS_DIR}/${cli_name}"
 
   printf "\n=== Running scenarios for: %s ===\n" "${cli_name}"
+
+  # For claude-code scenarios, verify the claude CLI is available.
+  # If not found, skip all scenarios in this directory with SKIP status.
+  if [[ "${cli_name}" == "claude-code" ]]; then
+    if ! claude_adapter_check > /dev/null 2>&1; then
+      echo "  SKIP: claude CLI not found in PATH — skipping all claude-code scenarios" >&2
+      for scenario_script in $(ls -1 "${cli_dir}"/*.sh 2>/dev/null | sort); do
+        [[ -f "${scenario_script}" ]] || continue
+        scenario_file="$(basename "${scenario_script}")"
+        scenario_name="${scenario_file#[0-9]*-}"
+        scenario_name="${scenario_name%.sh}"
+        record_result "${cli_name}" "${scenario_name}" "skip" "0" "claude CLI not found in PATH"
+        TOTAL_SKIP=$((TOTAL_SKIP + 1))
+      done
+      continue
+    fi
+  fi
 
   # Source and run each scenario script in sorted order
   for scenario_script in $(ls -1 "${cli_dir}"/*.sh 2>/dev/null | sort); do
