@@ -13,10 +13,10 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 ## Current Position
 
 Milestone: v1.9
-Phase: 24 of 27
-Plan: 02 complete (all 4 Gemini E2E scenarios created)
-Status: In progress — Phase 24 complete (both plans done), Phase 25 (Copilot E2E) next
-Last activity: 2026-02-23 — Phase 24 Plan 02 complete: all 4 Gemini E2E scenario scripts created
+Phase: 25 of 27
+Plan: 01 complete (copilot_adapter.sh, fixtures, run.sh integration)
+Status: In progress — Phase 25 Plan 01 complete, Phase 25 Plan 02 (Copilot E2E scenarios) next
+Last activity: 2026-02-23 — Phase 25 Plan 01 complete: copilot adapter, fixture files, run.sh updated
 
 Progress: [██████████████████░░░░░] 22/27 phases complete (81%)
 
@@ -69,6 +69,7 @@ Progress: [██████████████████░░░░░
 | Phase 17 P02 | 1 min | 7 tasks | 4 files |
 | Phase 21-copilot-cli-support-and-copilot-hooks-support P01 | 4 min | 2 tasks | 4 files |
 | Phase 21-copilot-cli-support-and-copilot-hooks-support P04 | 0 min | 2 tasks | 7 files |
+| Phase 25-copilot-cli-e2e-testing P01 | 2 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -135,6 +136,12 @@ Phase 21 decisions:
 - `cch copilot install` generates wrapper scripts (bash + PowerShell) and `.github/hooks/rulez.json`
 - `cch copilot doctor` scans `.github/hooks/*.json` for installed/missing/misconfigured/outdated hooks
 
+Phase 25 decisions:
+- copilot_adapter_check checks PATH only — no API key (Copilot uses OAuth login, unlike Gemini)
+- Copilot hook format: .github/hooks/rulez.json with preToolUse/bash/powershell/timeoutSec (vs Gemini BeforeTool/command/timeout ms)
+- invoke_copilot_headless uses --allow-all-tools (not --yolo --output-format json like Gemini)
+- Fixture YAML files identical to Gemini fixtures — canonical tool names work for Copilot via RuleZ canonicalization
+
 ### Pending Todos
 
 - [ ] Replace Naive Matchers with globset (tooling)
@@ -150,7 +157,7 @@ None active.
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 24-02-PLAN.md (all 4 Gemini E2E scenario scripts)
+Stopped at: Completed 25-01-PLAN.md (copilot adapter, fixtures, run.sh integration)
 Resume file: None
 
-Next action: Execute Phase 25 (Copilot E2E testing)
+Next action: Execute Phase 25 Plan 02 (Copilot E2E scenario scripts)
