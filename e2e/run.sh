@@ -31,6 +31,8 @@ source "${E2E_ROOT}/lib/reporting.sh"
 source "${E2E_ROOT}/lib/claude_adapter.sh"
 # shellcheck source=lib/gemini_adapter.sh
 source "${E2E_ROOT}/lib/gemini_adapter.sh"
+# shellcheck source=lib/copilot_adapter.sh
+source "${E2E_ROOT}/lib/copilot_adapter.sh"
 
 # ---------------------------------------------------------------------------
 # Initialize harness and reporting
@@ -126,6 +128,16 @@ for cli_name in "${CLI_NAMES[@]}"; do
       echo "  NOTE: gemini CLI not available — scenarios requiring it will be skipped" >&2
     fi
     export GEMINI_CLI_AVAILABLE
+  fi
+
+  if [[ "${cli_name}" == "copilot" ]]; then
+    if copilot_adapter_check > /dev/null 2>&1; then
+      COPILOT_CLI_AVAILABLE=1
+    else
+      COPILOT_CLI_AVAILABLE=0
+      echo "  NOTE: copilot CLI not available — scenarios requiring it will be skipped" >&2
+    fi
+    export COPILOT_CLI_AVAILABLE
   fi
 
   # Source and run each scenario script in sorted order
