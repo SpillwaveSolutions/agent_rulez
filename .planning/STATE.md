@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 ## Current Position
 
 Milestone: v1.9
-Phase: 25 of 27
+Phase: 25 of 27 (complete)
 Plan: 03 complete (auth gap closure — copilot_adapter_check now verifies GitHub OAuth)
-Status: In progress — Phase 25 fully complete, Phase 26 (OpenCode CLI E2E Testing) next
-Last activity: 2026-02-23 — Phase 25 Plan 03 complete: auth check added to copilot_adapter_check (gh auth status / probe fallback)
+Status: Phase 25 verified and complete. Phase 26 (OpenCode CLI E2E Testing) next.
+Last activity: 2026-02-23 — Phase 25 verified: all 3 plans complete, auth gap closed, 5/5 must-haves passed
 
-Progress: [██████████████████░░░░░] 22/27 phases complete (81%)
+Progress: [███████████████████░░░░] 23/27 phases complete (85%)
 
 ## Performance Metrics
 
