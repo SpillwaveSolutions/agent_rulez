@@ -28,10 +28,31 @@ claude_adapter_check() {
     return 1
   fi
 
+  # Claude Code refuses to launch inside another Claude Code session
+  if [[ -n "${CLAUDECODE:-}" ]]; then
+    echo "ERROR: Running inside a Claude Code session (CLAUDECODE env var is set)." >&2
+    echo "  Claude Code cannot be nested. Run E2E tests from a regular terminal." >&2
+    return 1
+  fi
+
   local version
   version="$(claude --version 2>&1 || true)"
   echo "claude_adapter: found claude CLI: ${version}"
   return 0
+}
+
+# ---------------------------------------------------------------------------
+# require_claude_cli
+# Returns 0 if claude CLI is available for headless invocation, 1 otherwise.
+# Scenarios that need claude should call this at their start and return 1
+# (triggering skip) if it fails.
+# ---------------------------------------------------------------------------
+require_claude_cli() {
+  if [[ "${CLAUDE_CLI_AVAILABLE:-0}" -eq 1 ]]; then
+    return 0
+  fi
+  echo "  [skip] claude CLI not available for headless invocation" >&2
+  return 77
 }
 
 # ---------------------------------------------------------------------------

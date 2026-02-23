@@ -8,7 +8,9 @@
 #   JUNIT_TESTS      — total test count
 #   JUNIT_FAILURES   — failure count
 #   JUNIT_SKIPS      — skip count
-#   RESULTS          — associative array: "cli:scenario" -> "pass|fail|skip"
+#   RESULTS_FILE     — temp file storing results as "cli:scenario:status" per line
+#
+# Compatible with bash 3.2+ (macOS system bash).
 
 set -euo pipefail
 
@@ -16,7 +18,7 @@ set -euo pipefail
 # Result Tracking
 # ---------------------------------------------------------------------------
 
-# reporting_init — initialize counters, temp file, and results array
+# reporting_init — initialize counters, temp file, and results file
 reporting_init() {
   JUNIT_CASES_FILE="$(mktemp)"
   export JUNIT_CASES_FILE
@@ -26,12 +28,26 @@ reporting_init() {
   JUNIT_SKIPS=0
   export JUNIT_TESTS JUNIT_FAILURES JUNIT_SKIPS
 
-  declare -gA RESULTS
+  RESULTS_FILE="$(mktemp)"
+  export RESULTS_FILE
+}
+
+# _get_result cli scenario — lookup result from RESULTS_FILE, return "????" if not found
+_get_result() {
+  local cli="$1"
+  local scenario="$2"
+  local line
+  line=$(grep "^${cli}:${scenario}:" "${RESULTS_FILE}" 2>/dev/null | tail -1) || true
+  if [[ -n "${line}" ]]; then
+    echo "${line##*:}"
+  else
+    echo "????"
+  fi
 }
 
 # record_result cli_name scenario_name status elapsed_secs message
 # status is "pass", "fail", or "skip"
-# Increments counters, stores in RESULTS, appends JUnit XML testcase element.
+# Increments counters, stores in RESULTS_FILE, appends JUnit XML testcase element.
 record_result() {
   local cli_name="$1"
   local scenario_name="$2"
@@ -41,8 +57,8 @@ record_result() {
 
   JUNIT_TESTS=$((JUNIT_TESTS + 1))
 
-  # Store in associative array for ASCII table
-  RESULTS["${cli_name}:${scenario_name}"]="${status}"
+  # Store result in file
+  echo "${cli_name}:${scenario_name}:${status}" >> "${RESULTS_FILE}"
 
   # Escape message for XML attribute (basic escaping)
   local safe_message
@@ -110,33 +126,31 @@ EOF
 # ASCII Table
 # ---------------------------------------------------------------------------
 
-# print_results_table cli_names_array
-# Takes a bash array (passed by name) of CLI names.
+# print_results_table cli_list
+# Takes a space-separated list of CLI names as arguments.
 # Renders ASCII table: CLI x scenario matrix.
 # Prints summary: "X passed, Y failed, Z skipped"
 print_results_table() {
-  local -n cli_names_ref="$1"
-
-  local scenarios=("install" "hook-fire" "deny" "inject")
+  local scenarios="install hook-fire deny inject"
 
   printf "\n"
   printf "%-22s" "CLI"
-  for s in "${scenarios[@]}"; do
+  for s in ${scenarios}; do
     printf " %-12s" "${s}"
   done
   printf "\n"
 
   printf "%-22s" "----------------------"
-  for s in "${scenarios[@]}"; do
+  for s in ${scenarios}; do
     printf " %-12s" "------------"
   done
   printf "\n"
 
-  for cli in "${cli_names_ref[@]}"; do
+  for cli in "$@"; do
     printf "%-22s" "${cli}"
-    for s in "${scenarios[@]}"; do
-      local key="${cli}:${s}"
-      local result="${RESULTS[${key}]:-????}"
+    for s in ${scenarios}; do
+      local result
+      result="$(_get_result "${cli}" "${s}")"
       case "${result}" in
         pass) printf " %-12s" "PASS" ;;
         fail) printf " %-12s" "FAIL" ;;
@@ -165,7 +179,7 @@ print_results_table() {
 write_markdown_summary() {
   local output_path="$1"
 
-  local scenarios=("install" "hook-fire" "deny" "inject")
+  local scenarios="install hook-fire deny inject"
 
   {
     echo "# RuleZ E2E Test Results"
@@ -173,33 +187,31 @@ write_markdown_summary() {
     echo "**Run ID:** ${RUN_ID:-unknown}"
     echo ""
     printf "| %-22s" "CLI"
-    for s in "${scenarios[@]}"; do
+    for s in ${scenarios}; do
       printf " | %-12s" "${s}"
     done
     printf " |\n"
 
     printf "| %-22s" ":----------------------"
-    for s in "${scenarios[@]}"; do
+    for s in ${scenarios}; do
       printf " | %-12s" ":----------:"
     done
     printf " |\n"
 
-    # Collect unique CLIs from RESULTS keys
-    local seen_clis=()
-    for key in "${!RESULTS[@]}"; do
-      local cli="${key%%:*}"
-      local already=0
-      for seen in "${seen_clis[@]:-}"; do
-        [[ "${seen}" == "${cli}" ]] && already=1 && break
-      done
-      [[ "${already}" -eq 0 ]] && seen_clis+=("${cli}")
-    done
+    # Collect unique CLIs from results file
+    local seen_clis=""
+    while IFS=: read -r cli _scenario _status; do
+      case " ${seen_clis} " in
+        *" ${cli} "*) ;;  # already seen
+        *) seen_clis="${seen_clis} ${cli}" ;;
+      esac
+    done < "${RESULTS_FILE}"
 
-    for cli in "${seen_clis[@]:-}"; do
+    for cli in ${seen_clis}; do
       printf "| %-22s" "${cli}"
-      for s in "${scenarios[@]}"; do
-        local key="${cli}:${s}"
-        local result="${RESULTS[${key}]:-????}"
+      for s in ${scenarios}; do
+        local result
+        result="$(_get_result "${cli}" "${s}")"
         case "${result}" in
           pass) printf " | %-12s" "PASS" ;;
           fail) printf " | %-12s" "**FAIL**" ;;

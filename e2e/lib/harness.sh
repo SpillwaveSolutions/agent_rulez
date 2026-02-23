@@ -232,24 +232,25 @@ run_scenario() {
   timer_start
 
   local scenario_exit=0
-  local scenario_msg=""
 
-  if "${scenario_func}" "${workspace}" "${RULEZ_BINARY}" 2>&1; then
-    scenario_exit=0
-    scenario_msg="passed"
-  else
-    scenario_exit=1
-    scenario_msg="failed"
-  fi
+  "${scenario_func}" "${workspace}" "${RULEZ_BINARY}" 2>&1 || scenario_exit=$?
 
   local elapsed
   elapsed="$(timer_elapsed)"
 
   local status
+  local scenario_msg
   if [[ "${scenario_exit}" -eq 0 ]]; then
     status="pass"
+    scenario_msg="passed"
+  elif [[ "${scenario_exit}" -eq 77 ]]; then
+    # Exit code 77 = skip (autotools convention)
+    status="skip"
+    scenario_msg="skipped (prerequisites not met)"
+    TOTAL_SKIP=$((TOTAL_SKIP + 1))
   else
     status="fail"
+    scenario_msg="failed"
   fi
 
   # record_result is defined in reporting.sh (sourced by run.sh before harness is called)
@@ -257,9 +258,9 @@ run_scenario() {
 
   cleanup_workspace "${workspace}" "${status}"
 
-  if [[ "${status}" == "pass" ]]; then
-    printf "[scenario] %s / %s => PASS (%ss)\n" "${cli_name}" "${scenario_name}" "${elapsed}"
-  else
-    printf "[scenario] %s / %s => FAIL (%ss)\n" "${cli_name}" "${scenario_name}" "${elapsed}" >&2
-  fi
+  case "${status}" in
+    pass) printf "[scenario] %s / %s => PASS (%ss)\n" "${cli_name}" "${scenario_name}" "${elapsed}" ;;
+    skip) printf "[scenario] %s / %s => SKIP (%ss)\n" "${cli_name}" "${scenario_name}" "${elapsed}" ;;
+    fail) printf "[scenario] %s / %s => FAIL (%ss)\n" "${cli_name}" "${scenario_name}" "${elapsed}" >&2 ;;
+  esac
 }

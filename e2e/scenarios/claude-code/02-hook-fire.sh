@@ -16,6 +16,9 @@ scenario_hook_fire() {
   local workspace="$1"
   local rulez_binary="$2"
 
+  # This scenario requires a live claude CLI (returns 77 = skip)
+  require_claude_cli || return $?
+
   local failures=0
 
   # Write .claude/settings.json with PreToolUse hook pointing at rulez
