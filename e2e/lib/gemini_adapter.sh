@@ -84,7 +84,7 @@ setup_gemini_hooks() {
           {
             "type": "command",
             "command": "${abs_rulez} gemini hook",
-            "timeout": 10
+            "timeout": 10000
           }
         ]
       }
