@@ -14,9 +14,9 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 
 Milestone: v1.9
 Phase: 23 of 27
-Plan: Not yet planned
-Status: Phases 23-27 added to roadmap, awaiting planning
-Last activity: 2026-02-22 — v1.8.0 released, added multi-CLI E2E testing phases
+Plan: 01 complete (harness framework done)
+Status: In progress — Phase 23 Plan 01 complete, scenario scripts pending
+Last activity: 2026-02-23 — Phase 23 Plan 01 complete: E2E harness framework created
 
 Progress: [██████████████████░░░░░] 22/27 phases complete (81%)
 
@@ -45,6 +45,7 @@ Progress: [██████████████████░░░░░
 
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
+| Phase 23 P01 | 5 min | 2 tasks | 5 files |
 | Phase 16 P01 | 1 min | 4 tasks | 7 files |
 | Phase 16 P02 | 1 min | 1 task | 1 file |
 | Phase 15 P01 | 1 min | 4 tasks | 2 files |
@@ -77,6 +78,14 @@ Progress: [██████████████████░░░░░
 - Phases 23-27 added: Multi-CLI E2E Testing (Claude Code, Gemini, Copilot, OpenCode, Codex)
 
 ### Decisions
+
+Phase 23 decisions:
+- Pure bash harness with no Node/Python dependencies (locked from CONTEXT.md)
+- Workspace isolation via project-level .claude/settings.json in isolated run dir (CLAUDE_CONFIG_DIR does not exist)
+- Log assertion uses WORKSPACE_LOG_SNAPSHOT (wc -l before scenario) + tail -n +<snapshot+1> after (avoids global log contamination)
+- Dynamic scenario discovery: run.sh discovers e2e/scenarios/<cli>/*.sh, no hardcoded CLI list
+- Scenario function naming convention: scenario_<name> with dashes->underscores
+- task e2e depends on build-cli to ensure fresh binary before tests
 
 All v1.4 decisions archived to PROJECT.md Key Decisions table and milestones/v1.4-ROADMAP.md.
 
@@ -124,8 +133,8 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-02-22
-Stopped at: v1.8.0 released, phases 23-27 added to roadmap
+Last session: 2026-02-23
+Stopped at: Completed 23-01-PLAN.md (E2E harness framework)
 Resume file: None
 
-Next action: Plan and execute Phase 23 (Claude Code CLI E2E Testing)
+Next action: Execute Phase 23 Plan 02 (Claude Code CLI scenario scripts: install, hook-fire, deny, inject)
