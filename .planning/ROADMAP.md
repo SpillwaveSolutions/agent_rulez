@@ -287,7 +287,11 @@ Plans:
   2. `task e2e` entry point runs all scenarios and produces reports
   3. Claude Code passes all 4 core scenarios (install, hook-fire, deny, inject)
   4. Console ASCII table, JUnit XML, and Markdown summary reports generated
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 23-01-PLAN.md — E2E harness framework (workspace isolation, assertions, reporting, Taskfile integration)
+- [ ] 23-02-PLAN.md — Claude Code adapter, fixtures, and 4 E2E scenarios (install, hook-fire, deny, inject)
 
 ### Phase 24: Gemini CLI E2E Testing
 **Goal**: Add Gemini CLI adapter + scenarios to the existing E2E harness
