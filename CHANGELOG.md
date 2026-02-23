@@ -5,10 +5,13 @@ All notable changes to RuleZ (AI Policy Engine) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.8.0] - 2026-02-19
+## [1.8.0] - 2026-02-21
 
 ### Added
 
+- **Tool name canonicalization** — Platform-specific tool names are now normalized to Claude Code's PascalCase canonical names at adapter ingestion time. Rules with `tools: [Bash]` work across Gemini CLI (`run_shell_command`), Copilot (`shell`), and OpenCode (`bash`)
+- **Platform tool name preservation** — Original platform tool name stored in `tool_input.platform_tool_name` when mapping occurs, for debugging and auditability
+- **TOOL-MAPPING.md** — Cross-platform tool name mapping reference documenting all canonical names, platform aliases, and confidence levels
 - **Multi-platform adapter documentation** — New `platform-adapters.md` reference covering Gemini CLI, GitHub Copilot, and OpenCode event mappings
 - **Dual-fire event documentation** — Complete coverage of dual-fire triggers across Gemini and OpenCode adapters
 - **Agent lifecycle patterns** — New BeforeAgent/AfterAgent rule patterns for agent governance
@@ -17,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Gemini adapter** — Corrected tool name mappings to match verified Gemini CLI docs (`run_shell_command`, `glob`, `search_file_content`/`grep_search`); refactored to Map-first pattern fixing Rust ownership bug
+- **Copilot adapter** — Refactored to Map-first pattern fixing Rust ownership bug (E0382)
+- **OpenCode adapter** — Added `webfetch` as alias alongside existing `fetch` for WebFetch mapping
 - **Mastering-hooks skill v2.0.0** — Complete rewrite of the Claude Code skill with multi-platform support
 - **CCH → RuleZ rename** — All remaining CCH references in skill docs, templates, and scripts updated to RuleZ
 - **Event types table** — Expanded from 13 to 16 event types (added BeforeAgent, AfterAgent, BeforeModel, AfterModel, BeforeToolSelection)
