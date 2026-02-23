@@ -36,7 +36,10 @@ scenario_install() {
     "rulez.json contains preToolUse hook" || failures=$((failures + 1))
 
   # Assert rulez.json contains copilot hook command entry
-  assert_file_contains "${workspace}/.github/hooks/rulez.json" '"copilot hook"' \
+  # The bash/powershell values are absolute paths ending in "copilot hook", e.g.
+  # "/path/to/rulez copilot hook" — match without surrounding quotes since no literal
+  # JSON string value is exactly "copilot hook" (it has a path prefix).
+  assert_file_contains "${workspace}/.github/hooks/rulez.json" 'copilot hook' \
     "rulez.json contains copilot hook entry" || failures=$((failures + 1))
 
   if [[ "${failures}" -eq 0 ]]; then
