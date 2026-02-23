@@ -14,9 +14,9 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 
 Milestone: v1.9
 Phase: 24 of 27
-Plan: 01 complete (Gemini CLI adapter, fixtures, run.sh integration done)
-Status: In progress — Phase 24 Plan 01 complete, Gemini E2E scenarios pending
-Last activity: 2026-02-23 — Phase 24 Plan 01 complete: Gemini adapter, fixtures, and run.sh integration created
+Plan: 02 complete (all 4 Gemini E2E scenarios created)
+Status: In progress — Phase 24 complete (both plans done), Phase 25 (Copilot E2E) next
+Last activity: 2026-02-23 — Phase 24 Plan 02 complete: all 4 Gemini E2E scenario scripts created
 
 Progress: [██████████████████░░░░░] 22/27 phases complete (81%)
 
@@ -45,6 +45,7 @@ Progress: [██████████████████░░░░░
 
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
+| Phase 24 P02 | 2 min | 2 tasks | 4 files |
 | Phase 24 P01 | 2 min | 2 tasks | 5 files |
 | Phase 23 P02 | 5 min | 2 tasks | 9 files |
 | Phase 23 P01 | 5 min | 2 tasks | 5 files |
@@ -87,6 +88,8 @@ Phase 24 decisions:
 - GEMINI_API_KEY check is part of gemini_adapter_check (unlike Claude) because Gemini CLI requires API key at launch
 - Gemini BeforeTool hook uses regex matcher ".*" (not glob "*" like Claude Code)
 - Hook command format: "${abs_rulez} gemini hook"
+- Install scenario (01) uses --scope project --binary flags: scopes to workspace and locates rulez binary
+- Scenarios 02-04 all call mkdir -p .claude before cp hooks.yaml: ensures dir exists in fresh workspaces
 
 Phase 23 decisions:
 - Pure bash harness with no Node/Python dependencies (locked from CONTEXT.md)
@@ -147,7 +150,7 @@ None active.
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 24-01-PLAN.md (Gemini adapter, fixtures, run.sh gemini integration)
+Stopped at: Completed 24-02-PLAN.md (all 4 Gemini E2E scenario scripts)
 Resume file: None
 
-Next action: Execute Phase 24 Plan 02 (Gemini E2E scenarios)
+Next action: Execute Phase 25 (Copilot E2E testing)
