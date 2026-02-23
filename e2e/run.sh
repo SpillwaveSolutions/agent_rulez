@@ -29,6 +29,8 @@ source "${E2E_ROOT}/lib/harness.sh"
 source "${E2E_ROOT}/lib/reporting.sh"
 # shellcheck source=lib/claude_adapter.sh
 source "${E2E_ROOT}/lib/claude_adapter.sh"
+# shellcheck source=lib/gemini_adapter.sh
+source "${E2E_ROOT}/lib/gemini_adapter.sh"
 
 # ---------------------------------------------------------------------------
 # Initialize harness and reporting
@@ -104,21 +106,26 @@ for cli_name in "${CLI_NAMES[@]}"; do
 
   printf "\n=== Running scenarios for: %s ===\n" "${cli_name}"
 
-  # For claude-code scenarios, verify the claude CLI is available.
-  # If not found, skip all scenarios in this directory with SKIP status.
+  # Check claude CLI availability for claude-code scenarios that need it.
+  # Individual scenarios call require_claude_cli to skip if unavailable.
   if [[ "${cli_name}" == "claude-code" ]]; then
-    if ! claude_adapter_check > /dev/null 2>&1; then
-      echo "  SKIP: claude CLI not found in PATH — skipping all claude-code scenarios" >&2
-      for scenario_script in $(ls -1 "${cli_dir}"/*.sh 2>/dev/null | sort); do
-        [[ -f "${scenario_script}" ]] || continue
-        scenario_file="$(basename "${scenario_script}")"
-        scenario_name="${scenario_file#[0-9]*-}"
-        scenario_name="${scenario_name%.sh}"
-        record_result "${cli_name}" "${scenario_name}" "skip" "0" "claude CLI not found in PATH"
-        TOTAL_SKIP=$((TOTAL_SKIP + 1))
-      done
-      continue
+    if claude_adapter_check > /dev/null 2>&1; then
+      CLAUDE_CLI_AVAILABLE=1
+    else
+      CLAUDE_CLI_AVAILABLE=0
+      echo "  NOTE: claude CLI not available — scenarios requiring it will be skipped" >&2
     fi
+    export CLAUDE_CLI_AVAILABLE
+  fi
+
+  if [[ "${cli_name}" == "gemini" ]]; then
+    if gemini_adapter_check > /dev/null 2>&1; then
+      GEMINI_CLI_AVAILABLE=1
+    else
+      GEMINI_CLI_AVAILABLE=0
+      echo "  NOTE: gemini CLI not available — scenarios requiring it will be skipped" >&2
+    fi
+    export GEMINI_CLI_AVAILABLE
   fi
 
   # Source and run each scenario script in sorted order
@@ -152,7 +159,7 @@ done
 # ---------------------------------------------------------------------------
 # Output results
 # ---------------------------------------------------------------------------
-print_results_table CLI_NAMES
+print_results_table "${CLI_NAMES[@]}"
 write_junit_xml "${RUN_DIR}/junit.xml"
 write_markdown_summary "${RUN_DIR}/summary.md"
 
