@@ -1,0 +1,11 @@
+version: "1.0"
+settings:
+  log_level: "info"
+  fail_open: true
+rules:
+  - name: e2e-hookfire-log
+    description: "E2E test: logs PreToolUse event without blocking"
+    matchers:
+      tools: ["Bash"]
+    actions:
+      block: false

@@ -1,6 +1,6 @@
 # RuleZ Roadmap
 
-**Current Focus:** v1.7 Multi-Platform Hook Support — ALL PHASES COMPLETE (18, 20, 21)
+**Current Focus:** v1.9 Multi-CLI E2E Testing — Phases 23-27
 
 ---
 
@@ -11,6 +11,8 @@
 - ✅ **v1.4 Stability & Polish** — Phases 7-10 (shipped 2026-02-10) — [Archive](milestones/v1.4-ROADMAP.md)
 - ✅ **v1.6 RuleZ UI** — Phases 11-17 (shipped 2026-02-12)
 - ✅ **v1.7 Multi-Platform Hook Support** — Phases 18-21 (shipped 2026-02-13)
+- ✅ **v1.8 Tool Name Canonicalization** — Phase 22 (shipped 2026-02-22)
+- 🔄 **v1.9 Multi-CLI E2E Testing** — Phases 23-27
 
 ---
 
@@ -271,4 +273,74 @@ Plans:
 
 ---
 
-*Created 2026-02-06 — Updated 2026-02-20 Phase 22 planned*
+## 🔄 v1.9 Multi-CLI E2E Testing
+
+**Milestone Goal:** Headless multi-CLI E2E/UAT test harness validating real integration behavior across 5 agent CLIs. Each CLI gets its own phase with full E2E testing. RuleZ-only scope.
+
+**Shared context:** [E2E-CONTEXT.md](phases/e2e-multi-cli-harness/E2E-CONTEXT.md)
+
+### Phase 23: Claude Code CLI E2E Testing
+**Goal**: Establish the E2E test harness framework + Claude Code scenarios (install, hook-fire, deny, inject)
+**Depends on**: Phase 22
+**Success Criteria** (what must be TRUE):
+  1. E2E harness framework exists at `e2e/` with isolated workspace management
+  2. `task e2e` entry point runs all scenarios and produces reports
+  3. Claude Code passes all 4 core scenarios (install, hook-fire, deny, inject)
+  4. Console ASCII table, JUnit XML, and Markdown summary reports generated
+**Plans**: 2 plans
+
+Plans:
+- [x] 23-01-PLAN.md — E2E harness framework (workspace isolation, assertions, reporting, Taskfile integration)
+- [x] 23-02-PLAN.md — Claude Code adapter, fixtures, and 4 E2E scenarios (install, hook-fire, deny, inject)
+
+### Phase 24: Gemini CLI E2E Testing
+**Goal**: Add Gemini CLI adapter + scenarios to the existing E2E harness
+**Depends on**: Phase 23
+**Success Criteria** (what must be TRUE):
+  1. Gemini CLI passes all 4 core scenarios (install, hook-fire, deny, inject)
+  2. Headless invocation works reliably in CI
+  3. Reports include Gemini row in CLI x scenario matrix
+**Plans**: 2 plans
+
+Plans:
+- [ ] 24-01-PLAN.md — Gemini adapter library, fixtures, and run.sh integration
+- [ ] 24-02-PLAN.md — 4 Gemini E2E scenarios (install, hook-fire, deny, inject)
+
+### Phase 25: Copilot CLI E2E Testing
+**Goal**: Add Copilot CLI adapter + scenarios to the existing E2E harness
+**Depends on**: Phase 23
+**Success Criteria** (what must be TRUE):
+  1. Copilot CLI passes all 4 core scenarios (install, hook-fire, deny, inject)
+  2. Headless invocation works reliably in CI
+  3. Reports include Copilot row in CLI x scenario matrix
+**Plans**: TBD
+
+### Phase 26: OpenCode CLI E2E Testing
+**Goal**: Add OpenCode CLI adapter + scenarios to the existing E2E harness
+**Depends on**: Phase 23
+**Success Criteria** (what must be TRUE):
+  1. OpenCode CLI passes all 4 core scenarios (install, hook-fire, deny, inject)
+  2. Headless invocation works reliably in CI
+  3. Reports include OpenCode row in CLI x scenario matrix
+**Plans**: TBD
+
+### Phase 27: Codex CLI E2E Testing
+**Goal**: Add Codex CLI adapter + scenarios (NO hooks support — limited scenario set)
+**Depends on**: Phase 23
+**Success Criteria** (what must be TRUE):
+  1. Codex CLI passes available scenarios (hooks NOT supported — hook scenarios skipped, not failed)
+  2. Headless invocation works reliably in CI
+  3. Reports include Codex row with skip markers for unsupported scenarios
+**Plans**: TBD
+
+---
+
+| 23. Claude Code CLI E2E Testing | v1.9 | 2/2 | ✅ Complete | 2026-02-23 |
+| 24. Gemini CLI E2E Testing | v1.9 | 0/2 | In Progress | - |
+| 25. Copilot CLI E2E Testing | v1.9 | 0/TBD | Pending | - |
+| 26. OpenCode CLI E2E Testing | v1.9 | 0/TBD | Pending | - |
+| 27. Codex CLI E2E Testing | v1.9 | 0/TBD | Pending | - |
+
+---
+
+*Created 2026-02-06 — Updated 2026-02-22 Phases 23-27 added for multi-CLI E2E testing*

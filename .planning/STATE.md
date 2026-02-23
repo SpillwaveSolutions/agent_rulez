@@ -5,19 +5,20 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** LLMs do not enforce policy. LLMs are subject to policy.
-**Current focus:** v1.8 — Phase 22 Tool Name Canonicalization COMPLETE
+**Current focus:** v1.9 — Multi-CLI E2E Testing (Phases 23-27)
+**v1.8:** Tool Name Canonicalization — COMPLETE (Phase 22, shipped 2026-02-22)
 **v1.7:** Multi-Platform Hook Support — COMPLETE (all phases 18-21 done)
 **v1.6:** RuleZ UI — COMPLETE (all phases 11-17 done)
 
 ## Current Position
 
-Milestone: v1.8
-Phase: 22 of 22
-Plan: All plans complete
-Status: Phase 22 complete (tool name canonicalization across all adapters)
-Last activity: 2026-02-20 — Completed Phase 22 (adapter tool name mapping + TOOL-MAPPING.md)
+Milestone: v1.9
+Phase: 24 of 27
+Plan: 02 complete (all 4 Gemini E2E scenarios created)
+Status: In progress — Phase 24 complete (both plans done), Phase 25 (Copilot E2E) next
+Last activity: 2026-02-23 — Phase 24 Plan 02 complete: all 4 Gemini E2E scenario scripts created
 
-Progress: [██████████████████] 22/22 phases complete (100%)
+Progress: [██████████████████░░░░░] 22/27 phases complete (81%)
 
 ## Performance Metrics
 
@@ -44,6 +45,10 @@ Progress: [██████████████████] 22/22 phases 
 
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
+| Phase 24 P02 | 2 min | 2 tasks | 4 files |
+| Phase 24 P01 | 2 min | 2 tasks | 5 files |
+| Phase 23 P02 | 5 min | 2 tasks | 9 files |
+| Phase 23 P01 | 5 min | 2 tasks | 5 files |
 | Phase 16 P01 | 1 min | 4 tasks | 7 files |
 | Phase 16 P02 | 1 min | 1 task | 1 file |
 | Phase 15 P01 | 1 min | 4 tasks | 2 files |
@@ -73,8 +78,30 @@ Progress: [██████████████████] 22/22 phases 
 - Phase 20 added: Gemini CLI support and Gemini hooks support
 - Phase 21 added: Copilot CLI support and Copilot hooks support
 - Phase 22 added: Tool Name Canonicalization Across Platforms
+- Phases 23-27 added: Multi-CLI E2E Testing (Claude Code, Gemini, Copilot, OpenCode, Codex)
 
 ### Decisions
+
+Phase 24 decisions:
+- Timeout exit (124) maps to skip (77) in invoke_gemini_headless — Gemini --yolo flag has known intermittent behavior
+- Gemini fixture files identical to claude-code fixtures — canonical tool names (Bash) work for both CLIs via RuleZ canonicalization
+- GEMINI_API_KEY check is part of gemini_adapter_check (unlike Claude) because Gemini CLI requires API key at launch
+- Gemini BeforeTool hook uses regex matcher ".*" (not glob "*" like Claude Code)
+- Hook command format: "${abs_rulez} gemini hook"
+- Install scenario (01) uses --scope project --binary flags: scopes to workspace and locates rulez binary
+- Scenarios 02-04 all call mkdir -p .claude before cp hooks.yaml: ensures dir exists in fresh workspaces
+
+Phase 23 decisions:
+- Pure bash harness with no Node/Python dependencies (locked from CONTEXT.md)
+- Workspace isolation via project-level .claude/settings.json in isolated run dir (CLAUDE_CONFIG_DIR does not exist)
+- Log assertion uses WORKSPACE_LOG_SNAPSHOT (wc -l before scenario) + tail -n +<snapshot+1> after (avoids global log contamination)
+- Dynamic scenario discovery: run.sh discovers e2e/scenarios/<cli>/*.sh, no hardcoded CLI list
+- Scenario function naming convention: scenario_<name> with dashes->underscores
+- task e2e depends on build-cli to ensure fresh binary before tests
+- claude_adapter_check called per-CLI in run.sh; all claude-code scenarios skipped with SKIP if claude not found
+- Audit log as deterministic proof: all 3 claude-invoking scenarios verify via assert_log_contains (not claude stdout)
+- install scenario (01) does not invoke claude CLI — structural assertion only — runs regardless of claude availability
+- Log snapshot refreshed inside each claude scenario after setup_claude_hooks to avoid counting hook-setup writes
 
 All v1.4 decisions archived to PROJECT.md Key Decisions table and milestones/v1.4-ROADMAP.md.
 
@@ -114,6 +141,7 @@ Phase 21 decisions:
 - [ ] Implement Regex and Config Caching (tooling)
 - [ ] Offload Log Filtering to Web Worker or Rust (ui)
 - [ ] Parallel Rule Evaluation (tooling)
+- [ ] Expose tool_input fields in enabled_when eval context (tooling, Phase 22.1)
 
 ### Blockers/Concerns
 
@@ -121,8 +149,8 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-02-20
-Stopped at: Phase 22 COMPLETE — tool name canonicalization across all adapters
+Last session: 2026-02-23
+Stopped at: Completed 24-02-PLAN.md (all 4 Gemini E2E scenario scripts)
 Resume file: None
 
-Next action: Commit Phase 22 changes and create PR
+Next action: Execute Phase 25 (Copilot E2E testing)
