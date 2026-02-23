@@ -34,8 +34,8 @@ harness_init() {
   export RUN_DIR
 
   # Auto-detect rulez binary: prefer release, fall back to debug
-  local release_bin="${E2E_ROOT}/../rulez/target/release/rulez"
-  local debug_bin="${E2E_ROOT}/../rulez/target/debug/rulez"
+  local release_bin="${E2E_ROOT}/../target/release/rulez"
+  local debug_bin="${E2E_ROOT}/../target/debug/rulez"
 
   if [[ -x "${release_bin}" ]]; then
     RULEZ_BINARY="$(cd "$(dirname "${release_bin}")" && pwd)/$(basename "${release_bin}")"
