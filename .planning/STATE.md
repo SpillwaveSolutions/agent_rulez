@@ -5,19 +5,20 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** LLMs do not enforce policy. LLMs are subject to policy.
-**Current focus:** v1.8 — Phase 22 Tool Name Canonicalization COMPLETE
+**Current focus:** v1.9 — Multi-CLI E2E Testing (Phases 23-27)
+**v1.8:** Tool Name Canonicalization — COMPLETE (Phase 22, shipped 2026-02-22)
 **v1.7:** Multi-Platform Hook Support — COMPLETE (all phases 18-21 done)
 **v1.6:** RuleZ UI — COMPLETE (all phases 11-17 done)
 
 ## Current Position
 
-Milestone: v1.8
-Phase: 22 of 22
-Plan: All plans complete
-Status: Phase 22 complete (tool name canonicalization across all adapters)
-Last activity: 2026-02-20 — Completed Phase 22 (adapter tool name mapping + TOOL-MAPPING.md)
+Milestone: v1.9
+Phase: 23 of 27
+Plan: Not yet planned
+Status: Phases 23-27 added to roadmap, awaiting planning
+Last activity: 2026-02-22 — v1.8.0 released, added multi-CLI E2E testing phases
 
-Progress: [██████████████████] 22/22 phases complete (100%)
+Progress: [██████████████████░░░░░] 22/27 phases complete (81%)
 
 ## Performance Metrics
 
@@ -73,6 +74,7 @@ Progress: [██████████████████] 22/22 phases 
 - Phase 20 added: Gemini CLI support and Gemini hooks support
 - Phase 21 added: Copilot CLI support and Copilot hooks support
 - Phase 22 added: Tool Name Canonicalization Across Platforms
+- Phases 23-27 added: Multi-CLI E2E Testing (Claude Code, Gemini, Copilot, OpenCode, Codex)
 
 ### Decisions
 
@@ -114,6 +116,7 @@ Phase 21 decisions:
 - [ ] Implement Regex and Config Caching (tooling)
 - [ ] Offload Log Filtering to Web Worker or Rust (ui)
 - [ ] Parallel Rule Evaluation (tooling)
+- [ ] Expose tool_input fields in enabled_when eval context (tooling, Phase 22.1)
 
 ### Blockers/Concerns
 
@@ -121,8 +124,8 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-02-20
-Stopped at: Phase 22 COMPLETE — tool name canonicalization across all adapters
+Last session: 2026-02-22
+Stopped at: v1.8.0 released, phases 23-27 added to roadmap
 Resume file: None
 
-Next action: Commit Phase 22 changes and create PR
+Next action: Plan and execute Phase 23 (Claude Code CLI E2E Testing)
