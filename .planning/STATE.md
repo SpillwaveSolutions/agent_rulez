@@ -14,9 +14,9 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 
 Milestone: v1.9
 Phase: 25 of 27
-Plan: 02 complete (all 4 Copilot E2E scenario scripts)
-Status: In progress — Phase 25 complete, Phase 26 (OpenCode CLI E2E Testing) next
-Last activity: 2026-02-23 — Phase 25 Plan 02 complete: 4 Copilot E2E scenario scripts (install/hook-fire/deny/inject)
+Plan: 03 complete (auth gap closure — copilot_adapter_check now verifies GitHub OAuth)
+Status: In progress — Phase 25 fully complete, Phase 26 (OpenCode CLI E2E Testing) next
+Last activity: 2026-02-23 — Phase 25 Plan 03 complete: auth check added to copilot_adapter_check (gh auth status / probe fallback)
 
 Progress: [██████████████████░░░░░] 22/27 phases complete (81%)
 
@@ -71,6 +71,7 @@ Progress: [██████████████████░░░░░
 | Phase 21-copilot-cli-support-and-copilot-hooks-support P04 | 0 min | 2 tasks | 7 files |
 | Phase 25-copilot-cli-e2e-testing P01 | 2 | 2 tasks | 5 files |
 | Phase 25 P02 | 2 | 2 tasks | 4 files |
+| Phase 25 P03 | 1 | 1 task | 1 file |
 
 ## Accumulated Context
 
@@ -144,6 +145,7 @@ Phase 25 decisions:
 - Fixture YAML files identical to Gemini fixtures — canonical tool names work for Copilot via RuleZ canonicalization
 - [Phase 25]: 01-install.sh uses no --scope flag (copilot install has no --scope, unlike gemini which uses --scope project)
 - [Phase 25]: Assertion for hook entry uses unquoted 'copilot hook' substring — JSON bash/powershell fields have path prefix
+- [Phase 25 P03]: Auth gap closed — gh auth status (Stage 1) / copilot probe timeout (Stage 2) added to copilot_adapter_check; unauthenticated => return 1 => COPILOT_CLI_AVAILABLE=0 => scenarios 02-04 skip (exit 77)
 
 ### Pending Todos
 
@@ -160,7 +162,7 @@ None active.
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 25-02-PLAN.md (all 4 Copilot E2E scenario scripts)
+Stopped at: Completed 25-03-PLAN.md (auth gap closure for copilot_adapter_check)
 Resume file: None
 
 Next action: Execute Phase 26 (OpenCode CLI E2E Testing)
