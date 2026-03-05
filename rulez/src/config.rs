@@ -189,6 +189,18 @@ impl Config {
                 }
             }
 
+            // Validate command_match regex compiles
+            if let Some(ref pattern) = rule.matchers.command_match {
+                if let Err(e) = regex::Regex::new(pattern) {
+                    return Err(anyhow::anyhow!(
+                        "Invalid command_match regex '{}' in rule '{}': {}",
+                        pattern,
+                        rule.name,
+                        e
+                    ));
+                }
+            }
+
             // Validate require_fields paths
             if let Some(ref require_fields) = rule.matchers.require_fields {
                 // Reject empty arrays

@@ -281,9 +281,14 @@ fn rule_matches_event(rule: &crate::models::Rule, event: &Event) -> bool {
                 .get("command")
                 .and_then(|v| v.as_str())
                 .unwrap_or("");
-            if let Ok(re) = regex::Regex::new(cmd_pattern) {
-                if !re.is_match(cmd) {
-                    return false;
+            match crate::hooks::get_or_compile_regex(cmd_pattern, false) {
+                Ok(re) => {
+                    if !re.is_match(cmd) {
+                        return false;
+                    }
+                }
+                Err(_) => {
+                    return false; // Fail-closed: invalid regex blocks
                 }
             }
         } else {

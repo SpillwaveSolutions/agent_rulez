@@ -46,7 +46,7 @@ pub static REGEX_CACHE: LazyLock<Mutex<LruCache<String, Regex>>> = LazyLock::new
 });
 
 /// Get or compile a regex pattern with caching
-fn get_or_compile_regex(pattern: &str, case_insensitive: bool) -> Result<Regex> {
+pub(crate) fn get_or_compile_regex(pattern: &str, case_insensitive: bool) -> Result<Regex> {
     let cache_key = format!("{}:{}", pattern, case_insensitive);
 
     // Try to get from cache (LruCache::get updates LRU order)
@@ -684,19 +684,16 @@ fn matches_rule(event: &Event, rule: &Rule) -> bool {
     if let Some(ref pattern) = matchers.command_match {
         if let Some(ref tool_input) = event.tool_input {
             if let Some(command) = tool_input.get("command").and_then(|c| c.as_str()) {
-                match get_or_compile_regex(pattern, false) {
-                    Ok(regex) => {
-                        if !regex.is_match(command) {
-                            return false;
-                        }
-                    }
-                    Err(_) => {
-                        tracing::warn!(
-                            "Invalid command_match regex '{}' in rule — failing closed",
-                            pattern
-                        );
+                if let Ok(regex) = get_or_compile_regex(pattern, false) {
+                    if !regex.is_match(command) {
                         return false;
                     }
+                } else {
+                    tracing::warn!(
+                        "Invalid command_match regex '{}' in rule — failing closed",
+                        pattern
+                    );
+                    return false;
                 }
             }
         }
@@ -793,15 +790,14 @@ fn matches_rule_with_debug(event: &Event, rule: &Rule) -> (bool, Option<MatcherR
         matcher_results.command_match_matched =
             Some(if let Some(ref tool_input) = event.tool_input {
                 if let Some(command) = tool_input.get("command").and_then(|c| c.as_str()) {
-                    match get_or_compile_regex(pattern, false) {
-                        Ok(regex) => regex.is_match(command),
-                        Err(_) => {
-                            tracing::warn!(
-                                "Invalid command_match regex '{}' in rule — failing closed",
-                                pattern
-                            );
-                            false
-                        }
+                    if let Ok(regex) = get_or_compile_regex(pattern, false) {
+                        regex.is_match(command)
+                    } else {
+                        tracing::warn!(
+                            "Invalid command_match regex '{}' in rule — failing closed",
+                            pattern
+                        );
+                        false
                     }
                 } else {
                     false
@@ -1059,22 +1055,19 @@ async fn execute_rule_actions(event: &Event, rule: &Rule, config: &Config) -> Re
                 .or_else(|| tool_input.get("content"))
                 .and_then(|c| c.as_str())
             {
-                match get_or_compile_regex(pattern, false) {
-                    Ok(regex) => {
-                        if regex.is_match(content) {
-                            return Ok(Response::block(format!(
-                                "Content blocked by rule '{}': matches pattern '{}'",
-                                rule.name, pattern
-                            )));
-                        }
+                if let Ok(regex) = get_or_compile_regex(pattern, false) {
+                    if regex.is_match(content) {
+                        return Ok(Response::block(format!(
+                            "Content blocked by rule '{}': matches pattern '{}'",
+                            rule.name, pattern
+                        )));
                     }
-                    Err(_) => {
-                        tracing::warn!(
-                            "Invalid block_if_match regex '{}' in rule '{}' — failing closed",
-                            pattern,
-                            rule.name
-                        );
-                    }
+                } else {
+                    tracing::warn!(
+                        "Invalid block_if_match regex '{}' in rule '{}' — failing closed",
+                        pattern,
+                        rule.name
+                    );
                 }
             }
         }
@@ -1351,24 +1344,21 @@ async fn execute_rule_actions_warn_mode(
                 .or_else(|| tool_input.get("content"))
                 .and_then(|c| c.as_str())
             {
-                match get_or_compile_regex(pattern, false) {
-                    Ok(regex) => {
-                        if regex.is_match(content) {
-                            let warning = format!(
-                                "[WARNING] Rule '{}' would block this content (matches pattern '{}').\n\
-                                 This rule is in 'warn' mode - operation will proceed.",
-                                rule.name, pattern
-                            );
-                            return Ok(Response::inject(warning));
-                        }
-                    }
-                    Err(_) => {
-                        tracing::warn!(
-                            "Invalid block_if_match regex '{}' in rule '{}' — failing closed",
-                            pattern,
-                            rule.name
+                if let Ok(regex) = get_or_compile_regex(pattern, false) {
+                    if regex.is_match(content) {
+                        let warning = format!(
+                            "[WARNING] Rule '{}' would block this content (matches pattern '{}').\n\
+                             This rule is in 'warn' mode - operation will proceed.",
+                            rule.name, pattern
                         );
+                        return Ok(Response::inject(warning));
                     }
+                } else {
+                    tracing::warn!(
+                        "Invalid block_if_match regex '{}' in rule '{}' — failing closed",
+                        pattern,
+                        rule.name
+                    );
                 }
             }
         }
