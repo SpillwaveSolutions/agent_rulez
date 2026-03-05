@@ -580,6 +580,31 @@ fn build_eval_context(event: &Event) -> HashMapContext<DefaultNumericTypes> {
             .ok();
     }
 
+    // Expose tool_input fields with tool_input_ prefix for use in enabled_when expressions
+    // Supports string, bool, and number (f64) field values. Arrays, objects, and null are skipped.
+    // Example: enabled_when: "tool_input_command =~ \"git push\""
+    if let Some(ref tool_input) = event.tool_input {
+        if let Some(obj) = tool_input.as_object() {
+            for (key, val) in obj {
+                let var_name = format!("tool_input_{}", key);
+                match val {
+                    serde_json::Value::String(s) => {
+                        ctx.set_value(var_name, Value::String(s.clone())).ok();
+                    }
+                    serde_json::Value::Bool(b) => {
+                        ctx.set_value(var_name, Value::Boolean(*b)).ok();
+                    }
+                    serde_json::Value::Number(n) => {
+                        if let Some(f) = n.as_f64() {
+                            ctx.set_value(var_name, Value::Float(f)).ok();
+                        }
+                    }
+                    _ => {} // Arrays, objects, null -- not supported by evalexpr
+                }
+            }
+        }
+    }
+
     ctx
 }
 
