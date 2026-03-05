@@ -120,6 +120,12 @@ enum Commands {
         #[command(subcommand)]
         subcommand: OpenCodeSubcommand,
     },
+    /// Check for and install newer rulez binary releases
+    Upgrade {
+        /// Only check for updates, do not install
+        #[arg(long)]
+        check: bool,
+    },
 }
 
 /// Subcommands for the explain command
@@ -356,6 +362,9 @@ async fn main() -> Result<()> {
                 cli::opencode_hook::run(cli.debug_logs).await?;
             }
         },
+        Some(Commands::Upgrade { check }) => {
+            cli::upgrade::run(check).await?;
+        }
         None => {
             // No subcommand provided, read from stdin for hook processing
             process_hook_event(&cli, &config).await?;

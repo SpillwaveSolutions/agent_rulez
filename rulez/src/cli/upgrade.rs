@@ -37,7 +37,10 @@ pub async fn run(check_only: bool) -> Result<()> {
         return Ok(());
     }
 
-    println!("Upgrade available: {} -> {}", current_version, latest_version);
+    println!(
+        "Upgrade available: {} -> {}",
+        current_version, latest_version
+    );
 
     if check_only {
         println!("Run 'rulez upgrade' (without --check) to install.");
