@@ -5515,4 +5515,42 @@ mod tests {
             "tool_input_nested (object) should not be in context"
         );
     }
+
+    #[test]
+    fn test_glob_dir_no_false_positive() {
+        // "src/" should NOT match "/other/src/foo.rs" — the old contains() did
+        let patterns = vec!["src/".to_string()];
+        let glob_set = build_glob_set(&patterns);
+        // Should match files directly under src/
+        assert!(
+            glob_set.is_match("src/main.rs"),
+            "src/ should match src/main.rs"
+        );
+        assert!(
+            glob_set.is_match("src/lib/utils.rs"),
+            "src/ should match src/lib/utils.rs"
+        );
+        // Should NOT match a path where "src" appears as a non-root component
+        assert!(
+            !glob_set.is_match("/other/src/foo.rs"),
+            "src/ should NOT match /other/src/foo.rs (false positive)"
+        );
+    }
+
+    #[test]
+    fn test_glob_set_wildcard_patterns() {
+        let patterns = vec!["**/*.rs".to_string()];
+        let glob_set = build_glob_set(&patterns);
+        assert!(glob_set.is_match("src/main.rs"));
+        assert!(glob_set.is_match("deep/nested/file.rs"));
+        assert!(!glob_set.is_match("src/main.py"));
+    }
+
+    #[test]
+    fn test_glob_set_empty_patterns() {
+        let patterns: Vec<String> = vec![];
+        let glob_set = build_glob_set(&patterns);
+        // Empty glob set matches nothing
+        assert!(!glob_set.is_match("anything.rs"));
+    }
 }

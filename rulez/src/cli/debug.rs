@@ -363,10 +363,8 @@ fn rule_matches_event(rule: &crate::models::Rule, event: &Event) -> bool {
                 .or_else(|| tool_input.get("file_path"))
                 .and_then(|v| v.as_str())
                 .unwrap_or("");
-            if !directories.iter().any(|dir| {
-                file_path.contains(dir.trim_end_matches("/**"))
-                    || file_path.contains(dir.trim_end_matches("/*"))
-            }) {
+            let glob_set = crate::hooks::build_glob_set(directories);
+            if !glob_set.is_match(file_path) {
                 return false;
             }
         } else {
