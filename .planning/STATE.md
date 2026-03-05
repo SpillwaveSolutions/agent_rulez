@@ -14,9 +14,9 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 
 Milestone: v2.0 — RuleZ Cleanup and Hardening
 Phase: 28 (in progress)
-Plan: 02 complete (mastering-hooks skill docs field name fix — hooks-yaml-schema.md and rule-patterns.md corrected)
-Status: Phase 28 Plan 02 complete. Plans 01, 02, 06, 07 done; remaining plans TBD.
-Last activity: 2026-03-05 — Phase 28 P02 complete: 7 field name mismatches fixed across 2 skill doc files; both pass rulez validate
+Plan: 04 complete (debug JSON trace enriched with script_output field for run script action results)
+Status: Phase 28 Plan 04 complete. Plans 01, 02, 04, 06, 07 done; remaining plans TBD.
+Last activity: 2026-03-05 — Phase 28 P04 complete: JsonRuleEvaluation.script_output field added; matched rules show block reason or inject size
 
 Progress: [███████████████████░░░░] 23/27 phases complete (85%) + Phase 28 in progress
 
@@ -74,6 +74,7 @@ Progress: [███████████████████░░░░
 | Phase 25 P03 | 1 | 1 task | 1 file |
 | Phase 28 P06 | 5 min | 2 tasks | 4 files |
 | Phase 28 P07 | 5 min | 3 tasks | 2 files |
+| Phase 28 P04 | 5 min | 2 tasks | 1 file |
 | Phase 28 P02 | 6 min | 3 tasks | 2 files |
 
 ## Accumulated Context
@@ -170,7 +171,7 @@ Phase 25 decisions:
 - [x] Auto-check and upgrade RuleZ binary to latest release (tooling, [#102](https://github.com/SpillwaveSolutions/agent_rulez/issues/102)) — DONE in 28-06
 - [x] Fix mastering-hooks skill schema mismatches with RuleZ binary (docs, [#103](https://github.com/SpillwaveSolutions/agent_rulez/issues/103), [#104](https://github.com/SpillwaveSolutions/agent_rulez/issues/104), [#105](https://github.com/SpillwaveSolutions/agent_rulez/issues/105)) — DONE in 28-02: rules:/matchers:/actions:/version:1.0 corrected in hooks-yaml-schema.md and rule-patterns.md
 - [x] Fix invalid regex silently matching all commands and stale config cache (tooling, [#101](https://github.com/SpillwaveSolutions/agent_rulez/issues/101)) — DONE in 28-01: fail-closed regex at all 5 call sites, Config::validate() catches bad command_match regex
-- [ ] rulez debug does not exercise run action scripts (tooling, [#104](https://github.com/SpillwaveSolutions/agent_rulez/issues/104))
+- [x] rulez debug does not exercise run action scripts (tooling, [#104](https://github.com/SpillwaveSolutions/agent_rulez/issues/104)) — DONE in 28-04: script_output field added to JSON trace, run scripts exercised via process_event()
 
 Phase 28 P02 decisions:
 - inject: takes a file path; inject_inline: takes inline markdown; inject_command: takes a shell command (corrected in skill docs)
@@ -189,7 +190,7 @@ None active.
 ## Session Continuity
 
 Last session: 2026-03-05
-Stopped at: Completed 28-02-PLAN.md (mastering-hooks skill docs field name fix — hooks-yaml-schema.md and rule-patterns.md corrected)
+Stopped at: Completed 28-04-PLAN.md (debug JSON trace enriched with script_output for run script results)
 Resume file: None
 
-Next action: Execute Phase 28 Plan 03 (next cleanup/hardening todo)
+Next action: Execute Phase 28 Plan 05 (next cleanup/hardening todo)
