@@ -156,6 +156,7 @@ Phase 25 decisions:
 - [ ] Expose tool_input fields in enabled_when eval context (tooling, Phase 22.1)
 - [ ] Auto-check and upgrade RuleZ binary to latest release (tooling, [#102](https://github.com/SpillwaveSolutions/agent_rulez/issues/102))
 - [ ] Fix skill reference docs using hooks instead of rules (docs, [#103](https://github.com/SpillwaveSolutions/agent_rulez/issues/103))
+- [ ] Fix invalid regex silently matching all commands and stale config cache (tooling, [#101](https://github.com/SpillwaveSolutions/agent_rulez/issues/101))
 
 ### Blockers/Concerns
 
