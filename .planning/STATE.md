@@ -168,8 +168,13 @@ Phase 25 decisions:
 - [ ] Expose tool_input fields in enabled_when eval context (tooling, Phase 22.1)
 - [x] Auto-check and upgrade RuleZ binary to latest release (tooling, [#102](https://github.com/SpillwaveSolutions/agent_rulez/issues/102)) — DONE in 28-06
 - [ ] Fix mastering-hooks skill schema mismatches with RuleZ binary (docs, [#103](https://github.com/SpillwaveSolutions/agent_rulez/issues/103), [#104](https://github.com/SpillwaveSolutions/agent_rulez/issues/104), [#105](https://github.com/SpillwaveSolutions/agent_rulez/issues/105))
-- [ ] Fix invalid regex silently matching all commands and stale config cache (tooling, [#101](https://github.com/SpillwaveSolutions/agent_rulez/issues/101))
+- [x] Fix invalid regex silently matching all commands and stale config cache (tooling, [#101](https://github.com/SpillwaveSolutions/agent_rulez/issues/101)) — DONE in 28-01: fail-closed regex at all 5 call sites, Config::validate() catches bad command_match regex
 - [ ] rulez debug does not exercise run action scripts (tooling, [#104](https://github.com/SpillwaveSolutions/agent_rulez/issues/104))
+
+Phase 28 P01 decisions:
+- Use if let Ok(regex) = get_or_compile_regex(...) / else { warn; return false } — clippy prefers if-let for two-arm match (single_match_else lint)
+- get_or_compile_regex promoted to pub(crate) so debug.rs can call crate::hooks::get_or_compile_regex without duplicating logic
+- Fail-closed on invalid block_if_match: log warning and continue (no error Response), since no content matched
 
 ### Blockers/Concerns
 
@@ -178,7 +183,7 @@ None active.
 ## Session Continuity
 
 Last session: 2026-03-05
-Stopped at: Completed 28-06-PLAN.md (upgrade subcommand with self_update crate)
+Stopped at: Completed 28-01-PLAN.md (fail-closed regex bug fix — command_match/block_if_match now fail-closed; Config::validate() catches bad regex)
 Resume file: None
 
-Next action: Continue Phase 28 remaining plans (08+) or Phase 26 (OpenCode CLI E2E Testing)
+Next action: Execute Phase 28 Plan 02 (debug run scripts / tool_input eval context)
