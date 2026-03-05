@@ -5,6 +5,7 @@ area: docs
 github_issue:
   - https://github.com/SpillwaveSolutions/agent_rulez/issues/103
   - https://github.com/SpillwaveSolutions/agent_rulez/issues/105
+  - https://github.com/SpillwaveSolutions/agent_rulez/issues/104
 files:
   - mastering-hooks/references/hooks-yaml-schema.md
   - mastering-hooks/references/rule-patterns.md
@@ -25,6 +26,8 @@ Field name mismatches found:
 | `type: inject` / `source: file` / `path:` | `inject: <path>` |
 | `type: block` / `reason:` | `block: true` |
 | `priority:` (top-level) | `metadata: { priority: }` |
+| `$RULEZ_TOOL_INPUT_COMMAND` env var in scripts | JSON via stdin (parse with `jq`) |
+| `block_if_match` action type | Does not exist — use `block: true` |
 
 Affected files:
 - `mastering-hooks/references/hooks-yaml-schema.md` — schema definition uses wrong keys

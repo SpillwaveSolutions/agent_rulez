@@ -155,8 +155,9 @@ Phase 25 decisions:
 - [ ] Parallel Rule Evaluation (tooling)
 - [ ] Expose tool_input fields in enabled_when eval context (tooling, Phase 22.1)
 - [ ] Auto-check and upgrade RuleZ binary to latest release (tooling, [#102](https://github.com/SpillwaveSolutions/agent_rulez/issues/102))
-- [ ] Fix mastering-hooks skill schema mismatches with RuleZ binary (docs, [#103](https://github.com/SpillwaveSolutions/agent_rulez/issues/103), [#105](https://github.com/SpillwaveSolutions/agent_rulez/issues/105))
+- [ ] Fix mastering-hooks skill schema mismatches with RuleZ binary (docs, [#103](https://github.com/SpillwaveSolutions/agent_rulez/issues/103), [#104](https://github.com/SpillwaveSolutions/agent_rulez/issues/104), [#105](https://github.com/SpillwaveSolutions/agent_rulez/issues/105))
 - [ ] Fix invalid regex silently matching all commands and stale config cache (tooling, [#101](https://github.com/SpillwaveSolutions/agent_rulez/issues/101))
+- [ ] rulez debug does not exercise run action scripts (tooling, [#104](https://github.com/SpillwaveSolutions/agent_rulez/issues/104))
 
 ### Blockers/Concerns
 
