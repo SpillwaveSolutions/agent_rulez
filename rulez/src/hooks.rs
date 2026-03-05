@@ -5341,4 +5341,156 @@ mod tests {
             "Pattern B should have been evicted"
         );
     }
+
+    // =============================================================================
+    // Phase 28-03: tool_input field injection tests
+    // =============================================================================
+
+    #[test]
+    fn test_build_eval_context_tool_input_string_field() {
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Bash".to_string()),
+            tool_input: Some(serde_json::json!({
+                "command": "git push origin main",
+            })),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let ctx = build_eval_context(&event);
+
+        // tool_input_command should be accessible as a string
+        let result =
+            eval_boolean_with_context("tool_input_command == \"git push origin main\"", &ctx)
+                .unwrap_or(false);
+        assert!(
+            result,
+            "tool_input_command should be accessible in eval context"
+        );
+    }
+
+    #[test]
+    fn test_build_eval_context_tool_input_bool_field() {
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Bash".to_string()),
+            tool_input: Some(serde_json::json!({
+                "command": "ls",
+                "run_in_background": true,
+            })),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let ctx = build_eval_context(&event);
+
+        let result = eval_boolean_with_context("tool_input_run_in_background == true", &ctx)
+            .unwrap_or(false);
+        assert!(
+            result,
+            "tool_input_run_in_background should be true in eval context"
+        );
+    }
+
+    #[test]
+    fn test_build_eval_context_tool_input_number_field() {
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Bash".to_string()),
+            tool_input: Some(serde_json::json!({
+                "command": "sleep 10",
+                "timeout": 30,
+            })),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let ctx = build_eval_context(&event);
+
+        let result = eval_boolean_with_context("tool_input_timeout == 30.0", &ctx).unwrap_or(false);
+        assert!(result, "tool_input_timeout should be 30.0 in eval context");
+    }
+
+    #[test]
+    fn test_build_eval_context_tool_input_none() {
+        // When tool_input is None, no tool_input_ vars should be set
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Bash".to_string()),
+            tool_input: None,
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let ctx = build_eval_context(&event);
+
+        // Accessing a missing variable should cause evaluation to fail
+        let result = eval_boolean_with_context("tool_input_command == \"anything\"", &ctx);
+        assert!(
+            result.is_err(),
+            "tool_input_command should not exist when tool_input is None"
+        );
+    }
+
+    #[test]
+    fn test_build_eval_context_tool_input_skips_complex_types() {
+        // Arrays, objects, null should be skipped (not cause errors)
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Bash".to_string()),
+            tool_input: Some(serde_json::json!({
+                "command": "echo hello",
+                "nested": {"key": "value"},
+                "list": [1, 2, 3],
+                "nothing": null,
+            })),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let ctx = build_eval_context(&event);
+
+        // String field should be set
+        let result = eval_boolean_with_context("tool_input_command == \"echo hello\"", &ctx)
+            .unwrap_or(false);
+        assert!(result, "tool_input_command should be set");
+
+        // Complex types should not be set
+        let result = eval_boolean_with_context("tool_input_nested == \"anything\"", &ctx);
+        assert!(
+            result.is_err(),
+            "tool_input_nested (object) should not be in context"
+        );
+    }
 }
