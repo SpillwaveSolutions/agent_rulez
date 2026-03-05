@@ -29,7 +29,7 @@ Inject coding standards based on file type.
     tools: [Write, Edit]
     extensions: [.py, .pyi]
   actions:
-    inject_file: .claude/context/python-standards.md
+    inject: .claude/context/python-standards.md
 
 # TypeScript standards
 - name: typescript-standards
@@ -38,7 +38,7 @@ Inject coding standards based on file type.
     tools: [Write, Edit]
     extensions: [.ts, .tsx]
   actions:
-    inject_file: .claude/context/typescript-standards.md
+    inject: .claude/context/typescript-standards.md
 ```
 
 ### Directory-Based Context
@@ -53,7 +53,7 @@ Different context for different parts of the codebase.
     tools: [Write, Edit]
     directories: [src/api/, src/routes/]
   actions:
-    inject_file: .claude/context/api-guidelines.md
+    inject: .claude/context/api-guidelines.md
 
 # Database layer context
 - name: db-context
@@ -62,7 +62,7 @@ Different context for different parts of the codebase.
     tools: [Write, Edit]
     directories: [src/models/, src/repositories/]
   actions:
-    inject_file: .claude/context/database-patterns.md
+    inject: .claude/context/database-patterns.md
 ```
 
 ### Dynamic Context from Commands
@@ -99,7 +99,7 @@ Load comprehensive project context.
   matchers:
     operations: [SessionStart]
   actions:
-    inject_file: .claude/context/project-overview.md
+    inject: .claude/context/project-overview.md
 ```
 
 **Example project-overview.md**:
@@ -216,7 +216,7 @@ echo '{"continue": true}'
     tools: [Bash]
     command_match: "rm\\s+(-rf|-fr)"
   actions:
-    inject: |
+    inject_inline: |
       **Warning**: Recursive delete detected. Please verify:
       - Target path is correct
       - No important files will be deleted
@@ -274,7 +274,7 @@ echo '{"continue": true}'
     directories: [src/]
     extensions: [.py, .ts, .js]
   actions:
-    inject: |
+    inject_inline: |
       **Reminder**: You modified source code. Consider:
       - Running related tests: `pytest tests/`
       - Adding tests for new functionality
@@ -352,7 +352,7 @@ echo '{"continue": true}'
     tools: [Bash]
     enabled_when: "env.CI == 'true'"
   actions:
-    inject: |
+    inject_inline: |
       **CI Mode Active**: All commands are logged and audited.
 
 # Development shortcuts
@@ -362,7 +362,7 @@ echo '{"continue": true}'
     tools: [Bash]
     enabled_when: "env.CI != 'true'"
   actions:
-    inject: |
+    inject_inline: |
       Development mode: Using local configurations.
 ```
 
@@ -375,7 +375,7 @@ echo '{"continue": true}'
     tools: [Write, Edit, Bash]
     enabled_when: "env.GIT_BRANCH =~ '(main|master|production)'"
   actions:
-    inject: |
+    inject_inline: |
       **Warning**: You are on a protected branch.
       All changes require code review.
 ```
@@ -390,7 +390,7 @@ echo '{"continue": true}'
     tools: [Write, Edit]
     enabled_when: "tool.input.path =~ '(test_|_test\\.|\\.test\\.|spec\\.)'"
   actions:
-    inject_file: .claude/context/testing-guidelines.md
+    inject: .claude/context/testing-guidelines.md
 ```
 
 ---
@@ -408,7 +408,7 @@ Control what subagents/agents can do by injecting policy context.
   matchers:
     operations: [BeforeAgent]
   actions:
-    inject_file: .claude/context/agent-policy.md
+    inject: .claude/context/agent-policy.md
 
 # Log when agents complete
 - name: agent-completed
@@ -458,7 +458,7 @@ These patterns use only events available on all platforms:
   matchers:
     operations: [SessionStart]
   actions:
-    inject_file: .claude/context/project-overview.md
+    inject: .claude/context/project-overview.md
 ```
 
 ### Dual-Fire Aware Rules
@@ -472,7 +472,7 @@ On Gemini, `BeforeAgent` also fires `UserPromptSubmit`. Write rules knowing both
     operations: [UserPromptSubmit]
     prompt_match: "(?i)deploy"
   actions:
-    inject: |
+    inject_inline: |
       **Deploy detected**: Follow the deployment checklist.
 ```
 
@@ -486,15 +486,15 @@ On Gemini, `BeforeAgent` also fires `UserPromptSubmit`. Write rules knowing both
 ```yaml
 - name: python-lint
   matchers: { extensions: [.py] }
-  actions: { inject_file: lint.md }
+  actions: { inject: lint.md }
 
 - name: js-lint
   matchers: { extensions: [.js] }
-  actions: { inject_file: lint.md }
+  actions: { inject: lint.md }
 
 - name: ts-lint
   matchers: { extensions: [.ts] }
-  actions: { inject_file: lint.md }
+  actions: { inject: lint.md }
 ```
 
 **After** (1 rule):
@@ -503,7 +503,7 @@ On Gemini, `BeforeAgent` also fires `UserPromptSubmit`. Write rules knowing both
   matchers:
     extensions: [.py, .js, .ts]
   actions:
-    inject_file: .claude/context/lint-standards.md
+    inject: .claude/context/lint-standards.md
 ```
 
 ### Priority-Based Short-Circuiting
@@ -519,7 +519,7 @@ Block rules first, context injection later.
 # Priority 50-70: Context injection
 - name: code-standards
   priority: 50
-  actions: { inject_file: standards.md }
+  actions: { inject: standards.md }
 
 # Priority 90-100: Logging/telemetry (lowest priority)
 - name: action-log
@@ -547,8 +547,8 @@ Avoid expensive checks when not needed.
 
 | Pattern | Use Case | Key Technique |
 |---------|----------|---------------|
-| Language standards | Consistent code style | extensions + inject_file |
-| Directory context | Layer-specific guidance | directories + inject_file |
+| Language standards | Consistent code style | extensions + inject |
+| Directory context | Layer-specific guidance | directories + inject |
 | Dynamic context | Runtime information | inject_command |
 | Block dangerous | Safety guardrails | command_match + block |
 | Secret detection | Security | run + validation script |
@@ -557,6 +557,6 @@ Avoid expensive checks when not needed.
 | Conventional commits | Consistency | run + validation |
 | CI-specific | Environment awareness | enabled_when |
 | Branch protection | Workflow enforcement | enabled_when + regex |
-| Agent policy | Agent governance | BeforeAgent + inject_file |
+| Agent policy | Agent governance | BeforeAgent + inject |
 | Agent completion | Audit trail | AfterAgent + run |
 | Cross-platform safety | Universal rules | PreToolUse (all platforms) |

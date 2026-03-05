@@ -206,23 +206,27 @@ matchers:
 
 ### inject
 
-Inject markdown content into the AI assistant's context.
+Inject a file's content into the AI assistant's context.
 
 ```yaml
 actions:
-  inject: |
+  inject: .claude/context/standards.md
+```
+
+### inject_inline
+
+Inject inline markdown content directly.
+
+```yaml
+actions:
+  inject_inline: |
     ## Important Note
     Always follow these guidelines...
 ```
 
-Or inject from a file:
+### inject_command
 
-```yaml
-actions:
-  inject_file: .claude/context/standards.md
-```
-
-Or inject from a command:
+Inject output from a shell command.
 
 ```yaml
 actions:
@@ -301,7 +305,7 @@ rules:
       tools: [Write, Edit]
       extensions: [.py]
     actions:
-      inject_file: .claude/context/python-standards.md
+      inject: .claude/context/python-standards.md
 
   # Conditional: Only in CI
   - name: ci-strict-mode
@@ -317,7 +321,7 @@ rules:
     matchers:
       operations: [SessionStart]
     actions:
-      inject_file: .claude/context/project-overview.md
+      inject: .claude/context/project-overview.md
 
   # Agent lifecycle: Inject policy before agent runs
   - name: agent-policy
@@ -325,7 +329,7 @@ rules:
     matchers:
       operations: [BeforeAgent]
     actions:
-      inject_file: .claude/context/agent-policy.md
+      inject: .claude/context/agent-policy.md
 ```
 
 ---
