@@ -82,6 +82,7 @@ Progress: [███████████████████░░░░
 - Phase 21 added: Copilot CLI support and Copilot hooks support
 - Phase 22 added: Tool Name Canonicalization Across Platforms
 - Phases 23-27 added: Multi-CLI E2E Testing (Claude Code, Gemini, Copilot, OpenCode, Codex)
+- Phase 28 added: RuleZ Cleanup and Hardening (all 9 pending todos: regex bug, debug bug, tool_input eval, globset, caching, parallel eval, log worker, skill docs, auto-upgrade)
 
 ### Decisions
 

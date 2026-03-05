@@ -346,6 +346,27 @@ Plans:
 | 26. OpenCode CLI E2E Testing | v1.9 | 0/TBD | Pending | - |
 | 27. Codex CLI E2E Testing | v1.9 | 0/TBD | Pending | - |
 
+| 28. RuleZ Cleanup and Hardening | v1.9 | 0/TBD | Pending | - |
+
+### Phase 28: RuleZ Cleanup and Hardening
+**Goal**: Fix critical bugs, improve engine performance, update skill docs, and add auto-upgrade capability — addresses all 9 pending todos
+**Depends on**: Phase 22 (no dependency on E2E phases 23-27)
+**Success Criteria** (what must be TRUE):
+  1. Invalid regex in command_match returns non-match (not silent match-all) and validates at startup
+  2. Config cache invalidated when hooks.yaml changes (timestamp or CRC check)
+  3. `rulez debug` exercises run action scripts identically to live hook path
+  4. tool_input fields exposed in enabled_when eval context (source, command, path, etc.)
+  5. Naive matchers replaced with globset crate for correct glob patterns
+  6. Regex compilation cached with LRU + config cached with file-change invalidation
+  7. Parallel rule evaluation available for large rule sets
+  8. Log filtering offloaded to Web Worker or Rust command
+  9. mastering-hooks skill docs use correct field names matching RuleZ binary schema
+  10. `rulez upgrade` or equivalent auto-checks and upgrades binary to latest release
+**Plans**: TBD
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 28 to break down)
+
 ---
 
-*Created 2026-02-06 — Updated 2026-02-23 Phase 25 complete (3/3 plans including gap closure)*
+*Created 2026-02-06 — Updated 2026-03-05 Phase 28 added: RuleZ Cleanup and Hardening (all 9 pending todos)*
