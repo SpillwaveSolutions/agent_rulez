@@ -3,6 +3,7 @@ use evalexpr::{
     ContextWithMutableFunctions, ContextWithMutableVariables, DefaultNumericTypes, Function,
     HashMapContext, Value, eval_boolean_with_context,
 };
+use globset::{Glob, GlobSet, GlobSetBuilder};
 use lru::LruCache;
 use regex::{Regex, RegexBuilder};
 use std::num::NonZeroUsize;
@@ -690,6 +691,39 @@ async fn evaluate_rules<'a>(
     Ok((matched_rules, response, rule_evaluations))
 }
 
+/// Build a GlobSet from a list of directory patterns.
+/// Each pattern is matched against the full file path.
+/// Invalid patterns are silently skipped (fail-open for individual patterns).
+/// Returns a GlobSet that matches if ANY pattern matches (OR semantics).
+pub(crate) fn build_glob_set(patterns: &[String]) -> GlobSet {
+    let mut builder = GlobSetBuilder::new();
+    for pattern in patterns {
+        // Add the pattern as-is
+        match Glob::new(pattern) {
+            Ok(glob) => {
+                builder.add(glob);
+            }
+            Err(e) => {
+                tracing::warn!("Invalid directory glob pattern '{}': {}", pattern, e);
+            }
+        }
+        // Also try appending /** for bare directory names like "src/"
+        let with_suffix = if pattern.ends_with('/') {
+            format!("{}**", pattern)
+        } else if !pattern.contains('*') {
+            format!("{}/**", pattern.trim_end_matches('/'))
+        } else {
+            continue;
+        };
+        if let Ok(glob) = Glob::new(&with_suffix) {
+            builder.add(glob);
+        }
+    }
+    builder
+        .build()
+        .unwrap_or_else(|_| GlobSetBuilder::new().build().unwrap())
+}
+
 /// Check if a rule matches the given event
 fn matches_rule(event: &Event, rule: &Rule) -> bool {
     let matchers = &rule.matchers;
@@ -747,14 +781,8 @@ fn matches_rule(event: &Event, rule: &Rule) -> bool {
     if let Some(ref directories) = matchers.directories {
         if let Some(ref tool_input) = event.tool_input {
             if let Some(file_path) = tool_input.get("filePath").and_then(|p| p.as_str()) {
-                let path = Path::new(file_path);
-                let path_str = path.to_string_lossy();
-
-                if !directories.iter().any(|dir| {
-                    // Simple glob matching - in production, use a proper glob library
-                    path_str.contains(dir.trim_end_matches("/**"))
-                        || path_str.contains(dir.trim_end_matches("/*"))
-                }) {
+                let glob_set = build_glob_set(directories);
+                if !glob_set.is_match(file_path) {
                     return false;
                 }
             }
@@ -863,14 +891,8 @@ fn matches_rule_with_debug(event: &Event, rule: &Rule) -> (bool, Option<MatcherR
         matcher_results.directories_matched =
             Some(if let Some(ref tool_input) = event.tool_input {
                 if let Some(file_path) = tool_input.get("filePath").and_then(|p| p.as_str()) {
-                    let path = Path::new(file_path);
-                    let path_str = path.to_string_lossy();
-
-                    directories.iter().any(|dir| {
-                        // Simple glob matching - in production, use a proper glob library
-                        path_str.contains(dir.trim_end_matches("/**"))
-                            || path_str.contains(dir.trim_end_matches("/*"))
-                    })
+                    let glob_set = build_glob_set(directories);
+                    glob_set.is_match(file_path)
                 } else {
                     false
                 }
