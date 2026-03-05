@@ -6,8 +6,20 @@ use evalexpr::{DefaultNumericTypes, build_operator_tree};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
+use std::sync::{LazyLock, Mutex};
+use std::time::SystemTime;
 
 use crate::models::{PromptMatch, Rule};
+
+/// In-process config cache. Stores (config, mtime, path) so we can detect file changes.
+/// Only one config is cached at a time (the most recently loaded path).
+struct CachedConfig {
+    config: Config,
+    mtime: SystemTime,
+    path: std::path::PathBuf,
+}
+
+static CONFIG_CACHE: LazyLock<Mutex<Option<CachedConfig>>> = LazyLock::new(|| Mutex::new(None));
 
 /// Global RuleZ settings
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -80,8 +92,30 @@ impl Default for Settings {
 }
 
 impl Config {
-    /// Load configuration from YAML file
+    /// Load configuration from YAML file with mtime-based caching.
+    ///
+    /// Returns cached config if the file's modification time has not changed
+    /// since the last load. Otherwise re-reads from disk and updates the cache.
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
+        let config_path = path.as_ref().to_path_buf();
+
+        // Config cache: only re-read from disk if mtime changed
+        {
+            let cache = CONFIG_CACHE.lock().unwrap();
+            if let Some(ref cached) = *cache {
+                if cached.path == config_path {
+                    if let Ok(meta) = std::fs::metadata(&config_path) {
+                        if let Ok(mtime) = meta.modified() {
+                            if mtime == cached.mtime {
+                                return Ok(cached.config.clone()); // Cache hit
+                            }
+                        }
+                    }
+                }
+            }
+        } // Release lock before I/O
+
+        // Cache miss: read from disk
         let content = fs::read_to_string(&path)
             .with_context(|| format!("Failed to read config file: {}", path.as_ref().display()))?;
 
@@ -89,6 +123,21 @@ impl Config {
             .with_context(|| format!("Failed to parse config file: {}", path.as_ref().display()))?;
 
         config.validate()?;
+
+        // Store in cache
+        {
+            let mut cache = CONFIG_CACHE.lock().unwrap();
+            if let Ok(meta) = std::fs::metadata(&config_path) {
+                if let Ok(mtime) = meta.modified() {
+                    *cache = Some(CachedConfig {
+                        config: config.clone(),
+                        mtime,
+                        path: config_path,
+                    });
+                }
+            }
+        }
+
         Ok(config)
     }
 
