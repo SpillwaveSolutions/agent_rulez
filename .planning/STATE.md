@@ -14,9 +14,9 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 
 Milestone: v2.0 — RuleZ Cleanup and Hardening
 Phase: 28 (in progress)
-Plan: 04 complete (debug JSON trace enriched with script_output field for run script action results)
-Status: Phase 28 Plan 04 complete. Plans 01, 02, 04, 06, 07 done; remaining plans TBD.
-Last activity: 2026-03-05 — Phase 28 P04 complete: JsonRuleEvaluation.script_output field added; matched rules show block reason or inject size
+Plan: 03 complete (tool_input eval context injection and mtime config cache)
+Status: Phase 28 Plan 03 complete. Plans 01, 02, 03, 04, 06, 07 done; remaining plans TBD.
+Last activity: 2026-03-05 — Phase 28 P03 complete: tool_input_ vars in build_eval_context(); mtime-based CONFIG_CACHE in Config::from_file()
 
 Progress: [███████████████████░░░░] 23/27 phases complete (85%) + Phase 28 in progress
 
@@ -75,6 +75,7 @@ Progress: [███████████████████░░░░
 | Phase 28 P06 | 5 min | 2 tasks | 4 files |
 | Phase 28 P07 | 5 min | 3 tasks | 2 files |
 | Phase 28 P04 | 5 min | 2 tasks | 1 file |
+| Phase 28 P03 | 5 min | 3 tasks | 2 files |
 | Phase 28 P02 | 6 min | 3 tasks | 2 files |
 
 ## Accumulated Context
@@ -164,14 +165,19 @@ Phase 25 decisions:
 ### Pending Todos
 
 - [ ] Replace Naive Matchers with globset (tooling)
-- [ ] Implement Regex and Config Caching (tooling)
+- [x] Implement Regex and Config Caching (tooling) — DONE in 28-03: mtime-based CONFIG_CACHE in Config::from_file()
 - [ ] Offload Log Filtering to Web Worker or Rust (ui)
 - [ ] Parallel Rule Evaluation (tooling)
-- [ ] Expose tool_input fields in enabled_when eval context (tooling, Phase 22.1)
+- [x] Expose tool_input fields in enabled_when eval context (tooling, Phase 22.1) — DONE in 28-03: tool_input_ prefixed vars in build_eval_context()
 - [x] Auto-check and upgrade RuleZ binary to latest release (tooling, [#102](https://github.com/SpillwaveSolutions/agent_rulez/issues/102)) — DONE in 28-06
 - [x] Fix mastering-hooks skill schema mismatches with RuleZ binary (docs, [#103](https://github.com/SpillwaveSolutions/agent_rulez/issues/103), [#104](https://github.com/SpillwaveSolutions/agent_rulez/issues/104), [#105](https://github.com/SpillwaveSolutions/agent_rulez/issues/105)) — DONE in 28-02: rules:/matchers:/actions:/version:1.0 corrected in hooks-yaml-schema.md and rule-patterns.md
 - [x] Fix invalid regex silently matching all commands and stale config cache (tooling, [#101](https://github.com/SpillwaveSolutions/agent_rulez/issues/101)) — DONE in 28-01: fail-closed regex at all 5 call sites, Config::validate() catches bad command_match regex
 - [x] rulez debug does not exercise run action scripts (tooling, [#104](https://github.com/SpillwaveSolutions/agent_rulez/issues/104)) — DONE in 28-04: script_output field added to JSON trace, run scripts exercised via process_event()
+
+Phase 28 P03 decisions:
+- Numbers from tool_input JSON stored as evalexpr Float (f64) -- comparison expressions must use 30.0 not 30
+- Cache placed in from_file() not load() so both project and global config paths benefit from caching
+- Complex JSON types (arrays, objects, null) silently skipped in tool_input injection -- only string, bool, number supported by evalexpr
 
 Phase 28 P02 decisions:
 - inject: takes a file path; inject_inline: takes inline markdown; inject_command: takes a shell command (corrected in skill docs)
@@ -190,7 +196,7 @@ None active.
 ## Session Continuity
 
 Last session: 2026-03-05
-Stopped at: Completed 28-04-PLAN.md (debug JSON trace enriched with script_output for run script results)
+Stopped at: Completed 28-03-PLAN.md (tool_input eval context injection and mtime config cache)
 Resume file: None
 
 Next action: Execute Phase 28 Plan 05 (next cleanup/hardening todo)
