@@ -14,9 +14,9 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 
 Milestone: v2.0 — RuleZ Cleanup and Hardening
 Phase: 28 (in progress)
-Plan: 05 complete (globset directory matching)
-Status: Phase 28 Plan 05 complete. Plans 01, 02, 03, 04, 05, 06, 07 done; Plan 08 remaining.
-Last activity: 2026-03-05 — Phase 28 P05 complete: globset replaces contains() hack in hooks.rs and debug.rs
+Plan: 08 complete (parallel rule evaluation)
+Status: Phase 28 complete. All 8 plans done (01-08).
+Last activity: 2026-03-05 — Phase 28 P08 complete: parallel rule matching via join_all for large rule sets
 
 Progress: [███████████████████░░░░] 23/27 phases complete (85%) + Phase 28 in progress
 
@@ -78,6 +78,7 @@ Progress: [███████████████████░░░░
 | Phase 28 P03 | 5 min | 3 tasks | 2 files |
 | Phase 28 P02 | 6 min | 3 tasks | 2 files |
 | Phase 28 P05 | 5 min | 2 tasks | 3 files |
+| Phase 28 P08 | 5 min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -163,13 +164,14 @@ Phase 25 decisions:
 - [Phase 25]: Assertion for hook entry uses unquoted 'copilot hook' substring — JSON bash/powershell fields have path prefix
 - [Phase 25 P03]: Auth gap closed — gh auth status (Stage 1) / copilot probe timeout (Stage 2) added to copilot_adapter_check; unauthenticated => return 1 => COPILOT_CLI_AVAILABLE=0 => scenarios 02-04 skip (exit 77)
 - [Phase 28]: build_glob_set() auto-appends /** for bare dir names; invalid patterns warn+skip; GlobSet compiled per eval call
+- [Phase 28 P08]: Parallel rule matching uses join_all for >= 10 rules; action execution stays sequential to preserve merge semantics; futures 0.3 added
 
 ### Pending Todos
 
 - [x] Replace Naive Matchers with globset (tooling) — DONE in 28-05: build_glob_set() replaces contains() hack
 - [x] Implement Regex and Config Caching (tooling) — DONE in 28-03: mtime-based CONFIG_CACHE in Config::from_file()
 - [ ] Offload Log Filtering to Web Worker or Rust (ui)
-- [ ] Parallel Rule Evaluation (tooling)
+- [x] Parallel Rule Evaluation (tooling) — DONE in 28-08: join_all parallel matching for rule sets >= 10 rules
 - [x] Expose tool_input fields in enabled_when eval context (tooling, Phase 22.1) — DONE in 28-03: tool_input_ prefixed vars in build_eval_context()
 - [x] Auto-check and upgrade RuleZ binary to latest release (tooling, [#102](https://github.com/SpillwaveSolutions/agent_rulez/issues/102)) — DONE in 28-06
 - [x] Fix mastering-hooks skill schema mismatches with RuleZ binary (docs, [#103](https://github.com/SpillwaveSolutions/agent_rulez/issues/103), [#104](https://github.com/SpillwaveSolutions/agent_rulez/issues/104), [#105](https://github.com/SpillwaveSolutions/agent_rulez/issues/105)) — DONE in 28-02: rules:/matchers:/actions:/version:1.0 corrected in hooks-yaml-schema.md and rule-patterns.md
@@ -198,7 +200,7 @@ None active.
 ## Session Continuity
 
 Last session: 2026-03-05
-Stopped at: Completed 28-05-PLAN.md (globset directory matching)
+Stopped at: Completed 28-08-PLAN.md (parallel rule evaluation) — Phase 28 complete
 Resume file: None
 
-Next action: Execute Phase 28 Plan 08 (remaining cleanup/hardening todo)
+Next action: Phase 28 complete. All cleanup and hardening plans executed.
