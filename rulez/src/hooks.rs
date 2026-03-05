@@ -684,8 +684,17 @@ fn matches_rule(event: &Event, rule: &Rule) -> bool {
     if let Some(ref pattern) = matchers.command_match {
         if let Some(ref tool_input) = event.tool_input {
             if let Some(command) = tool_input.get("command").and_then(|c| c.as_str()) {
-                if let Ok(regex) = Regex::new(pattern) {
-                    if !regex.is_match(command) {
+                match get_or_compile_regex(pattern, false) {
+                    Ok(regex) => {
+                        if !regex.is_match(command) {
+                            return false;
+                        }
+                    }
+                    Err(_) => {
+                        tracing::warn!(
+                            "Invalid command_match regex '{}' in rule — failing closed",
+                            pattern
+                        );
                         return false;
                     }
                 }
@@ -784,10 +793,15 @@ fn matches_rule_with_debug(event: &Event, rule: &Rule) -> (bool, Option<MatcherR
         matcher_results.command_match_matched =
             Some(if let Some(ref tool_input) = event.tool_input {
                 if let Some(command) = tool_input.get("command").and_then(|c| c.as_str()) {
-                    if let Ok(regex) = Regex::new(pattern) {
-                        regex.is_match(command)
-                    } else {
-                        false
+                    match get_or_compile_regex(pattern, false) {
+                        Ok(regex) => regex.is_match(command),
+                        Err(_) => {
+                            tracing::warn!(
+                                "Invalid command_match regex '{}' in rule — failing closed",
+                                pattern
+                            );
+                            false
+                        }
                     }
                 } else {
                     false
@@ -1045,12 +1059,21 @@ async fn execute_rule_actions(event: &Event, rule: &Rule, config: &Config) -> Re
                 .or_else(|| tool_input.get("content"))
                 .and_then(|c| c.as_str())
             {
-                if let Ok(regex) = Regex::new(pattern) {
-                    if regex.is_match(content) {
-                        return Ok(Response::block(format!(
-                            "Content blocked by rule '{}': matches pattern '{}'",
-                            rule.name, pattern
-                        )));
+                match get_or_compile_regex(pattern, false) {
+                    Ok(regex) => {
+                        if regex.is_match(content) {
+                            return Ok(Response::block(format!(
+                                "Content blocked by rule '{}': matches pattern '{}'",
+                                rule.name, pattern
+                            )));
+                        }
+                    }
+                    Err(_) => {
+                        tracing::warn!(
+                            "Invalid block_if_match regex '{}' in rule '{}' — failing closed",
+                            pattern,
+                            rule.name
+                        );
                     }
                 }
             }
@@ -1328,14 +1351,23 @@ async fn execute_rule_actions_warn_mode(
                 .or_else(|| tool_input.get("content"))
                 .and_then(|c| c.as_str())
             {
-                if let Ok(regex) = Regex::new(pattern) {
-                    if regex.is_match(content) {
-                        let warning = format!(
-                            "[WARNING] Rule '{}' would block this content (matches pattern '{}').\n\
-                             This rule is in 'warn' mode - operation will proceed.",
-                            rule.name, pattern
+                match get_or_compile_regex(pattern, false) {
+                    Ok(regex) => {
+                        if regex.is_match(content) {
+                            let warning = format!(
+                                "[WARNING] Rule '{}' would block this content (matches pattern '{}').\n\
+                                 This rule is in 'warn' mode - operation will proceed.",
+                                rule.name, pattern
+                            );
+                            return Ok(Response::inject(warning));
+                        }
+                    }
+                    Err(_) => {
+                        tracing::warn!(
+                            "Invalid block_if_match regex '{}' in rule '{}' — failing closed",
+                            pattern,
+                            rule.name
                         );
-                        return Ok(Response::inject(warning));
                     }
                 }
             }
