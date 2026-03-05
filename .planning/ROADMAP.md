@@ -346,7 +346,7 @@ Plans:
 | 26. OpenCode CLI E2E Testing | v1.9 | 0/TBD | Pending | - |
 | 27. Codex CLI E2E Testing | v1.9 | 0/TBD | Pending | - |
 
-| 28. RuleZ Cleanup and Hardening | v1.9 | 0/TBD | Pending | - |
+| 28. RuleZ Cleanup and Hardening | v1.9 | 0/8 | Pending | - |
 
 ### Phase 28: RuleZ Cleanup and Hardening
 **Goal**: Fix critical bugs, improve engine performance, update skill docs, and add auto-upgrade capability — addresses all 9 pending todos
@@ -362,11 +362,18 @@ Plans:
   8. Log filtering offloaded to Web Worker or Rust command
   9. mastering-hooks skill docs use correct field names matching RuleZ binary schema
   10. `rulez upgrade` or equivalent auto-checks and upgrades binary to latest release
-**Plans**: TBD
+**Plans**: 8 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 28 to break down)
+- [ ] 28-01-PLAN.md — Regex fail-closed fix: 5 call sites in hooks.rs + debug.rs + command_match validation in config.rs
+- [ ] 28-02-PLAN.md — Fix mastering-hooks skill docs: 7 field name mismatches in hooks-yaml-schema.md + rule-patterns.md
+- [ ] 28-03-PLAN.md — tool_input fields in enabled_when eval context + mtime-based config cache
+- [ ] 28-04-PLAN.md — Fix debug run script trace: enrich JSON evaluations with action results
+- [ ] 28-05-PLAN.md — Replace naive contains() directory matching with globset crate
+- [ ] 28-06-PLAN.md — rulez upgrade subcommand using self_update crate
+- [ ] 28-07-PLAN.md — UI log filter debounce (200ms) in rulez-ui logStore + LogViewer
+- [ ] 28-08-PLAN.md — Parallel rule evaluation using tokio join_all for large rule sets
 
 ---
 
-*Created 2026-02-06 — Updated 2026-03-05 Phase 28 added: RuleZ Cleanup and Hardening (all 9 pending todos)*
+*Created 2026-02-06 — Updated 2026-03-05 Phase 28 planned: 8 plans across 4 waves (regex fix, docs, tool_input+cache, debug trace, globset, upgrade, UI debounce, parallel eval)*
