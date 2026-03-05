@@ -12,4 +12,5 @@ pub mod logs;
 pub mod opencode_doctor;
 pub mod opencode_hook;
 pub mod opencode_install;
+pub mod upgrade;
 pub mod validate;
