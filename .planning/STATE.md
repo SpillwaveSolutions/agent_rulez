@@ -5,7 +5,9 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** LLMs do not enforce policy. LLMs are subject to policy.
-**Current focus:** v1.9 — Multi-CLI E2E Testing (Phases 23-27)
+**Current focus:** v2.1 — Multi-CLI E2E Testing (Phases 24, 26, 27)
+**v2.0:** RuleZ Cleanup and Hardening — COMPLETE (Phase 28, shipped 2026-03-05)
+**v1.9:** Multi-CLI E2E Testing (partial) — COMPLETE (Phases 23, 25, shipped 2026-03-05)
 **v1.8:** Tool Name Canonicalization — COMPLETE (Phase 22, shipped 2026-02-22)
 **v1.7:** Multi-Platform Hook Support — COMPLETE (all phases 18-21 done)
 **v1.6:** RuleZ UI — COMPLETE (all phases 11-17 done)
@@ -13,12 +15,12 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 ## Current Position
 
 Milestone: v2.0 — RuleZ Cleanup and Hardening
-Phase: 28 (in progress)
-Plan: 08 complete (parallel rule evaluation)
-Status: Phase 28 complete. All 8 plans done (01-08).
-Last activity: 2026-03-05 — Phase 28 P08 complete: parallel rule matching via join_all for large rule sets
+Phase: 28 (COMPLETE)
+Plan: All 8 plans complete (01-08)
+Status: Phase 28 complete. All 8 plans done across 4 waves.
+Last activity: 2026-03-05 — Phase 28 complete: regex fix, docs fix, upgrade cmd, debounce, tool_input eval, debug trace, globset, parallel eval
 
-Progress: [███████████████████░░░░] 23/27 phases complete (85%) + Phase 28 in progress
+Progress: [████████████████████████] 28/28 phases complete (v2.0 milestone done)
 
 ## Performance Metrics
 
@@ -203,4 +205,4 @@ Last session: 2026-03-05
 Stopped at: Completed 28-08-PLAN.md (parallel rule evaluation) — Phase 28 complete
 Resume file: None
 
-Next action: Phase 28 complete. All cleanup and hardening plans executed.
+Next action: Release v2.0 with release skill. Phases 24, 26, 27 moved to v2.1 milestone.
