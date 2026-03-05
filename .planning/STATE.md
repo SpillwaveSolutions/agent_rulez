@@ -14,9 +14,9 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 
 Milestone: v2.0 — RuleZ Cleanup and Hardening
 Phase: 28 (in progress)
-Plan: 03 complete (tool_input eval context injection and mtime config cache)
-Status: Phase 28 Plan 03 complete. Plans 01, 02, 03, 04, 06, 07 done; remaining plans TBD.
-Last activity: 2026-03-05 — Phase 28 P03 complete: tool_input_ vars in build_eval_context(); mtime-based CONFIG_CACHE in Config::from_file()
+Plan: 05 complete (globset directory matching)
+Status: Phase 28 Plan 05 complete. Plans 01, 02, 03, 04, 05, 06, 07 done; Plan 08 remaining.
+Last activity: 2026-03-05 — Phase 28 P05 complete: globset replaces contains() hack in hooks.rs and debug.rs
 
 Progress: [███████████████████░░░░] 23/27 phases complete (85%) + Phase 28 in progress
 
@@ -77,6 +77,7 @@ Progress: [███████████████████░░░░
 | Phase 28 P04 | 5 min | 2 tasks | 1 file |
 | Phase 28 P03 | 5 min | 3 tasks | 2 files |
 | Phase 28 P02 | 6 min | 3 tasks | 2 files |
+| Phase 28 P05 | 5 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -161,10 +162,11 @@ Phase 25 decisions:
 - [Phase 25]: 01-install.sh uses no --scope flag (copilot install has no --scope, unlike gemini which uses --scope project)
 - [Phase 25]: Assertion for hook entry uses unquoted 'copilot hook' substring — JSON bash/powershell fields have path prefix
 - [Phase 25 P03]: Auth gap closed — gh auth status (Stage 1) / copilot probe timeout (Stage 2) added to copilot_adapter_check; unauthenticated => return 1 => COPILOT_CLI_AVAILABLE=0 => scenarios 02-04 skip (exit 77)
+- [Phase 28]: build_glob_set() auto-appends /** for bare dir names; invalid patterns warn+skip; GlobSet compiled per eval call
 
 ### Pending Todos
 
-- [ ] Replace Naive Matchers with globset (tooling)
+- [x] Replace Naive Matchers with globset (tooling) — DONE in 28-05: build_glob_set() replaces contains() hack
 - [x] Implement Regex and Config Caching (tooling) — DONE in 28-03: mtime-based CONFIG_CACHE in Config::from_file()
 - [ ] Offload Log Filtering to Web Worker or Rust (ui)
 - [ ] Parallel Rule Evaluation (tooling)
@@ -196,7 +198,7 @@ None active.
 ## Session Continuity
 
 Last session: 2026-03-05
-Stopped at: Completed 28-03-PLAN.md (tool_input eval context injection and mtime config cache)
+Stopped at: Completed 28-05-PLAN.md (globset directory matching)
 Resume file: None
 
-Next action: Execute Phase 28 Plan 05 (next cleanup/hardening todo)
+Next action: Execute Phase 28 Plan 08 (remaining cleanup/hardening todo)
