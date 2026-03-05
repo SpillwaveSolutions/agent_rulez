@@ -12,13 +12,13 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 
 ## Current Position
 
-Milestone: v1.9
-Phase: 25 of 27 (complete)
-Plan: 03 complete (auth gap closure — copilot_adapter_check now verifies GitHub OAuth)
-Status: Phase 25 verified and complete. Phase 26 (OpenCode CLI E2E Testing) next.
-Last activity: 2026-02-23 — Phase 25 verified: all 3 plans complete, auth gap closed, 5/5 must-haves passed
+Milestone: v2.0 — RuleZ Cleanup and Hardening
+Phase: 28 (in progress)
+Plan: 07 complete (log filter 200ms debounce — applyClientFilters() no longer fires on every keystroke)
+Status: Phase 28 Plan 07 complete. Plans 01-07 done; remaining plans TBD.
+Last activity: 2026-03-05 — Phase 28 P07 complete: 200ms debounce on log filter text input, npm run build passes
 
-Progress: [███████████████████░░░░] 23/27 phases complete (85%)
+Progress: [███████████████████░░░░] 23/27 phases complete (85%) + Phase 28 in progress
 
 ## Performance Metrics
 
@@ -72,6 +72,7 @@ Progress: [███████████████████░░░░
 | Phase 25-copilot-cli-e2e-testing P01 | 2 | 2 tasks | 5 files |
 | Phase 25 P02 | 2 | 2 tasks | 4 files |
 | Phase 25 P03 | 1 | 1 task | 1 file |
+| Phase 28 P07 | 5 min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -139,6 +140,10 @@ Phase 21 decisions:
 - `cch copilot install` generates wrapper scripts (bash + PowerShell) and `.github/hooks/rulez.json`
 - `cch copilot doctor` scans `.github/hooks/*.json` for installed/missing/misconfigured/outdated hooks
 
+Phase 28 P07 decisions:
+- Log filter debounce was already implemented in LogFilterBar.tsx at 300ms (component-level, Option A) — only updated timer from 300ms to 200ms
+- Added debounce comment to logStore.ts setTextFilter documenting that debounce is applied at the call site
+
 Phase 25 decisions:
 - copilot_adapter_check checks PATH only — no API key (Copilot uses OAuth login, unlike Gemini)
 - Copilot hook format: .github/hooks/rulez.json with preToolUse/bash/powershell/timeoutSec (vs Gemini BeforeTool/command/timeout ms)
@@ -166,8 +171,8 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-02-23
-Stopped at: Completed 25-03-PLAN.md (auth gap closure for copilot_adapter_check)
+Last session: 2026-03-05
+Stopped at: Completed 28-07-PLAN.md (log filter 200ms debounce)
 Resume file: None
 
-Next action: Execute Phase 26 (OpenCode CLI E2E Testing)
+Next action: Continue Phase 28 remaining plans (08+) or Phase 26 (OpenCode CLI E2E Testing)
