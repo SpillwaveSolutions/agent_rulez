@@ -14,9 +14,9 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 
 Milestone: v2.0 — RuleZ Cleanup and Hardening
 Phase: 28 (in progress)
-Plan: 07 complete (log filter 200ms debounce — applyClientFilters() no longer fires on every keystroke)
-Status: Phase 28 Plan 07 complete. Plans 01-07 done; remaining plans TBD.
-Last activity: 2026-03-05 — Phase 28 P07 complete: 200ms debounce on log filter text input, npm run build passes
+Plan: 06 complete (upgrade subcommand — rulez upgrade --check and rulez upgrade using self_update crate)
+Status: Phase 28 Plan 06 complete. Plans 01-06 and 07 done; remaining plans TBD.
+Last activity: 2026-03-05 — Phase 28 P06 complete: rulez upgrade subcommand added, full CI passes
 
 Progress: [███████████████████░░░░] 23/27 phases complete (85%) + Phase 28 in progress
 
@@ -72,6 +72,7 @@ Progress: [███████████████████░░░░
 | Phase 25-copilot-cli-e2e-testing P01 | 2 | 2 tasks | 5 files |
 | Phase 25 P02 | 2 | 2 tasks | 4 files |
 | Phase 25 P03 | 1 | 1 task | 1 file |
+| Phase 28 P06 | 5 min | 2 tasks | 4 files |
 | Phase 28 P07 | 5 min | 3 tasks | 2 files |
 
 ## Accumulated Context
@@ -140,6 +141,11 @@ Phase 21 decisions:
 - `cch copilot install` generates wrapper scripts (bash + PowerShell) and `.github/hooks/rulez.json`
 - `cch copilot doctor` scans `.github/hooks/*.json` for installed/missing/misconfigured/outdated hooks
 
+Phase 28 P06 decisions:
+- GitHub owner/repo values are placeholders (SpillwaveSolutions/agent_rulez) — must be updated when repo is made public with releases
+- Using self_update crate (industry standard for Rust binary self-upgrade) over manual reqwest approach
+- --check flag prints version info and exits 0/1 without installing — safe for use in CI/automation
+
 Phase 28 P07 decisions:
 - Log filter debounce was already implemented in LogFilterBar.tsx at 300ms (component-level, Option A) — only updated timer from 300ms to 200ms
 - Added debounce comment to logStore.ts setTextFilter documenting that debounce is applied at the call site
@@ -160,7 +166,7 @@ Phase 25 decisions:
 - [ ] Offload Log Filtering to Web Worker or Rust (ui)
 - [ ] Parallel Rule Evaluation (tooling)
 - [ ] Expose tool_input fields in enabled_when eval context (tooling, Phase 22.1)
-- [ ] Auto-check and upgrade RuleZ binary to latest release (tooling, [#102](https://github.com/SpillwaveSolutions/agent_rulez/issues/102))
+- [x] Auto-check and upgrade RuleZ binary to latest release (tooling, [#102](https://github.com/SpillwaveSolutions/agent_rulez/issues/102)) — DONE in 28-06
 - [ ] Fix mastering-hooks skill schema mismatches with RuleZ binary (docs, [#103](https://github.com/SpillwaveSolutions/agent_rulez/issues/103), [#104](https://github.com/SpillwaveSolutions/agent_rulez/issues/104), [#105](https://github.com/SpillwaveSolutions/agent_rulez/issues/105))
 - [ ] Fix invalid regex silently matching all commands and stale config cache (tooling, [#101](https://github.com/SpillwaveSolutions/agent_rulez/issues/101))
 - [ ] rulez debug does not exercise run action scripts (tooling, [#104](https://github.com/SpillwaveSolutions/agent_rulez/issues/104))
@@ -172,7 +178,7 @@ None active.
 ## Session Continuity
 
 Last session: 2026-03-05
-Stopped at: Completed 28-07-PLAN.md (log filter 200ms debounce)
+Stopped at: Completed 28-06-PLAN.md (upgrade subcommand with self_update crate)
 Resume file: None
 
 Next action: Continue Phase 28 remaining plans (08+) or Phase 26 (OpenCode CLI E2E Testing)
