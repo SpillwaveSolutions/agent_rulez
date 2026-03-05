@@ -17,14 +17,15 @@ export function LogFilterBar() {
   const [searchInput, setSearchInput] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Debounced text filter
+  // Debounced text filter — 200ms delay prevents applyClientFilters() from running on
+  // every keystroke against potentially 100K log entries.
   useEffect(() => {
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
     }
     debounceRef.current = setTimeout(() => {
       setTextFilter(searchInput);
-    }, 300);
+    }, 200);
     return () => {
       if (debounceRef.current) {
         clearTimeout(debounceRef.current);
