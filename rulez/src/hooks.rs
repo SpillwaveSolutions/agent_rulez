@@ -3,6 +3,7 @@ use evalexpr::{
     ContextWithMutableFunctions, ContextWithMutableVariables, DefaultNumericTypes, Function,
     HashMapContext, Value, eval_boolean_with_context,
 };
+use futures::future::join_all;
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use lru::LruCache;
 use regex::{Regex, RegexBuilder};
@@ -638,9 +639,34 @@ fn is_rule_enabled(rule: &Rule, event: &Event) -> bool {
     }
 }
 
+/// Minimum number of enabled rules before parallel matching is used.
+/// Below this threshold, the sequential path is used (lower overhead).
+const PARALLEL_THRESHOLD: usize = 10;
+
 /// Evaluate all enabled rules against an event
 /// Rules are sorted by priority (higher first) by config.enabled_rules()
+///
+/// Parallel matching: enabled for rule sets with >= PARALLEL_THRESHOLD rules.
+/// When threshold is met, rule matching runs concurrently via join_all.
+/// Action execution remains sequential to preserve merge semantics
+/// (block takes precedence, inject accumulates, priority order matters).
 async fn evaluate_rules<'a>(
+    event: &'a Event,
+    config: &'a Config,
+    debug_config: &DebugConfig,
+) -> Result<(Vec<&'a Rule>, Response, Vec<RuleEvaluation>)> {
+    let rules = config.enabled_rules();
+
+    if rules.len() >= PARALLEL_THRESHOLD {
+        evaluate_rules_parallel(event, config, debug_config).await
+    } else {
+        evaluate_rules_sequential(event, config, debug_config).await
+    }
+}
+
+/// Sequential rule evaluation — used for small rule sets (< PARALLEL_THRESHOLD rules).
+/// Original implementation: matches and executes actions inline per rule.
+async fn evaluate_rules_sequential<'a>(
     event: &'a Event,
     config: &'a Config,
     debug_config: &DebugConfig,
@@ -686,6 +712,79 @@ async fn evaluate_rules<'a>(
             // Merge responses based on mode (block takes precedence, inject accumulates)
             response = merge_responses_with_mode(response, rule_response, mode);
         }
+    }
+
+    Ok((matched_rules, response, rule_evaluations))
+}
+
+/// Parallel rule evaluation — used for large rule sets (>= PARALLEL_THRESHOLD rules).
+///
+/// Phase 1: Parallel matching — all rules are matched concurrently via join_all.
+/// This is safe because matches_rule() and is_rule_enabled() are pure/stateless.
+///
+/// Phase 2: Sequential action execution — matched rules execute actions in priority
+/// order (highest first) to preserve merge semantics (block > inject > allow).
+async fn evaluate_rules_parallel<'a>(
+    event: &'a Event,
+    config: &'a Config,
+    debug_config: &DebugConfig,
+) -> Result<(Vec<&'a Rule>, Response, Vec<RuleEvaluation>)> {
+    let rules = config.enabled_rules();
+    let debug_enabled = debug_config.enabled;
+
+    // Phase 1: Parallel matching — run is_rule_enabled + matches_rule concurrently
+    let match_futures: Vec<_> = rules
+        .iter()
+        .map(|&rule| async move {
+            // Check enabled_when before matchers
+            if !is_rule_enabled(rule, event) {
+                return (rule, false, None, false); // (rule, matched, matcher_results, enabled)
+            }
+
+            let (matched, matcher_results) = if debug_enabled {
+                matches_rule_with_debug(event, rule)
+            } else {
+                (matches_rule(event, rule), None)
+            };
+
+            (rule, matched, matcher_results, true)
+        })
+        .collect();
+
+    let match_results = join_all(match_futures).await;
+
+    // Collect evaluations and matched rules (preserving priority order from config)
+    let mut matched_rules = Vec::new();
+    let mut rule_evaluations = Vec::new();
+
+    for (rule, matched, matcher_results, enabled) in match_results {
+        if debug_enabled {
+            if !enabled {
+                rule_evaluations.push(RuleEvaluation {
+                    rule_name: rule.name.clone(),
+                    matched: false,
+                    matcher_results: None,
+                });
+            } else {
+                rule_evaluations.push(RuleEvaluation {
+                    rule_name: rule.name.clone(),
+                    matched,
+                    matcher_results,
+                });
+            }
+        }
+
+        if matched {
+            matched_rules.push(rule);
+        }
+    }
+
+    // Phase 2: Sequential action execution — preserves merge semantics
+    let mut response = Response::allow();
+    for rule in &matched_rules {
+        let mode = rule.effective_mode();
+        let rule_response = execute_rule_actions_with_mode(event, rule, config, mode).await?;
+        response = merge_responses_with_mode(response, rule_response, mode);
     }
 
     Ok((matched_rules, response, rule_evaluations))
