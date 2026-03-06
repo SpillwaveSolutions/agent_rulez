@@ -340,7 +340,10 @@ Plans:
   1. Codex CLI passes available scenarios (hooks NOT supported — hook scenarios skipped, not failed)
   2. Headless invocation works reliably in CI
   3. Reports include Codex row with skip markers for unsupported scenarios
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 27-01-PLAN.md — Codex adapter, fixtures, 4 scenarios (install + 3 skip stubs), and run.sh integration
 
 ---
 
@@ -348,7 +351,7 @@ Plans:
 | 25. Copilot CLI E2E Testing | v1.9 | 3/3 | ✅ Complete | 2026-02-23 |
 | 24. Gemini CLI E2E Testing | v2.1 | 0/2 | Pending | - |
 | 26. OpenCode CLI E2E Testing | v2.1 | 0/TBD | Pending | - |
-| 27. Codex CLI E2E Testing | v2.1 | 0/TBD | Pending | - |
+| 27. Codex CLI E2E Testing | v2.1 | 0/1 | Pending | - |
 
 | 28. RuleZ Cleanup and Hardening | v2.0 | 8/8 | ✅ Complete | 2026-03-05 |
 
@@ -396,4 +399,4 @@ Phases 24, 26, 27 moved from v1.9 — see phase details above.
 
 ---
 
-*Created 2026-02-06 — Updated 2026-03-05 Phase 28 complete: 8 plans across 4 waves; v2.0 milestone shipped*
+*Created 2026-02-06 — Updated 2026-03-06 Phase 27 planned: 1 plan for Codex CLI E2E testing*
