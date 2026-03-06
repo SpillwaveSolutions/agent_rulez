@@ -24,25 +24,21 @@ Inject coding standards based on file type.
 ```yaml
 # Python standards
 - name: python-standards
-  event: PreToolUse
-  match:
+  matchers:
+    operations: [PreToolUse]
     tools: [Write, Edit]
     extensions: [.py, .pyi]
-  action:
-    type: inject
-    source: file
-    path: .claude/context/python-standards.md
+  actions:
+    inject: .claude/context/python-standards.md
 
 # TypeScript standards
 - name: typescript-standards
-  event: PreToolUse
-  match:
+  matchers:
+    operations: [PreToolUse]
     tools: [Write, Edit]
     extensions: [.ts, .tsx]
-  action:
-    type: inject
-    source: file
-    path: .claude/context/typescript-standards.md
+  actions:
+    inject: .claude/context/typescript-standards.md
 ```
 
 ### Directory-Based Context
@@ -52,25 +48,21 @@ Different context for different parts of the codebase.
 ```yaml
 # API layer context
 - name: api-context
-  event: PreToolUse
-  match:
+  matchers:
+    operations: [PreToolUse]
     tools: [Write, Edit]
     directories: [src/api/, src/routes/]
-  action:
-    type: inject
-    source: file
-    path: .claude/context/api-guidelines.md
+  actions:
+    inject: .claude/context/api-guidelines.md
 
 # Database layer context
 - name: db-context
-  event: PreToolUse
-  match:
+  matchers:
+    operations: [PreToolUse]
     tools: [Write, Edit]
     directories: [src/models/, src/repositories/]
-  action:
-    type: inject
-    source: file
-    path: .claude/context/database-patterns.md
+  actions:
+    inject: .claude/context/database-patterns.md
 ```
 
 ### Dynamic Context from Commands
@@ -80,24 +72,20 @@ Generate context at runtime.
 ```yaml
 # Include current git branch
 - name: git-context
-  event: SessionStart
-  match: {}
-  action:
-    type: inject
-    source: command
-    command: |
+  matchers:
+    operations: [SessionStart]
+  actions:
+    inject_command: |
       echo "## Current Branch"
       echo "Branch: $(git branch --show-current)"
       echo "Last commit: $(git log -1 --oneline)"
 
 # Include dependency versions
 - name: dependency-context
-  event: SessionStart
-  match: {}
-  action:
-    type: inject
-    source: command
-    command: |
+  matchers:
+    operations: [SessionStart]
+  actions:
+    inject_command: |
       echo "## Dependencies"
       cat package.json | jq '{name, version, dependencies}'
 ```
@@ -108,12 +96,10 @@ Load comprehensive project context.
 
 ```yaml
 - name: project-overview
-  event: SessionStart
-  match: {}
-  action:
-    type: inject
-    source: file
-    path: .claude/context/project-overview.md
+  matchers:
+    operations: [SessionStart]
+  actions:
+    inject: .claude/context/project-overview.md
 ```
 
 **Example project-overview.md**:
@@ -143,25 +129,24 @@ Focus: Performance optimization for search
 ```yaml
 # Block force push
 - name: block-force-push
-  event: PreToolUse
   priority: 10
-  match:
+  matchers:
+    operations: [PreToolUse]
     tools: [Bash]
     command_match: "git push.*(--force|-f)"
-  action:
-    type: block
+  actions:
+    block: true
     reason: "Force push is dangerous. Use --force-with-lease or get approval."
 
 # Block main branch commits
 - name: block-main-commit
-  event: PreToolUse
   priority: 10
-  match:
+  matchers:
+    operations: [PreToolUse]
     tools: [Bash]
     command_match: "git commit.*--(amend|fixup)"
-  action:
-    type: run
-    command: |
+  actions:
+    run: |
       BRANCH=$(git branch --show-current)
       if [ "$BRANCH" = "main" ] || [ "$BRANCH" = "master" ]; then
         echo '{"continue": false, "reason": "Cannot amend commits on main/master branch"}'
@@ -174,15 +159,13 @@ Focus: Performance optimization for search
 
 ```yaml
 - name: detect-secrets
-  event: PreToolUse
   priority: 5
-  match:
+  matchers:
+    operations: [PreToolUse]
     tools: [Write, Edit]
     extensions: [.py, .js, .ts, .env, .yaml, .json]
-  action:
-    type: run
-    command: .claude/validators/check-secrets.sh
-    timeout: 10
+  actions:
+    run: .claude/validators/check-secrets.sh
 ```
 
 **check-secrets.sh**:
@@ -217,25 +200,23 @@ echo '{"continue": true}'
 
 ```yaml
 - name: block-rm-rf
-  event: PreToolUse
   priority: 1
-  match:
+  matchers:
+    operations: [PreToolUse]
     tools: [Bash]
     command_match: "rm\\s+(-rf|-fr|--recursive.*--force|--force.*--recursive)\\s+/"
-  action:
-    type: block
+  actions:
+    block: true
     reason: "Recursive force delete from root is blocked for safety."
 
 - name: warn-rm-rf
-  event: PreToolUse
   priority: 20
-  match:
+  matchers:
+    operations: [PreToolUse]
     tools: [Bash]
     command_match: "rm\\s+(-rf|-fr)"
-  action:
-    type: inject
-    source: inline
-    content: |
+  actions:
+    inject_inline: |
       **Warning**: Recursive delete detected. Please verify:
       - Target path is correct
       - No important files will be deleted
@@ -250,13 +231,12 @@ echo '{"continue": true}'
 
 ```yaml
 - name: pre-commit-lint
-  event: PreToolUse
-  match:
+  matchers:
+    operations: [PreToolUse]
     tools: [Bash]
     command_match: "git commit"
-  action:
-    type: run
-    command: |
+  actions:
+    run: |
       # Run linting
       npm run lint 2>&1
       LINT_EXIT=$?
@@ -266,20 +246,18 @@ echo '{"continue": true}'
       else
         echo '{"continue": true, "context": "All linting checks passed."}'
       fi
-    timeout: 60
 ```
 
 ### Auto-Format on Save
 
 ```yaml
 - name: format-python
-  event: PostToolUse
-  match:
+  matchers:
+    operations: [PostToolUse]
     tools: [Write]
     extensions: [.py]
-  action:
-    type: run
-    command: |
+  actions:
+    run: |
       FILE="$RULEZ_TOOL_INPUT_PATH"
       black "$FILE" 2>&1
       isort "$FILE" 2>&1
@@ -290,15 +268,13 @@ echo '{"continue": true}'
 
 ```yaml
 - name: test-reminder
-  event: PostToolUse
-  match:
+  matchers:
+    operations: [PostToolUse]
     tools: [Write, Edit]
     directories: [src/]
     extensions: [.py, .ts, .js]
-  action:
-    type: inject
-    source: inline
-    content: |
+  actions:
+    inject_inline: |
       **Reminder**: You modified source code. Consider:
       - Running related tests: `pytest tests/`
       - Adding tests for new functionality
@@ -313,13 +289,12 @@ echo '{"continue": true}'
 
 ```yaml
 - name: conventional-commits
-  event: PreToolUse
-  match:
+  matchers:
+    operations: [PreToolUse]
     tools: [Bash]
     command_match: 'git commit -m'
-  action:
-    type: run
-    command: |
+  actions:
+    run: |
       # Extract commit message
       MSG=$(echo "$RULEZ_TOOL_INPUT_COMMAND" | grep -oP '(?<=-m\s?["\x27])[^"\x27]+')
 
@@ -335,13 +310,12 @@ echo '{"continue": true}'
 
 ```yaml
 - name: validate-json
-  event: PreToolUse
-  match:
+  matchers:
+    operations: [PreToolUse]
     tools: [Write]
     extensions: [.json]
-  action:
-    type: run
-    command: |
+  actions:
+    run: |
       echo "$RULEZ_TOOL_INPUT_CONTENT" | jq . > /dev/null 2>&1
       if [ $? -eq 0 ]; then
         echo '{"continue": true}'
@@ -350,13 +324,12 @@ echo '{"continue": true}'
       fi
 
 - name: validate-yaml
-  event: PreToolUse
-  match:
+  matchers:
+    operations: [PreToolUse]
     tools: [Write]
     extensions: [.yaml, .yml]
-  action:
-    type: run
-    command: |
+  actions:
+    run: |
       echo "$RULEZ_TOOL_INPUT_CONTENT" | python -c "import sys, yaml; yaml.safe_load(sys.stdin)" 2>&1
       if [ $? -eq 0 ]; then
         echo '{"continue": true}'
@@ -374,26 +347,22 @@ echo '{"continue": true}'
 ```yaml
 # Stricter rules in CI
 - name: ci-strict-mode
-  event: PreToolUse
-  match:
+  matchers:
+    operations: [PreToolUse]
     tools: [Bash]
     enabled_when: "env.CI == 'true'"
-  action:
-    type: inject
-    source: inline
-    content: |
+  actions:
+    inject_inline: |
       **CI Mode Active**: All commands are logged and audited.
 
 # Development shortcuts
 - name: dev-shortcuts
-  event: PreToolUse
-  match:
+  matchers:
+    operations: [PreToolUse]
     tools: [Bash]
     enabled_when: "env.CI != 'true'"
-  action:
-    type: inject
-    source: inline
-    content: |
+  actions:
+    inject_inline: |
       Development mode: Using local configurations.
 ```
 
@@ -401,14 +370,12 @@ echo '{"continue": true}'
 
 ```yaml
 - name: production-branch-warning
-  event: PreToolUse
-  match:
+  matchers:
+    operations: [PreToolUse]
     tools: [Write, Edit, Bash]
     enabled_when: "env.GIT_BRANCH =~ '(main|master|production)'"
-  action:
-    type: inject
-    source: inline
-    content: |
+  actions:
+    inject_inline: |
       **Warning**: You are on a protected branch.
       All changes require code review.
 ```
@@ -418,14 +385,12 @@ echo '{"continue": true}'
 ```yaml
 # Extra care for test files
 - name: test-file-guidance
-  event: PreToolUse
-  match:
+  matchers:
+    operations: [PreToolUse]
     tools: [Write, Edit]
     enabled_when: "tool.input.path =~ '(test_|_test\\.|\\.test\\.|spec\\.)'"
-  action:
-    type: inject
-    source: file
-    path: .claude/context/testing-guidelines.md
+  actions:
+    inject: .claude/context/testing-guidelines.md
 ```
 
 ---
@@ -439,22 +404,19 @@ Control what subagents/agents can do by injecting policy context.
 ```yaml
 # Inject project conventions before any agent runs
 - name: agent-policy
-  event: BeforeAgent
   description: Ensure agents follow project conventions
-  match: {}
-  action:
-    type: inject
-    source: file
-    path: .claude/context/agent-policy.md
+  matchers:
+    operations: [BeforeAgent]
+  actions:
+    inject: .claude/context/agent-policy.md
 
 # Log when agents complete
 - name: agent-completed
-  event: AfterAgent
   description: Track agent completion for audit
-  match: {}
-  action:
-    type: run
-    command: |
+  matchers:
+    operations: [AfterAgent]
+  actions:
+    run: |
       echo '{"continue": true, "context": "Agent task completed. Review changes before proceeding."}'
 ```
 
@@ -463,12 +425,12 @@ Control what subagents/agents can do by injecting policy context.
 ```yaml
 # Block agents from modifying production configs
 - name: agent-no-prod-config
-  event: BeforeAgent
   priority: 10
-  match:
+  matchers:
+    operations: [BeforeAgent]
     enabled_when: "tool.input.path =~ '(production|prod)\\.'"
-  action:
-    type: block
+  actions:
+    block: true
     reason: "Agents cannot modify production configuration files."
 ```
 
@@ -483,22 +445,20 @@ These patterns use only events available on all platforms:
 ```yaml
 # Works on Claude Code, Gemini, Copilot, and OpenCode
 - name: universal-safety
-  event: PreToolUse
-  match:
+  matchers:
+    operations: [PreToolUse]
     tools: [Bash]
     command_match: "rm -rf /"
-  action:
-    type: block
+  actions:
+    block: true
     reason: "Dangerous operation blocked."
 
 # Session context works on all platforms
 - name: session-context
-  event: SessionStart
-  match: {}
-  action:
-    type: inject
-    source: file
-    path: .claude/context/project-overview.md
+  matchers:
+    operations: [SessionStart]
+  actions:
+    inject: .claude/context/project-overview.md
 ```
 
 ### Dual-Fire Aware Rules
@@ -508,13 +468,11 @@ On Gemini, `BeforeAgent` also fires `UserPromptSubmit`. Write rules knowing both
 ```yaml
 # This fires on Gemini's BeforeAgent AND as a dual-fire UserPromptSubmit
 - name: prompt-policy
-  event: UserPromptSubmit
-  match:
+  matchers:
+    operations: [UserPromptSubmit]
     prompt_match: "(?i)deploy"
-  action:
-    type: inject
-    source: inline
-    content: |
+  actions:
+    inject_inline: |
       **Deploy detected**: Follow the deployment checklist.
 ```
 
@@ -527,27 +485,25 @@ On Gemini, `BeforeAgent` also fires `UserPromptSubmit`. Write rules knowing both
 **Before** (3 rules):
 ```yaml
 - name: python-lint
-  match: { extensions: [.py] }
-  action: { type: inject, path: lint.md }
+  matchers: { extensions: [.py] }
+  actions: { inject: lint.md }
 
 - name: js-lint
-  match: { extensions: [.js] }
-  action: { type: inject, path: lint.md }
+  matchers: { extensions: [.js] }
+  actions: { inject: lint.md }
 
 - name: ts-lint
-  match: { extensions: [.ts] }
-  action: { type: inject, path: lint.md }
+  matchers: { extensions: [.ts] }
+  actions: { inject: lint.md }
 ```
 
 **After** (1 rule):
 ```yaml
 - name: code-lint
-  match:
+  matchers:
     extensions: [.py, .js, .ts]
-  action:
-    type: inject
-    source: file
-    path: .claude/context/lint-standards.md
+  actions:
+    inject: .claude/context/lint-standards.md
 ```
 
 ### Priority-Based Short-Circuiting
@@ -558,17 +514,17 @@ Block rules first, context injection later.
 # Priority 1-10: Blockers (highest priority)
 - name: security-block
   priority: 5
-  action: { type: block }
+  actions: { block: true }
 
 # Priority 50-70: Context injection
 - name: code-standards
   priority: 50
-  action: { type: inject }
+  actions: { inject: standards.md }
 
 # Priority 90-100: Logging/telemetry (lowest priority)
 - name: action-log
   priority: 100
-  action: { type: run, command: log.sh }
+  actions: { run: log.sh }
 ```
 
 ### Lazy Evaluation with enabled_when
@@ -578,12 +534,11 @@ Avoid expensive checks when not needed.
 ```yaml
 # Only run Python checks for Python files
 - name: python-security
-  match:
+  matchers:
     tools: [Write]
     enabled_when: "tool.input.path =~ '\\.py$'"
-  action:
-    type: run
-    command: python-security-check.sh
+  actions:
+    run: python-security-check.sh
 ```
 
 ---
@@ -594,7 +549,7 @@ Avoid expensive checks when not needed.
 |---------|----------|---------------|
 | Language standards | Consistent code style | extensions + inject |
 | Directory context | Layer-specific guidance | directories + inject |
-| Dynamic context | Runtime information | command source |
+| Dynamic context | Runtime information | inject_command |
 | Block dangerous | Safety guardrails | command_match + block |
 | Secret detection | Security | run + validation script |
 | Pre-commit | Quality gates | command_match + run |

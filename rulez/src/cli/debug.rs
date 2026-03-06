@@ -85,6 +85,10 @@ struct JsonRuleEvaluation {
     pattern: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     input: Option<String>,
+    /// Action result from process_event() — approximate per-rule attribution
+    /// since process_event() merges all matched rules into one response.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    script_output: Option<String>,
 }
 
 /// Run the debug command
@@ -185,6 +189,13 @@ pub async fn run(
         );
     }
 
+    // Note if any matched rules have run scripts (exercised via process_event above)
+    let has_run_scripts = config.rules.iter().any(|r| r.actions.run.is_some());
+    if has_run_scripts {
+        println!();
+        println!("[DEBUG] Run scripts were exercised via hooks::process_event() above");
+    }
+
     Ok(())
 }
 
@@ -222,6 +233,7 @@ async fn run_json_mode(event: Event, config: &Config) -> Result<()> {
             details,
             pattern,
             input: input.clone(),
+            script_output: None, // Enriched below after process_event()
         });
     }
 
@@ -229,6 +241,30 @@ async fn run_json_mode(event: Event, config: &Config) -> Result<()> {
     let debug_config = DebugConfig::new(true, config.settings.debug_logs);
     let response = hooks::process_event(event, &debug_config).await?;
     let total_time = start.elapsed().as_secs_f64() * 1000.0;
+
+    // Enrich matched rule evaluations with action results from process_event().
+    // NOTE: This is approximate per-rule attribution — process_event() runs all
+    // matched rules together and returns one merged response, so we cannot
+    // attribute output to individual rules. This is a best-effort trace.
+    for eval in &mut evaluations {
+        if eval.matched {
+            let action_info = if !response.continue_ {
+                if let Some(ref reason) = response.reason {
+                    Some(format!("[DEBUG] Script result: blocked — {}", reason))
+                } else {
+                    Some("[DEBUG] Script result: blocked".to_string())
+                }
+            } else if let Some(ref context) = response.context {
+                Some(format!(
+                    "[DEBUG] Script result: injected {} chars",
+                    context.len()
+                ))
+            } else {
+                Some("[DEBUG] No run script or script produced no output".to_string())
+            };
+            eval.script_output = action_info;
+        }
+    }
 
     // Determine outcome
     let outcome = if !response.continue_ {
@@ -281,9 +317,14 @@ fn rule_matches_event(rule: &crate::models::Rule, event: &Event) -> bool {
                 .get("command")
                 .and_then(|v| v.as_str())
                 .unwrap_or("");
-            if let Ok(re) = regex::Regex::new(cmd_pattern) {
-                if !re.is_match(cmd) {
-                    return false;
+            match crate::hooks::get_or_compile_regex(cmd_pattern, false) {
+                Ok(re) => {
+                    if !re.is_match(cmd) {
+                        return false;
+                    }
+                }
+                Err(_) => {
+                    return false; // Fail-closed: invalid regex blocks
                 }
             }
         } else {
@@ -322,10 +363,8 @@ fn rule_matches_event(rule: &crate::models::Rule, event: &Event) -> bool {
                 .or_else(|| tool_input.get("file_path"))
                 .and_then(|v| v.as_str())
                 .unwrap_or("");
-            if !directories.iter().any(|dir| {
-                file_path.contains(dir.trim_end_matches("/**"))
-                    || file_path.contains(dir.trim_end_matches("/*"))
-            }) {
+            let glob_set = crate::hooks::build_glob_set(directories);
+            if !glob_set.is_match(file_path) {
                 return false;
             }
         } else {

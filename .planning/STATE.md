@@ -5,20 +5,22 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** LLMs do not enforce policy. LLMs are subject to policy.
-**Current focus:** v1.9 — Multi-CLI E2E Testing (Phases 23-27)
+**Current focus:** v2.1 — Multi-CLI E2E Testing (Phases 24, 26, 27)
+**v2.0:** RuleZ Cleanup and Hardening — COMPLETE (Phase 28, shipped 2026-03-05)
+**v1.9:** Multi-CLI E2E Testing (partial) — COMPLETE (Phases 23, 25, shipped 2026-03-05)
 **v1.8:** Tool Name Canonicalization — COMPLETE (Phase 22, shipped 2026-02-22)
 **v1.7:** Multi-Platform Hook Support — COMPLETE (all phases 18-21 done)
 **v1.6:** RuleZ UI — COMPLETE (all phases 11-17 done)
 
 ## Current Position
 
-Milestone: v1.9
-Phase: 24 of 27
-Plan: 02 complete (all 4 Gemini E2E scenarios created)
-Status: In progress — Phase 24 complete (both plans done), Phase 25 (Copilot E2E) next
-Last activity: 2026-02-23 — Phase 24 Plan 02 complete: all 4 Gemini E2E scenario scripts created
+Milestone: v2.0 — RuleZ Cleanup and Hardening
+Phase: 28 (COMPLETE)
+Plan: All 8 plans complete (01-08)
+Status: Phase 28 complete. All 8 plans done across 4 waves.
+Last activity: 2026-03-05 — Phase 28 complete: regex fix, docs fix, upgrade cmd, debounce, tool_input eval, debug trace, globset, parallel eval
 
-Progress: [██████████████████░░░░░] 22/27 phases complete (81%)
+Progress: [████████████████████████] 28/28 phases complete (v2.0 milestone done)
 
 ## Performance Metrics
 
@@ -69,6 +71,16 @@ Progress: [██████████████████░░░░░
 | Phase 17 P02 | 1 min | 7 tasks | 4 files |
 | Phase 21-copilot-cli-support-and-copilot-hooks-support P01 | 4 min | 2 tasks | 4 files |
 | Phase 21-copilot-cli-support-and-copilot-hooks-support P04 | 0 min | 2 tasks | 7 files |
+| Phase 25-copilot-cli-e2e-testing P01 | 2 | 2 tasks | 5 files |
+| Phase 25 P02 | 2 | 2 tasks | 4 files |
+| Phase 25 P03 | 1 | 1 task | 1 file |
+| Phase 28 P06 | 5 min | 2 tasks | 4 files |
+| Phase 28 P07 | 5 min | 3 tasks | 2 files |
+| Phase 28 P04 | 5 min | 2 tasks | 1 file |
+| Phase 28 P03 | 5 min | 3 tasks | 2 files |
+| Phase 28 P02 | 6 min | 3 tasks | 2 files |
+| Phase 28 P05 | 5 min | 2 tasks | 3 files |
+| Phase 28 P08 | 5 min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -79,6 +91,7 @@ Progress: [██████████████████░░░░░
 - Phase 21 added: Copilot CLI support and Copilot hooks support
 - Phase 22 added: Tool Name Canonicalization Across Platforms
 - Phases 23-27 added: Multi-CLI E2E Testing (Claude Code, Gemini, Copilot, OpenCode, Codex)
+- Phase 28 added: RuleZ Cleanup and Hardening (all 9 pending todos: regex bug, debug bug, tool_input eval, globset, caching, parallel eval, log worker, skill docs, auto-upgrade)
 
 ### Decisions
 
@@ -135,13 +148,52 @@ Phase 21 decisions:
 - `cch copilot install` generates wrapper scripts (bash + PowerShell) and `.github/hooks/rulez.json`
 - `cch copilot doctor` scans `.github/hooks/*.json` for installed/missing/misconfigured/outdated hooks
 
+Phase 28 P06 decisions:
+- GitHub owner/repo values are placeholders (SpillwaveSolutions/agent_rulez) — must be updated when repo is made public with releases
+- Using self_update crate (industry standard for Rust binary self-upgrade) over manual reqwest approach
+- --check flag prints version info and exits 0/1 without installing — safe for use in CI/automation
+
+Phase 28 P07 decisions:
+- Log filter debounce was already implemented in LogFilterBar.tsx at 300ms (component-level, Option A) — only updated timer from 300ms to 200ms
+- Added debounce comment to logStore.ts setTextFilter documenting that debounce is applied at the call site
+
+Phase 25 decisions:
+- copilot_adapter_check checks PATH only — no API key (Copilot uses OAuth login, unlike Gemini)
+- Copilot hook format: .github/hooks/rulez.json with preToolUse/bash/powershell/timeoutSec (vs Gemini BeforeTool/command/timeout ms)
+- invoke_copilot_headless uses --allow-all-tools (not --yolo --output-format json like Gemini)
+- Fixture YAML files identical to Gemini fixtures — canonical tool names work for Copilot via RuleZ canonicalization
+- [Phase 25]: 01-install.sh uses no --scope flag (copilot install has no --scope, unlike gemini which uses --scope project)
+- [Phase 25]: Assertion for hook entry uses unquoted 'copilot hook' substring — JSON bash/powershell fields have path prefix
+- [Phase 25 P03]: Auth gap closed — gh auth status (Stage 1) / copilot probe timeout (Stage 2) added to copilot_adapter_check; unauthenticated => return 1 => COPILOT_CLI_AVAILABLE=0 => scenarios 02-04 skip (exit 77)
+- [Phase 28]: build_glob_set() auto-appends /** for bare dir names; invalid patterns warn+skip; GlobSet compiled per eval call
+- [Phase 28 P08]: Parallel rule matching uses join_all for >= 10 rules; action execution stays sequential to preserve merge semantics; futures 0.3 added
+
 ### Pending Todos
 
-- [ ] Replace Naive Matchers with globset (tooling)
-- [ ] Implement Regex and Config Caching (tooling)
+- [x] Replace Naive Matchers with globset (tooling) — DONE in 28-05: build_glob_set() replaces contains() hack
+- [x] Implement Regex and Config Caching (tooling) — DONE in 28-03: mtime-based CONFIG_CACHE in Config::from_file()
 - [ ] Offload Log Filtering to Web Worker or Rust (ui)
-- [ ] Parallel Rule Evaluation (tooling)
-- [ ] Expose tool_input fields in enabled_when eval context (tooling, Phase 22.1)
+- [x] Parallel Rule Evaluation (tooling) — DONE in 28-08: join_all parallel matching for rule sets >= 10 rules
+- [x] Expose tool_input fields in enabled_when eval context (tooling, Phase 22.1) — DONE in 28-03: tool_input_ prefixed vars in build_eval_context()
+- [x] Auto-check and upgrade RuleZ binary to latest release (tooling, [#102](https://github.com/SpillwaveSolutions/agent_rulez/issues/102)) — DONE in 28-06
+- [x] Fix mastering-hooks skill schema mismatches with RuleZ binary (docs, [#103](https://github.com/SpillwaveSolutions/agent_rulez/issues/103), [#104](https://github.com/SpillwaveSolutions/agent_rulez/issues/104), [#105](https://github.com/SpillwaveSolutions/agent_rulez/issues/105)) — DONE in 28-02: rules:/matchers:/actions:/version:1.0 corrected in hooks-yaml-schema.md and rule-patterns.md
+- [x] Fix invalid regex silently matching all commands and stale config cache (tooling, [#101](https://github.com/SpillwaveSolutions/agent_rulez/issues/101)) — DONE in 28-01: fail-closed regex at all 5 call sites, Config::validate() catches bad command_match regex
+- [x] rulez debug does not exercise run action scripts (tooling, [#104](https://github.com/SpillwaveSolutions/agent_rulez/issues/104)) — DONE in 28-04: script_output field added to JSON trace, run scripts exercised via process_event()
+
+Phase 28 P03 decisions:
+- Numbers from tool_input JSON stored as evalexpr Float (f64) -- comparison expressions must use 30.0 not 30
+- Cache placed in from_file() not load() so both project and global config paths benefit from caching
+- Complex JSON types (arrays, objects, null) silently skipped in tool_input injection -- only string, bool, number supported by evalexpr
+
+Phase 28 P02 decisions:
+- inject: takes a file path; inject_inline: takes inline markdown; inject_command: takes a shell command (corrected in skill docs)
+- priority: higher number = higher priority (original docs said "lower = higher" which was wrong)
+- event: per-rule flat field does not exist; use matchers.operations: [EventType] instead
+
+Phase 28 P01 decisions:
+- Use if let Ok(regex) = get_or_compile_regex(...) / else { warn; return false } — clippy prefers if-let for two-arm match (single_match_else lint)
+- get_or_compile_regex promoted to pub(crate) so debug.rs can call crate::hooks::get_or_compile_regex without duplicating logic
+- Fail-closed on invalid block_if_match: log warning and continue (no error Response), since no content matched
 
 ### Blockers/Concerns
 
@@ -149,8 +201,8 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-02-23
-Stopped at: Completed 24-02-PLAN.md (all 4 Gemini E2E scenario scripts)
+Last session: 2026-03-05
+Stopped at: Completed 28-08-PLAN.md (parallel rule evaluation) — Phase 28 complete
 Resume file: None
 
-Next action: Execute Phase 25 (Copilot E2E testing)
+Next action: Release v2.0 with release skill. Phases 24, 26, 27 moved to v2.1 milestone.

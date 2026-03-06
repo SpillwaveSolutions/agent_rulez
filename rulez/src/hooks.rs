@@ -3,6 +3,8 @@ use evalexpr::{
     ContextWithMutableFunctions, ContextWithMutableVariables, DefaultNumericTypes, Function,
     HashMapContext, Value, eval_boolean_with_context,
 };
+use futures::future::join_all;
+use globset::{Glob, GlobSet, GlobSetBuilder};
 use lru::LruCache;
 use regex::{Regex, RegexBuilder};
 use std::num::NonZeroUsize;
@@ -46,7 +48,7 @@ pub static REGEX_CACHE: LazyLock<Mutex<LruCache<String, Regex>>> = LazyLock::new
 });
 
 /// Get or compile a regex pattern with caching
-fn get_or_compile_regex(pattern: &str, case_insensitive: bool) -> Result<Regex> {
+pub(crate) fn get_or_compile_regex(pattern: &str, case_insensitive: bool) -> Result<Regex> {
     let cache_key = format!("{}:{}", pattern, case_insensitive);
 
     // Try to get from cache (LruCache::get updates LRU order)
@@ -580,6 +582,31 @@ fn build_eval_context(event: &Event) -> HashMapContext<DefaultNumericTypes> {
             .ok();
     }
 
+    // Expose tool_input fields with tool_input_ prefix for use in enabled_when expressions
+    // Supports string, bool, and number (f64) field values. Arrays, objects, and null are skipped.
+    // Example: enabled_when: "tool_input_command =~ \"git push\""
+    if let Some(ref tool_input) = event.tool_input {
+        if let Some(obj) = tool_input.as_object() {
+            for (key, val) in obj {
+                let var_name = format!("tool_input_{}", key);
+                match val {
+                    serde_json::Value::String(s) => {
+                        ctx.set_value(var_name, Value::String(s.clone())).ok();
+                    }
+                    serde_json::Value::Bool(b) => {
+                        ctx.set_value(var_name, Value::Boolean(*b)).ok();
+                    }
+                    serde_json::Value::Number(n) => {
+                        if let Some(f) = n.as_f64() {
+                            ctx.set_value(var_name, Value::Float(f)).ok();
+                        }
+                    }
+                    _ => {} // Arrays, objects, null -- not supported by evalexpr
+                }
+            }
+        }
+    }
+
     ctx
 }
 
@@ -612,9 +639,34 @@ fn is_rule_enabled(rule: &Rule, event: &Event) -> bool {
     }
 }
 
+/// Minimum number of enabled rules before parallel matching is used.
+/// Below this threshold, the sequential path is used (lower overhead).
+const PARALLEL_THRESHOLD: usize = 10;
+
 /// Evaluate all enabled rules against an event
 /// Rules are sorted by priority (higher first) by config.enabled_rules()
+///
+/// Parallel matching: enabled for rule sets with >= PARALLEL_THRESHOLD rules.
+/// When threshold is met, rule matching runs concurrently via join_all.
+/// Action execution remains sequential to preserve merge semantics
+/// (block takes precedence, inject accumulates, priority order matters).
 async fn evaluate_rules<'a>(
+    event: &'a Event,
+    config: &'a Config,
+    debug_config: &DebugConfig,
+) -> Result<(Vec<&'a Rule>, Response, Vec<RuleEvaluation>)> {
+    let rules = config.enabled_rules();
+
+    if rules.len() >= PARALLEL_THRESHOLD {
+        evaluate_rules_parallel(event, config, debug_config).await
+    } else {
+        evaluate_rules_sequential(event, config, debug_config).await
+    }
+}
+
+/// Sequential rule evaluation — used for small rule sets (< PARALLEL_THRESHOLD rules).
+/// Original implementation: matches and executes actions inline per rule.
+async fn evaluate_rules_sequential<'a>(
     event: &'a Event,
     config: &'a Config,
     debug_config: &DebugConfig,
@@ -665,6 +717,112 @@ async fn evaluate_rules<'a>(
     Ok((matched_rules, response, rule_evaluations))
 }
 
+/// Parallel rule evaluation — used for large rule sets (>= PARALLEL_THRESHOLD rules).
+///
+/// Phase 1: Parallel matching — all rules are matched concurrently via join_all.
+/// This is safe because matches_rule() and is_rule_enabled() are pure/stateless.
+///
+/// Phase 2: Sequential action execution — matched rules execute actions in priority
+/// order (highest first) to preserve merge semantics (block > inject > allow).
+async fn evaluate_rules_parallel<'a>(
+    event: &'a Event,
+    config: &'a Config,
+    debug_config: &DebugConfig,
+) -> Result<(Vec<&'a Rule>, Response, Vec<RuleEvaluation>)> {
+    let rules = config.enabled_rules();
+    let debug_enabled = debug_config.enabled;
+
+    // Phase 1: Parallel matching — run is_rule_enabled + matches_rule concurrently
+    let match_futures: Vec<_> = rules
+        .iter()
+        .map(|&rule| async move {
+            // Check enabled_when before matchers
+            if !is_rule_enabled(rule, event) {
+                return (rule, false, None, false); // (rule, matched, matcher_results, enabled)
+            }
+
+            let (matched, matcher_results) = if debug_enabled {
+                matches_rule_with_debug(event, rule)
+            } else {
+                (matches_rule(event, rule), None)
+            };
+
+            (rule, matched, matcher_results, true)
+        })
+        .collect();
+
+    let match_results = join_all(match_futures).await;
+
+    // Collect evaluations and matched rules (preserving priority order from config)
+    let mut matched_rules = Vec::new();
+    let mut rule_evaluations = Vec::new();
+
+    for (rule, matched, matcher_results, enabled) in match_results {
+        if debug_enabled {
+            if !enabled {
+                rule_evaluations.push(RuleEvaluation {
+                    rule_name: rule.name.clone(),
+                    matched: false,
+                    matcher_results: None,
+                });
+            } else {
+                rule_evaluations.push(RuleEvaluation {
+                    rule_name: rule.name.clone(),
+                    matched,
+                    matcher_results,
+                });
+            }
+        }
+
+        if matched {
+            matched_rules.push(rule);
+        }
+    }
+
+    // Phase 2: Sequential action execution — preserves merge semantics
+    let mut response = Response::allow();
+    for rule in &matched_rules {
+        let mode = rule.effective_mode();
+        let rule_response = execute_rule_actions_with_mode(event, rule, config, mode).await?;
+        response = merge_responses_with_mode(response, rule_response, mode);
+    }
+
+    Ok((matched_rules, response, rule_evaluations))
+}
+
+/// Build a GlobSet from a list of directory patterns.
+/// Each pattern is matched against the full file path.
+/// Invalid patterns are silently skipped (fail-open for individual patterns).
+/// Returns a GlobSet that matches if ANY pattern matches (OR semantics).
+pub(crate) fn build_glob_set(patterns: &[String]) -> GlobSet {
+    let mut builder = GlobSetBuilder::new();
+    for pattern in patterns {
+        // Add the pattern as-is
+        match Glob::new(pattern) {
+            Ok(glob) => {
+                builder.add(glob);
+            }
+            Err(e) => {
+                tracing::warn!("Invalid directory glob pattern '{}': {}", pattern, e);
+            }
+        }
+        // Also try appending /** for bare directory names like "src/"
+        let with_suffix = if pattern.ends_with('/') {
+            format!("{}**", pattern)
+        } else if !pattern.contains('*') {
+            format!("{}/**", pattern.trim_end_matches('/'))
+        } else {
+            continue;
+        };
+        if let Ok(glob) = Glob::new(&with_suffix) {
+            builder.add(glob);
+        }
+    }
+    builder
+        .build()
+        .unwrap_or_else(|_| GlobSetBuilder::new().build().unwrap())
+}
+
 /// Check if a rule matches the given event
 fn matches_rule(event: &Event, rule: &Rule) -> bool {
     let matchers = &rule.matchers;
@@ -684,10 +842,16 @@ fn matches_rule(event: &Event, rule: &Rule) -> bool {
     if let Some(ref pattern) = matchers.command_match {
         if let Some(ref tool_input) = event.tool_input {
             if let Some(command) = tool_input.get("command").and_then(|c| c.as_str()) {
-                if let Ok(regex) = Regex::new(pattern) {
+                if let Ok(regex) = get_or_compile_regex(pattern, false) {
                     if !regex.is_match(command) {
                         return false;
                     }
+                } else {
+                    tracing::warn!(
+                        "Invalid command_match regex '{}' in rule — failing closed",
+                        pattern
+                    );
+                    return false;
                 }
             }
         }
@@ -716,14 +880,8 @@ fn matches_rule(event: &Event, rule: &Rule) -> bool {
     if let Some(ref directories) = matchers.directories {
         if let Some(ref tool_input) = event.tool_input {
             if let Some(file_path) = tool_input.get("filePath").and_then(|p| p.as_str()) {
-                let path = Path::new(file_path);
-                let path_str = path.to_string_lossy();
-
-                if !directories.iter().any(|dir| {
-                    // Simple glob matching - in production, use a proper glob library
-                    path_str.contains(dir.trim_end_matches("/**"))
-                        || path_str.contains(dir.trim_end_matches("/*"))
-                }) {
+                let glob_set = build_glob_set(directories);
+                if !glob_set.is_match(file_path) {
                     return false;
                 }
             }
@@ -784,9 +942,13 @@ fn matches_rule_with_debug(event: &Event, rule: &Rule) -> (bool, Option<MatcherR
         matcher_results.command_match_matched =
             Some(if let Some(ref tool_input) = event.tool_input {
                 if let Some(command) = tool_input.get("command").and_then(|c| c.as_str()) {
-                    if let Ok(regex) = Regex::new(pattern) {
+                    if let Ok(regex) = get_or_compile_regex(pattern, false) {
                         regex.is_match(command)
                     } else {
+                        tracing::warn!(
+                            "Invalid command_match regex '{}' in rule — failing closed",
+                            pattern
+                        );
                         false
                     }
                 } else {
@@ -828,14 +990,8 @@ fn matches_rule_with_debug(event: &Event, rule: &Rule) -> (bool, Option<MatcherR
         matcher_results.directories_matched =
             Some(if let Some(ref tool_input) = event.tool_input {
                 if let Some(file_path) = tool_input.get("filePath").and_then(|p| p.as_str()) {
-                    let path = Path::new(file_path);
-                    let path_str = path.to_string_lossy();
-
-                    directories.iter().any(|dir| {
-                        // Simple glob matching - in production, use a proper glob library
-                        path_str.contains(dir.trim_end_matches("/**"))
-                            || path_str.contains(dir.trim_end_matches("/*"))
-                    })
+                    let glob_set = build_glob_set(directories);
+                    glob_set.is_match(file_path)
                 } else {
                     false
                 }
@@ -1045,13 +1201,19 @@ async fn execute_rule_actions(event: &Event, rule: &Rule, config: &Config) -> Re
                 .or_else(|| tool_input.get("content"))
                 .and_then(|c| c.as_str())
             {
-                if let Ok(regex) = Regex::new(pattern) {
+                if let Ok(regex) = get_or_compile_regex(pattern, false) {
                     if regex.is_match(content) {
                         return Ok(Response::block(format!(
                             "Content blocked by rule '{}': matches pattern '{}'",
                             rule.name, pattern
                         )));
                     }
+                } else {
+                    tracing::warn!(
+                        "Invalid block_if_match regex '{}' in rule '{}' — failing closed",
+                        pattern,
+                        rule.name
+                    );
                 }
             }
         }
@@ -1328,7 +1490,7 @@ async fn execute_rule_actions_warn_mode(
                 .or_else(|| tool_input.get("content"))
                 .and_then(|c| c.as_str())
             {
-                if let Ok(regex) = Regex::new(pattern) {
+                if let Ok(regex) = get_or_compile_regex(pattern, false) {
                     if regex.is_match(content) {
                         let warning = format!(
                             "[WARNING] Rule '{}' would block this content (matches pattern '{}').\n\
@@ -1337,6 +1499,12 @@ async fn execute_rule_actions_warn_mode(
                         );
                         return Ok(Response::inject(warning));
                     }
+                } else {
+                    tracing::warn!(
+                        "Invalid block_if_match regex '{}' in rule '{}' — failing closed",
+                        pattern,
+                        rule.name
+                    );
                 }
             }
         }
@@ -5293,5 +5461,195 @@ mod tests {
             cache.peek(&key_b).is_none(),
             "Pattern B should have been evicted"
         );
+    }
+
+    // =============================================================================
+    // Phase 28-03: tool_input field injection tests
+    // =============================================================================
+
+    #[test]
+    fn test_build_eval_context_tool_input_string_field() {
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Bash".to_string()),
+            tool_input: Some(serde_json::json!({
+                "command": "git push origin main",
+            })),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let ctx = build_eval_context(&event);
+
+        // tool_input_command should be accessible as a string
+        let result =
+            eval_boolean_with_context("tool_input_command == \"git push origin main\"", &ctx)
+                .unwrap_or(false);
+        assert!(
+            result,
+            "tool_input_command should be accessible in eval context"
+        );
+    }
+
+    #[test]
+    fn test_build_eval_context_tool_input_bool_field() {
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Bash".to_string()),
+            tool_input: Some(serde_json::json!({
+                "command": "ls",
+                "run_in_background": true,
+            })),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let ctx = build_eval_context(&event);
+
+        let result = eval_boolean_with_context("tool_input_run_in_background == true", &ctx)
+            .unwrap_or(false);
+        assert!(
+            result,
+            "tool_input_run_in_background should be true in eval context"
+        );
+    }
+
+    #[test]
+    fn test_build_eval_context_tool_input_number_field() {
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Bash".to_string()),
+            tool_input: Some(serde_json::json!({
+                "command": "sleep 10",
+                "timeout": 30,
+            })),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let ctx = build_eval_context(&event);
+
+        let result = eval_boolean_with_context("tool_input_timeout == 30.0", &ctx).unwrap_or(false);
+        assert!(result, "tool_input_timeout should be 30.0 in eval context");
+    }
+
+    #[test]
+    fn test_build_eval_context_tool_input_none() {
+        // When tool_input is None, no tool_input_ vars should be set
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Bash".to_string()),
+            tool_input: None,
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let ctx = build_eval_context(&event);
+
+        // Accessing a missing variable should cause evaluation to fail
+        let result = eval_boolean_with_context("tool_input_command == \"anything\"", &ctx);
+        assert!(
+            result.is_err(),
+            "tool_input_command should not exist when tool_input is None"
+        );
+    }
+
+    #[test]
+    fn test_build_eval_context_tool_input_skips_complex_types() {
+        // Arrays, objects, null should be skipped (not cause errors)
+        let event = Event {
+            hook_event_name: EventType::PreToolUse,
+            tool_name: Some("Bash".to_string()),
+            tool_input: Some(serde_json::json!({
+                "command": "echo hello",
+                "nested": {"key": "value"},
+                "list": [1, 2, 3],
+                "nothing": null,
+            })),
+            session_id: "test-session".to_string(),
+            timestamp: Utc::now(),
+            user_id: None,
+            transcript_path: None,
+            cwd: None,
+            permission_mode: None,
+            tool_use_id: None,
+            prompt: None,
+        };
+
+        let ctx = build_eval_context(&event);
+
+        // String field should be set
+        let result = eval_boolean_with_context("tool_input_command == \"echo hello\"", &ctx)
+            .unwrap_or(false);
+        assert!(result, "tool_input_command should be set");
+
+        // Complex types should not be set
+        let result = eval_boolean_with_context("tool_input_nested == \"anything\"", &ctx);
+        assert!(
+            result.is_err(),
+            "tool_input_nested (object) should not be in context"
+        );
+    }
+
+    #[test]
+    fn test_glob_dir_no_false_positive() {
+        // "src/" should NOT match "/other/src/foo.rs" — the old contains() did
+        let patterns = vec!["src/".to_string()];
+        let glob_set = build_glob_set(&patterns);
+        // Should match files directly under src/
+        assert!(
+            glob_set.is_match("src/main.rs"),
+            "src/ should match src/main.rs"
+        );
+        assert!(
+            glob_set.is_match("src/lib/utils.rs"),
+            "src/ should match src/lib/utils.rs"
+        );
+        // Should NOT match a path where "src" appears as a non-root component
+        assert!(
+            !glob_set.is_match("/other/src/foo.rs"),
+            "src/ should NOT match /other/src/foo.rs (false positive)"
+        );
+    }
+
+    #[test]
+    fn test_glob_set_wildcard_patterns() {
+        let patterns = vec!["**/*.rs".to_string()];
+        let glob_set = build_glob_set(&patterns);
+        assert!(glob_set.is_match("src/main.rs"));
+        assert!(glob_set.is_match("deep/nested/file.rs"));
+        assert!(!glob_set.is_match("src/main.py"));
+    }
+
+    #[test]
+    fn test_glob_set_empty_patterns() {
+        let patterns: Vec<String> = vec![];
+        let glob_set = build_glob_set(&patterns);
+        // Empty glob set matches nothing
+        assert!(!glob_set.is_match("anything.rs"));
     }
 }

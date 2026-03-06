@@ -91,6 +91,8 @@ export const useLogStore = create<LogState & LogActions>((set, get) => ({
     await get().loadLogs();
   },
 
+  // NOTE: debounce for this action is applied at the call site (LogFilterBar uses a 200ms
+  // setTimeout so applyClientFilters() is not triggered on every keystroke).
   setTextFilter: (textFilter) => {
     const { entries, severityFilter } = get();
     const filteredEntries = applyClientFilters(entries, textFilter, severityFilter);

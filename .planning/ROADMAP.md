@@ -1,6 +1,6 @@
 # RuleZ Roadmap
 
-**Current Focus:** v1.9 Multi-CLI E2E Testing — Phases 23-27
+**Current Focus:** v2.1 Multi-CLI E2E Testing — Phases 24, 26, 27
 
 ---
 
@@ -12,7 +12,9 @@
 - ✅ **v1.6 RuleZ UI** — Phases 11-17 (shipped 2026-02-12)
 - ✅ **v1.7 Multi-Platform Hook Support** — Phases 18-21 (shipped 2026-02-13)
 - ✅ **v1.8 Tool Name Canonicalization** — Phase 22 (shipped 2026-02-22)
-- 🔄 **v1.9 Multi-CLI E2E Testing** — Phases 23-27
+- ✅ **v1.9 Multi-CLI E2E Testing** — Phases 23, 25 (shipped 2026-03-05)
+- ✅ **v2.0 RuleZ Cleanup and Hardening** — Phase 28 (shipped 2026-03-05)
+- 🔄 **v2.1 Multi-CLI E2E Testing (continued)** — Phases 24, 26, 27
 
 ---
 
@@ -273,11 +275,13 @@ Plans:
 
 ---
 
-## 🔄 v1.9 Multi-CLI E2E Testing
+## ✅ v1.9 Multi-CLI E2E Testing (Partial)
 
 **Milestone Goal:** Headless multi-CLI E2E/UAT test harness validating real integration behavior across 5 agent CLIs. Each CLI gets its own phase with full E2E testing. RuleZ-only scope.
 
 **Shared context:** [E2E-CONTEXT.md](phases/e2e-multi-cli-harness/E2E-CONTEXT.md)
+
+**Note:** Phases 24, 26, 27 moved to v2.1 milestone for continued E2E work.
 
 ### Phase 23: Claude Code CLI E2E Testing
 **Goal**: Establish the E2E test harness framework + Claude Code scenarios (install, hook-fire, deny, inject)
@@ -313,7 +317,12 @@ Plans:
   1. Copilot CLI passes all 4 core scenarios (install, hook-fire, deny, inject)
   2. Headless invocation works reliably in CI
   3. Reports include Copilot row in CLI x scenario matrix
-**Plans**: TBD
+**Plans**: 3 plans (2 original + 1 gap closure)
+
+Plans:
+- [x] 25-01-PLAN.md — Copilot adapter library, fixtures, and run.sh integration
+- [x] 25-02-PLAN.md — 4 Copilot E2E scenarios (install, hook-fire, deny, inject)
+- [x] 25-03-PLAN.md — Auth check gap closure: add authentication verification to copilot_adapter_check
 
 ### Phase 26: OpenCode CLI E2E Testing
 **Goal**: Add OpenCode CLI adapter + scenarios to the existing E2E harness
@@ -336,11 +345,55 @@ Plans:
 ---
 
 | 23. Claude Code CLI E2E Testing | v1.9 | 2/2 | ✅ Complete | 2026-02-23 |
-| 24. Gemini CLI E2E Testing | v1.9 | 0/2 | In Progress | - |
-| 25. Copilot CLI E2E Testing | v1.9 | 0/TBD | Pending | - |
-| 26. OpenCode CLI E2E Testing | v1.9 | 0/TBD | Pending | - |
-| 27. Codex CLI E2E Testing | v1.9 | 0/TBD | Pending | - |
+| 25. Copilot CLI E2E Testing | v1.9 | 3/3 | ✅ Complete | 2026-02-23 |
+| 24. Gemini CLI E2E Testing | v2.1 | 0/2 | Pending | - |
+| 26. OpenCode CLI E2E Testing | v2.1 | 0/TBD | Pending | - |
+| 27. Codex CLI E2E Testing | v2.1 | 0/TBD | Pending | - |
+
+| 28. RuleZ Cleanup and Hardening | v2.0 | 8/8 | ✅ Complete | 2026-03-05 |
+
+### Phase 28: RuleZ Cleanup and Hardening
+**Goal**: Fix critical bugs, improve engine performance, update skill docs, and add auto-upgrade capability — addresses all 9 pending todos
+**Depends on**: Phase 22 (no dependency on E2E phases 23-27)
+**Success Criteria** (what must be TRUE):
+  1. Invalid regex in command_match returns non-match (not silent match-all) and validates at startup
+  2. Config cache invalidated when hooks.yaml changes (timestamp or CRC check)
+  3. `rulez debug` exercises run action scripts identically to live hook path
+  4. tool_input fields exposed in enabled_when eval context (source, command, path, etc.)
+  5. Naive matchers replaced with globset crate for correct glob patterns
+  6. Regex compilation cached with LRU + config cached with file-change invalidation
+  7. Parallel rule evaluation available for large rule sets
+  8. Log filtering offloaded to Web Worker or Rust command
+  9. mastering-hooks skill docs use correct field names matching RuleZ binary schema
+  10. `rulez upgrade` or equivalent auto-checks and upgrades binary to latest release
+**Plans**: 8 plans
+
+Plans:
+- [x] 28-01-PLAN.md — Regex fail-closed fix: 5 call sites in hooks.rs + debug.rs + command_match validation in config.rs
+- [x] 28-02-PLAN.md — Fix mastering-hooks skill docs: 7 field name mismatches in hooks-yaml-schema.md + rule-patterns.md
+- [x] 28-03-PLAN.md — tool_input fields in enabled_when eval context + mtime-based config cache
+- [x] 28-04-PLAN.md — Fix debug run script trace: enrich JSON evaluations with action results
+- [x] 28-05-PLAN.md — Replace naive contains() directory matching with globset crate
+- [x] 28-06-PLAN.md — rulez upgrade subcommand using self_update crate
+- [x] 28-07-PLAN.md — UI log filter debounce (200ms) in rulez-ui logStore + LogViewer
+- [x] 28-08-PLAN.md — Parallel rule evaluation using tokio join_all for large rule sets
 
 ---
 
-*Created 2026-02-06 — Updated 2026-02-22 Phases 23-27 added for multi-CLI E2E testing*
+## ✅ v2.0 RuleZ Cleanup and Hardening (Complete)
+
+**Milestone Goal:** Fix critical bugs, improve engine performance, update skill docs, and add auto-upgrade capability — addresses all 9 pending todos.
+
+Phase 28 complete — all 8 plans executed across 4 waves. See Phase 28 section above.
+
+---
+
+## 🔄 v2.1 Multi-CLI E2E Testing (Continued)
+
+**Milestone Goal:** Complete remaining CLI E2E testing for Gemini, OpenCode, and Codex.
+
+Phases 24, 26, 27 moved from v1.9 — see phase details above.
+
+---
+
+*Created 2026-02-06 — Updated 2026-03-05 Phase 28 complete: 8 plans across 4 waves; v2.0 milestone shipped*
