@@ -1,0 +1,12 @@
+version: "1.0"
+settings:
+  log_level: "info"
+  fail_open: false
+rules:
+  - name: e2e-deny-force-push
+    description: "E2E test: blocks git force push"
+    matchers:
+      tools: ["Bash"]
+      command_match: "git push.*--force|git push.*-f"
+    actions:
+      block: true
