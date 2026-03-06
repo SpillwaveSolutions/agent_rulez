@@ -1,3 +1,18 @@
+---
+gsd_state_version: 1.0
+milestone: v1.6
+milestone_name: RuleZ UI
+status: completed
+stopped_at: Phase 27 context gathered
+last_updated: "2026-03-06T22:45:29.579Z"
+last_activity: "2026-03-05 — Phase 28 complete: regex fix, docs fix, upgrade cmd, debounce, tool_input eval, debug trace, globset, parallel eval"
+progress:
+  total_phases: 18
+  completed_phases: 9
+  total_plans: 51
+  completed_plans: 33
+---
+
 # Project State
 
 ## Project Reference
@@ -201,8 +216,8 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-03-05
-Stopped at: Completed 28-08-PLAN.md (parallel rule evaluation) — Phase 28 complete
-Resume file: None
+Last session: 2026-03-06T22:45:29.575Z
+Stopped at: Phase 27 context gathered
+Resume file: .planning/phases/27-codex-cli-e2e-testing/27-CONTEXT.md
 
 Next action: Release v2.0 with release skill. Phases 24, 26, 27 moved to v2.1 milestone.
