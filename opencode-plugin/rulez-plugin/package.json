@@ -1,0 +1,11 @@
+{
+  "name": "rulez-plugin",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./index.ts",
+  "description": "RuleZ policy engine plugin for OpenCode CLI",
+  "dependencies": {},
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}

@@ -40,8 +40,8 @@ struct OpenCodeHookEntry {
 }
 
 pub async fn run(scope: Scope, binary_path: Option<String>, print: bool) -> Result<()> {
-    let cch_path = resolve_binary_path(binary_path)?;
-    let hook_command = format!("{} opencode hook", cch_path.display());
+    let rulez_path = resolve_binary_path(binary_path)?;
+    let hook_command = format!("{} opencode hook", rulez_path.display());
 
     if print {
         let snippet = build_snippet(&hook_command);
@@ -56,7 +56,7 @@ pub async fn run(scope: Scope, binary_path: Option<String>, print: bool) -> Resu
         "Installing OpenCode hooks...
 "
     );
-    println!("  Binary: {}", cch_path.display());
+    println!("  Binary: {}", rulez_path.display());
     println!("  Config: {}", config_path.display());
     println!("  Scope: {}", scope_name(scope));
     println!();
@@ -72,7 +72,7 @@ pub async fn run(scope: Scope, binary_path: Option<String>, print: bool) -> Resu
 
     for event in &OPENCODE_HOOK_EVENTS {
         let entries = hooks.entry((*event).to_string()).or_default();
-        let cleaned = remove_cch_hooks(entries);
+        let cleaned = remove_rulez_hooks(entries);
         *entries = cleaned;
         entries.push(new_entry.clone());
     }
@@ -89,7 +89,7 @@ pub async fn run(scope: Scope, binary_path: Option<String>, print: bool) -> Resu
     }
     println!();
     println!("To print snippet for docs:");
-    println!("  cch opencode install --print");
+    println!("  rulez opencode install --print");
 
     Ok(())
 }
@@ -113,15 +113,15 @@ fn build_snippet(command: &str) -> OpenCodeConfig {
     }
 }
 
-fn remove_cch_hooks(entries: &[OpenCodeHookEntry]) -> Vec<OpenCodeHookEntry> {
+fn remove_rulez_hooks(entries: &[OpenCodeHookEntry]) -> Vec<OpenCodeHookEntry> {
     entries
         .iter()
-        .filter(|hook| !is_cch_hook(hook))
+        .filter(|hook| !is_rulez_hook(hook))
         .cloned()
         .collect()
 }
 
-fn is_cch_hook(hook: &OpenCodeHookEntry) -> bool {
+fn is_rulez_hook(hook: &OpenCodeHookEntry) -> bool {
     if let Some(hook_type) = hook.hook_type.as_deref() {
         if hook_type != "command" {
             return false;
@@ -130,7 +130,7 @@ fn is_cch_hook(hook: &OpenCodeHookEntry) -> bool {
 
     hook.command
         .as_deref()
-        .map(|command| command.contains("cch"))
+        .map(|command| command.contains("rulez") || command.contains("cch"))
         .unwrap_or(false)
 }
 
@@ -193,7 +193,7 @@ fn resolve_binary_path(explicit_path: Option<String>) -> Result<PathBuf> {
         anyhow::bail!("Specified binary not found: {}", path);
     }
 
-    if let Ok(output) = std::process::Command::new("which").arg("cch").output() {
+    if let Ok(output) = std::process::Command::new("which").arg("rulez").output() {
         if output.status.success() {
             let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
             if !path.is_empty() {
@@ -202,15 +202,15 @@ fn resolve_binary_path(explicit_path: Option<String>) -> Result<PathBuf> {
         }
     }
 
-    let local = PathBuf::from("./target/release/cch");
+    let local = PathBuf::from("./target/release/rulez");
     if local.exists() {
         return Ok(local.canonicalize()?);
     }
 
-    let debug = PathBuf::from("./target/debug/cch");
+    let debug = PathBuf::from("./target/debug/rulez");
     if debug.exists() {
         return Ok(debug.canonicalize()?);
     }
 
-    anyhow::bail!("Could not find CCH binary. Build locally or specify path with --binary");
+    anyhow::bail!("Could not find rulez binary. Build locally or specify path with --binary");
 }
