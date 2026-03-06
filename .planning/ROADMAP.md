@@ -351,7 +351,7 @@ Plans:
 | 25. Copilot CLI E2E Testing | v1.9 | 3/3 | ✅ Complete | 2026-02-23 |
 | 24. Gemini CLI E2E Testing | v2.1 | 0/2 | Pending | - |
 | 26. OpenCode CLI E2E Testing | v2.1 | 0/TBD | Pending | - |
-| 27. Codex CLI E2E Testing | v2.1 | 0/1 | Pending | - |
+| 27. Codex CLI E2E Testing | v2.1 | Complete    | 2026-03-06 | - |
 
 | 28. RuleZ Cleanup and Hardening | v2.0 | 8/8 | ✅ Complete | 2026-03-05 |
 
