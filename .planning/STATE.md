@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: RuleZ UI
 status: completed
-stopped_at: Phase 27 context gathered
-last_updated: "2026-03-06T22:45:29.579Z"
-last_activity: "2026-03-05 — Phase 28 complete: regex fix, docs fix, upgrade cmd, debounce, tool_input eval, debug trace, globset, parallel eval"
+stopped_at: Completed 27-01-PLAN.md
+last_updated: "2026-03-06T23:00:32Z"
+last_activity: "2026-03-06 — Phase 27 P01 complete: Codex CLI adapter, 4 E2E scenarios, fixtures, run.sh integration"
 progress:
   total_phases: 18
   completed_phases: 9
@@ -29,13 +29,13 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 
 ## Current Position
 
-Milestone: v2.0 — RuleZ Cleanup and Hardening
-Phase: 28 (COMPLETE)
-Plan: All 8 plans complete (01-08)
-Status: Phase 28 complete. All 8 plans done across 4 waves.
-Last activity: 2026-03-05 — Phase 28 complete: regex fix, docs fix, upgrade cmd, debounce, tool_input eval, debug trace, globset, parallel eval
+Milestone: v2.1 — Multi-CLI E2E Testing
+Phase: 27-codex-cli-e2e-testing
+Plan: 01 (COMPLETE)
+Status: Phase 27 Plan 01 complete. Codex CLI E2E adapter, scenarios, fixtures, and run.sh integration done.
+Last activity: 2026-03-06 — Phase 27 P01 complete: Codex CLI adapter, 4 E2E scenarios, fixtures, run.sh integration
 
-Progress: [████████████████████████] 28/28 phases complete (v2.0 milestone done)
+Progress: Phase 27 Plan 01 complete
 
 ## Performance Metrics
 
@@ -96,6 +96,7 @@ Progress: [███████████████████████
 | Phase 28 P02 | 6 min | 3 tasks | 2 files |
 | Phase 28 P05 | 5 min | 2 tasks | 3 files |
 | Phase 28 P08 | 5 min | 3 tasks | 2 files |
+| Phase 27 P01 | 2 min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -210,14 +211,21 @@ Phase 28 P01 decisions:
 - get_or_compile_regex promoted to pub(crate) so debug.rs can call crate::hooks::get_or_compile_regex without duplicating logic
 - Fail-closed on invalid block_if_match: log warning and continue (no error Response), since no content matched
 
+Phase 27 decisions:
+- No rulez codex install subcommand -- adapter handles workspace setup directly via setup_codex_hooks
+- Scenarios 02-04 skip unconditionally with informative "no hook support" messages (exit 77)
+- setup_codex_hooks writes .codex/config.toml with model and approval_policy settings (stub, not hook integration)
+- invoke_codex_headless uses `codex exec "${prompt}" --ask-for-approval never --json` for headless mode
+- Fixture files identical to opencode fixtures -- canonical tool names work across CLIs via RuleZ canonicalization
+
 ### Blockers/Concerns
 
 None active.
 
 ## Session Continuity
 
-Last session: 2026-03-06T22:45:29.575Z
-Stopped at: Phase 27 context gathered
-Resume file: .planning/phases/27-codex-cli-e2e-testing/27-CONTEXT.md
+Last session: 2026-03-06T23:00:32Z
+Stopped at: Completed 27-01-PLAN.md
+Resume file: .planning/phases/27-codex-cli-e2e-testing/27-01-SUMMARY.md
 
-Next action: Release v2.0 with release skill. Phases 24, 26, 27 moved to v2.1 milestone.
+Next action: Phase 27 complete (single plan). All 5 CLIs now have E2E scenario coverage.
