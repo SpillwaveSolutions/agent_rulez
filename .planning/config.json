@@ -5,6 +5,7 @@
     "require_discussion": true,
     "require_research": true,
     "require_verification": true,
-    "research": true
+    "research": true,
+    "nyquist_validation": true
   }
 }

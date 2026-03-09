@@ -331,7 +331,7 @@ Plans:
   1. OpenCode CLI passes all 4 core scenarios (install, hook-fire, deny, inject)
   2. Headless invocation works reliably in CI
   3. Reports include OpenCode row in CLI x scenario matrix
-**Plans**: TBD
+**Plans**: 1 plan (executed outside GSD workflow via PR #108)
 
 ### Phase 27: Codex CLI E2E Testing
 **Goal**: Add Codex CLI adapter + scenarios (NO hooks support — limited scenario set)
@@ -343,15 +343,15 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 27-01-PLAN.md — Codex adapter, fixtures, 4 scenarios (install + 3 skip stubs), and run.sh integration
+- [x] 27-01-PLAN.md — Codex adapter, fixtures, 4 scenarios (install + 3 skip stubs), and run.sh integration
 
 ---
 
 | 23. Claude Code CLI E2E Testing | v1.9 | 2/2 | ✅ Complete | 2026-02-23 |
 | 25. Copilot CLI E2E Testing | v1.9 | 3/3 | ✅ Complete | 2026-02-23 |
 | 24. Gemini CLI E2E Testing | v2.1 | 0/2 | Pending | - |
-| 26. OpenCode CLI E2E Testing | v2.1 | 0/TBD | Pending | - |
-| 27. Codex CLI E2E Testing | v2.1 | Complete    | 2026-03-06 | - |
+| 26. OpenCode CLI E2E Testing | v2.1 | 1/1 | ✅ Complete | 2026-03-06 |
+| 27. Codex CLI E2E Testing | v2.1 | 1/1 | ✅ Complete | 2026-03-09 |
 
 | 28. RuleZ Cleanup and Hardening | v2.0 | 8/8 | ✅ Complete | 2026-03-05 |
 
@@ -399,4 +399,4 @@ Phases 24, 26, 27 moved from v1.9 — see phase details above.
 
 ---
 
-*Created 2026-02-06 — Updated 2026-03-06 Phase 27 planned: 1 plan for Codex CLI E2E testing*
+*Created 2026-02-06 — Updated 2026-03-09 Phases 26 & 27 complete (OpenCode + Codex E2E). Only Phase 24 (Gemini) remains for v2.1.*
