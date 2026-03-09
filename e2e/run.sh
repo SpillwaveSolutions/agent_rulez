@@ -35,6 +35,8 @@ source "${E2E_ROOT}/lib/gemini_adapter.sh"
 source "${E2E_ROOT}/lib/copilot_adapter.sh"
 # shellcheck source=lib/opencode_adapter.sh
 source "${E2E_ROOT}/lib/opencode_adapter.sh"
+# shellcheck source=lib/codex_adapter.sh
+source "${E2E_ROOT}/lib/codex_adapter.sh"
 
 # ---------------------------------------------------------------------------
 # Initialize harness and reporting
@@ -150,6 +152,16 @@ for cli_name in "${CLI_NAMES[@]}"; do
       echo "  NOTE: opencode CLI not available — scenarios requiring it will be skipped" >&2
     fi
     export OPENCODE_CLI_AVAILABLE
+  fi
+
+  if [[ "${cli_name}" == "codex" ]]; then
+    if codex_adapter_check > /dev/null 2>&1; then
+      CODEX_CLI_AVAILABLE=1
+    else
+      CODEX_CLI_AVAILABLE=0
+      echo "  NOTE: codex CLI not available — scenarios requiring it will be skipped" >&2
+    fi
+    export CODEX_CLI_AVAILABLE
   fi
 
   # Source and run each scenario script in sorted order
