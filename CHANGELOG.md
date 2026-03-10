@@ -5,6 +5,40 @@ All notable changes to RuleZ (AI Policy Engine) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-03-10
+
+### Added
+
+- **OpenCode CLI E2E testing** — Adapter, fixtures, and 4 E2E scenarios (install, hook-fire, deny, inject) for OpenCode CLI
+- **Codex CLI E2E testing** — Adapter, fixtures, and 4 E2E scenarios (1 install + 3 skip stubs — Codex has no hooks support)
+- **Gemini CLI E2E testing** — Adapter, fixtures, and 4 E2E scenarios completing Gemini headless integration
+- **All 5 CLIs covered** — E2E scenario matrix now spans Claude Code, Gemini, Copilot, OpenCode, and Codex
+
+### Changed
+
+- GSD tracking reconciliation — all 28 phases and 78 plans properly tracked across milestones v1.2–v2.1
+
+## [2.0.0] - 2026-03-05
+
+### Added
+
+- **`rulez upgrade`** — Auto-check and upgrade binary to latest GitHub release using self_update crate (rustls backend)
+- **tool_input eval context** — `tool_input_` prefixed variables injected into `enabled_when` expressions (string, bool, number fields)
+- **Debug script trace** — `script_output` field in JSON rule evaluations shows run action script results
+- **Parallel rule evaluation** — `join_all` parallel matching for rule sets >= 10 rules (sequential action execution preserved)
+
+### Fixed
+
+- **Regex fail-closed** — Invalid regex in `command_match` now returns non-match instead of silent match-all; validated at config load
+- **Config cache** — mtime-based `CachedConfig` invalidation in `Config::from_file()` prevents stale config reads
+- **Globset matching** — `build_glob_set()` replaces naive `contains()` directory matching with proper glob patterns
+- **Skill docs** — 7 field name mismatches corrected in mastering-hooks hooks-yaml-schema.md and rule-patterns.md
+
+### Changed
+
+- **UI log filter debounce** — Reduced from 300ms to 200ms in LogFilterBar.tsx for snappier filtering
+- 5 GitHub issues closed (#101–#105)
+
 ## [1.8.0] - 2026-02-21
 
 ### Added
