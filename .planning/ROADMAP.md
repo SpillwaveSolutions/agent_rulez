@@ -21,9 +21,14 @@
 <details>
 <summary>✅ v1.2 P2 Features (Phases 1-3) — SHIPPED 2026-02-07</summary>
 
-- [x] Phase 1: Inline Content Injection (1/1 plans) — inject_inline field
-- [x] Phase 2: Command-Based Context Generation (2/2 plans) — inject_command field
-- [x] Phase 3: Conditional Rule Activation (3/3 plans) — enabled_when field
+### Phase 1: Inline Content Injection
+- [x] 1/1 plans — inject_inline field
+
+### Phase 2: Command-Based Context Generation
+- [x] 2/2 plans — inject_command field
+
+### Phase 3: Conditional Rule Activation
+- [x] 3/3 plans — enabled_when field
 
 See [v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md) for full details.
 
@@ -32,9 +37,14 @@ See [v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md) for full details.
 <details>
 <summary>✅ v1.3 Advanced Matching & Validation (Phases 4-6) — SHIPPED 2026-02-10</summary>
 
-- [x] Phase 4: Prompt Matching (4/4 plans) — regex intent routing with AND/OR logic
-- [x] Phase 5: Field Validation (3/3 plans) — fail-closed field existence and type checks
-- [x] Phase 6: Inline Script Blocks (3/3 plans) — evalexpr expressions and shell scripts in YAML
+### Phase 4: Prompt Matching
+- [x] 4/4 plans — regex intent routing with AND/OR logic
+
+### Phase 5: Field Validation
+- [x] 3/3 plans — fail-closed field existence and type checks
+
+### Phase 6: Inline Script Blocks
+- [x] 3/3 plans — evalexpr expressions and shell scripts in YAML
 
 See [v1.3-ROADMAP.md](milestones/v1.3-ROADMAP.md) for full details.
 
@@ -43,10 +53,17 @@ See [v1.3-ROADMAP.md](milestones/v1.3-ROADMAP.md) for full details.
 <details>
 <summary>✅ v1.4 Stability & Polish (Phases 7-10) — SHIPPED 2026-02-10</summary>
 
-- [x] Phase 7: JSON Schema Validation (2/2 plans) — fail-open schema validation with <0.1ms overhead
-- [x] Phase 8: Debug CLI Enhancements (2/2 plans) — UserPromptSubmit support, LRU regex cache
-- [x] Phase 9: E2E Test Stabilization (3/3 plans) — canonical paths, symlink tests, CI matrix
-- [x] Phase 10: Tauri CI Integration (2/2 plans) — E2E gate + multi-platform desktop builds
+### Phase 7: JSON Schema Validation
+- [x] 2/2 plans — fail-open schema validation with <0.1ms overhead
+
+### Phase 8: Debug CLI Enhancements
+- [x] 2/2 plans — UserPromptSubmit support, LRU regex cache
+
+### Phase 9: E2E Test Stabilization
+- [x] 3/3 plans — canonical paths, symlink tests, CI matrix
+
+### Phase 10: Tauri CI Integration
+- [x] 2/2 plans — E2E gate + multi-platform desktop builds
 
 See [v1.4-ROADMAP.md](milestones/v1.4-ROADMAP.md) for full details.
 
@@ -218,11 +235,11 @@ Phases execute in numeric order: 11 → 12 → 13 → 14 → 15 → 16 → 17 �
 | 12. YAML Editor Enhancements | v1.6 | 3/3 | ✅ Complete | 2026-02-12 |
 | 13. Log Viewer | v1.6 | 3/3 | ✅ Complete | 2026-02-12 |
 | 14. Config Management | v1.6 | 3/3 | ✅ Complete | 2026-02-12 |
-| 15. Debug Simulator | v1.6 | 3/3 | Complete | 2026-02-12 |
-| 16. Onboarding | v1.6 | 2/2 | Complete | 2026-02-12 |
+| 15. Debug Simulator | v1.6 | 3/3 | ✅ Complete | 2026-02-12 |
+| 16. Onboarding | v1.6 | 2/2 | ✅ Complete | 2026-02-12 |
 | 17. E2E Testing | v1.6 | 2/2 | ✅ Complete | 2026-02-11 |
 | 18. OpenCode Plugin Integration | v1.7 | 3/3 | ✅ Complete | 2026-02-13 |
-| 19. Gemini Hook Support | v1.7 | 0/3 | Superseded by Phase 20 | - |
+| 19. Gemini Hook Support | v1.7 | 3/3 | Superseded by Phase 20 | 2026-02-12 |
 | 20. Gemini CLI Support | v1.7 | 5/5 | ✅ Complete | 2026-02-12 |
 | 21. Copilot CLI Support | v1.7 | 4/4 | ✅ Complete | 2026-02-13 |
 | 22. Tool Name Canonicalization | v1.8 | 2/2 | ✅ Complete | 2026-02-20 |
@@ -279,7 +296,7 @@ Plans:
 
 **Milestone Goal:** Headless multi-CLI E2E/UAT test harness validating real integration behavior across 5 agent CLIs. Each CLI gets its own phase with full E2E testing. RuleZ-only scope.
 
-**Shared context:** [E2E-CONTEXT.md](phases/e2e-multi-cli-harness/E2E-CONTEXT.md)
+**Shared context:** [E2E-CONTEXT.md](E2E-CONTEXT.md)
 
 **Note:** Phases 24, 26, 27 moved to v2.1 milestone for continued E2E work.
 
