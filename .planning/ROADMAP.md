@@ -14,7 +14,7 @@
 - ✅ **v1.8 Tool Name Canonicalization** — Phase 22 (shipped 2026-02-22)
 - ✅ **v1.9 Multi-CLI E2E Testing** — Phases 23, 25 (shipped 2026-03-05)
 - ✅ **v2.0 RuleZ Cleanup and Hardening** — Phase 28 (shipped 2026-03-05)
-- 🔄 **v2.1 Multi-CLI E2E Testing (continued)** — Phases 24, 26, 27
+- ✅ **v2.1 Multi-CLI E2E Testing (continued)** — Phases 24, 26, 27 (shipped 2026-03-09)
 
 ---
 
@@ -307,8 +307,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 24-01-PLAN.md — Gemini adapter library, fixtures, and run.sh integration
-- [ ] 24-02-PLAN.md — 4 Gemini E2E scenarios (install, hook-fire, deny, inject)
+- [x] 24-01-PLAN.md — Gemini adapter library, fixtures, and run.sh integration
+- [x] 24-02-PLAN.md — 4 Gemini E2E scenarios (install, hook-fire, deny, inject)
 
 ### Phase 25: Copilot CLI E2E Testing
 **Goal**: Add Copilot CLI adapter + scenarios to the existing E2E harness
@@ -349,7 +349,7 @@ Plans:
 
 | 23. Claude Code CLI E2E Testing | v1.9 | 2/2 | ✅ Complete | 2026-02-23 |
 | 25. Copilot CLI E2E Testing | v1.9 | 3/3 | ✅ Complete | 2026-02-23 |
-| 24. Gemini CLI E2E Testing | v2.1 | 0/2 | Pending | - |
+| 24. Gemini CLI E2E Testing | v2.1 | 2/2 | ✅ Complete | 2026-02-23 |
 | 26. OpenCode CLI E2E Testing | v2.1 | 1/1 | ✅ Complete | 2026-03-06 |
 | 27. Codex CLI E2E Testing | v2.1 | 1/1 | ✅ Complete | 2026-03-09 |
 
@@ -391,12 +391,12 @@ Phase 28 complete — all 8 plans executed across 4 waves. See Phase 28 section 
 
 ---
 
-## 🔄 v2.1 Multi-CLI E2E Testing (Continued)
+## ✅ v2.1 Multi-CLI E2E Testing (Continued) — Complete
 
 **Milestone Goal:** Complete remaining CLI E2E testing for Gemini, OpenCode, and Codex.
 
-Phases 24, 26, 27 moved from v1.9 — see phase details above.
+Phases 24, 26, 27 moved from v1.9 — all three phases complete.
 
 ---
 
-*Created 2026-02-06 — Updated 2026-03-09 Phases 26 & 27 complete (OpenCode + Codex E2E). Only Phase 24 (Gemini) remains for v2.1.*
+*Created 2026-02-06 — Updated 2026-03-09 v2.1 milestone complete (Phases 24, 26, 27 all done).*
