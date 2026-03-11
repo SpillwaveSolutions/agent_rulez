@@ -1,6 +1,6 @@
 # RuleZ Roadmap
 
-**Current Focus:** v2.1 Multi-CLI E2E Testing — Phases 24, 26, 27
+**Current Focus:** All milestones complete (v1.2–v2.1). Releasing v2.1.0.
 
 ---
 
