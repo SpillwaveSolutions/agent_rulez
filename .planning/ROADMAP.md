@@ -414,6 +414,22 @@ Phase 28 complete — all 8 plans executed across 4 waves. See Phase 28 section 
 
 Phases 24, 26, 27 moved from v1.9 — all three phases complete.
 
+### Phase 29: v2.2.1 cleanup — sync skills, CLI help, and UI integration
+
+**Goal:** Rename stale release-cch skill to release-rulez, document missing CLI commands in mastering-hooks, and wire ConfigDiffView into UI navigation
+**Requirements**: CLEANUP-01, CLEANUP-02, CLEANUP-03, CLEANUP-04, CLEANUP-05
+**Depends on:** Phase 28
+**Success Criteria** (what must be TRUE):
+  1. No "cch" references remain in skill directories (.claude/skills/ and .opencode/skill/)
+  2. preflight-check.sh uses correct workspace-level paths
+  3. mastering-hooks cli-commands.md documents all CLI commands including test, lint, upgrade, and platform installs
+  4. ConfigDiffView is accessible via "Diff" button in UI header
+**Plans:** 2 plans
+
+Plans:
+- [ ] 29-01-PLAN.md — Rename release-cch to release-rulez + fix cch references in both skill copies
+- [ ] 29-02-PLAN.md — Add missing CLI commands to mastering-hooks + wire ConfigDiffView into UI
+
 ---
 
-*Created 2026-02-06 — Updated 2026-03-09 v2.1 milestone complete (Phases 24, 26, 27 all done).*
+*Created 2026-02-06 — Updated 2026-03-12 Phase 29 planned (v2.2.1 cleanup).*
