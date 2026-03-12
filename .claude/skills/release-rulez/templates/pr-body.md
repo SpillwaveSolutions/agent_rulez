@@ -1,6 +1,6 @@
 ## Summary
 
-Prepare for the v${VERSION} release of Claude Context Hooks (CCH).
+Prepare for the v${VERSION} release of RuleZ.
 
 ## Changes
 
@@ -34,7 +34,7 @@ Prepare for the v${VERSION} release of Claude Context Hooks (CCH).
 
 4. Verify release:
    ```bash
-   .claude/skills/release-cch/scripts/verify-release.sh
+   .claude/skills/release-rulez/scripts/verify-release.sh
    ```
 
 ## Build Targets
