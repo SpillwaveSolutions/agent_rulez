@@ -120,11 +120,28 @@ enum Commands {
         #[command(subcommand)]
         subcommand: OpenCodeSubcommand,
     },
+    /// Run batch test scenarios from a YAML file
+    Test {
+        /// Path to test scenarios YAML file
+        test_file: String,
+        /// Show detailed output for each test case
+        #[arg(short, long)]
+        verbose: bool,
+    },
     /// Check for and install newer rulez binary releases
     Upgrade {
         /// Only check for updates, do not install
         #[arg(long)]
         check: bool,
+    },
+    /// Analyze rule quality and detect issues
+    Lint {
+        /// Path to configuration file
+        #[arg(short, long)]
+        config: Option<String>,
+        /// Show detailed analysis
+        #[arg(short, long)]
+        verbose: bool,
     },
 }
 
@@ -230,15 +247,15 @@ async fn main() -> Result<()> {
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .init();
 
-    // Initialize the global logger for audit trails
-    if let Err(e) = logging::init_global_logger() {
-        tracing::warn!("Failed to initialize logger: {}", e);
-    }
-
     let cli = Cli::parse();
 
     // Load config to get settings for DebugConfig
     let config = config::Config::load(None)?;
+
+    // Initialize the global logger with external backends from config
+    if let Err(e) = logging::init_global_logger_with_config(&config.settings.logging) {
+        tracing::warn!("Failed to initialize logger: {}", e);
+    }
 
     match cli.command {
         Some(Commands::Init {
@@ -362,8 +379,14 @@ async fn main() -> Result<()> {
                 cli::opencode_hook::run(cli.debug_logs).await?;
             }
         },
+        Some(Commands::Test { test_file, verbose }) => {
+            cli::test::run(test_file, verbose).await?;
+        }
         Some(Commands::Upgrade { check }) => {
             cli::upgrade::run(check).await?;
+        }
+        Some(Commands::Lint { config, verbose }) => {
+            cli::lint::run(config, verbose).await?;
         }
         None => {
             // No subcommand provided, read from stdin for hook processing

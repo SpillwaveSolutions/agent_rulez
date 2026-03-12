@@ -43,6 +43,10 @@ pub struct Settings {
     /// Enable debug logging with full event and rule details
     #[serde(default = "default_debug_logs")]
     pub debug_logs: bool,
+
+    /// External logging backend configuration
+    #[serde(default)]
+    pub logging: crate::logging::LoggingConfig,
 }
 
 fn default_log_level() -> String {
@@ -87,6 +91,7 @@ impl Default for Settings {
             script_timeout: default_script_timeout(),
             fail_open: default_fail_open(),
             debug_logs: default_debug_logs(),
+            logging: crate::logging::LoggingConfig::default(),
         }
     }
 }

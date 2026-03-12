@@ -1,0 +1,27 @@
+# Test scenarios for `rulez test` command
+# Works with the default hooks.yaml from `rulez init`
+
+tests:
+  - name: "block force push to main"
+    event_type: PreToolUse
+    tool: Bash
+    command: "git push --force origin main"
+    expected: block
+
+  - name: "block hard reset"
+    event_type: PreToolUse
+    tool: Bash
+    command: "git reset --hard HEAD~3"
+    expected: block
+
+  - name: "allow normal git push"
+    event_type: PreToolUse
+    tool: Bash
+    command: "git push origin feature-branch"
+    expected: allow
+
+  - name: "allow echo command"
+    event_type: PreToolUse
+    tool: Bash
+    command: "echo hello world"
+    expected: allow

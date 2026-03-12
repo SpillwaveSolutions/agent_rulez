@@ -41,7 +41,7 @@ impl SimEventType {
         }
     }
 
-    fn from_str(s: &str) -> Option<Self> {
+    pub fn parse_event_type(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "pretooluse" | "pre" | "pre-tool-use" => Some(SimEventType::PreToolUse),
             "posttooluse" | "post" | "post-tool-use" => Some(SimEventType::PostToolUse),
@@ -107,7 +107,7 @@ pub async fn run(
         REGEX_CACHE.lock().unwrap().clear();
     }
 
-    let event_type = SimEventType::from_str(&event_type).context(format!(
+    let event_type = SimEventType::parse_event_type(&event_type).context(format!(
         "Unknown event type: '{}'\nValid types: PreToolUse, PostToolUse, SessionStart, PermissionRequest, UserPromptSubmit, SessionEnd, PreCompact, BeforeAgent, AfterAgent",
         event_type
     ))?;
@@ -403,7 +403,7 @@ fn extract_event_input(event: &Event) -> Option<String> {
 }
 
 /// Build a simulated event
-fn build_event(
+pub fn build_event(
     event_type: SimEventType,
     tool: Option<String>,
     command: Option<String>,
