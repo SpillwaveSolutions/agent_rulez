@@ -5,6 +5,22 @@ All notable changes to RuleZ (AI Policy Engine) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-03-12
+
+### Added
+
+- **Subagent hook patterns** (Phase 29) — `agent-inline-hooks.md` reference, updated rule-patterns, troubleshooting guide, and hooks template with subagent examples
+- **`rulez test`** (Phase 30) — Batch test command runs multiple event scenarios from a YAML file with pass/fail summary
+- **External logging backends** (Phase 33) — OTLP, Datadog, and Splunk integrations via curl subprocess transport with fallback to local JSON Lines
+- **BeforeAgent event guide** (Phase 32) — Event scoping documentation, platform support table, and Issue #107 resolution
+- **Config diff view** (Phase 34) — Side-by-side global vs project config comparison in rulez-ui using Monaco DiffEditor
+- **API documentation** (Phase 35) — Event schema and config schema reference docs, expanded rustdoc for library crate
+- **`rulez lint`** (Phase 36) — Rule quality analysis with 9 checks: duplicate names, empty matchers, conflicting actions, overlapping rules, dead rules, missing descriptions, invalid regex, glob consolidation, missing priority
+
+### Changed
+
+- Cold-start performance baseline established (Phase 31) — moved CLI parse before config init
+
 ## [2.1.0] - 2026-03-10
 
 ### Added
