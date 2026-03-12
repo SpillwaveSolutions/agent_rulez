@@ -93,6 +93,25 @@ rulez repl              # Interactive debug mode
 - Project config: `.claude/hooks.yaml`
 - Logs: `~/.claude/logs/rulez.log`
 
+## GitHub CLI Setup
+
+**CRITICAL: Switch to personal account before any `gh` operations (PRs, issues, etc.).**
+
+```bash
+# Check which account is active
+gh auth status
+
+# Switch to personal account (EMU account cannot create PRs)
+gh auth switch --user RichardHightower
+```
+
+## GCloud Auth
+
+```bash
+gcloud auth login
+gcloud auth application-default login
+```
+
 ## Pre-Push Checklist
 
 **CRITICAL: Always run the FULL CI pipeline locally before pushing or creating PRs. ALL steps must pass.**
