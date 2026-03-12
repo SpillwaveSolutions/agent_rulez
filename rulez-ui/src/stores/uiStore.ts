@@ -1,7 +1,7 @@
 import { create } from "zustand";
 
 export type RightPanelTab = "simulator" | "tree" | "settings";
-export type MainView = "editor" | "logs";
+export type MainView = "editor" | "logs" | "diff";
 
 interface UIState {
   sidebarOpen: boolean;
