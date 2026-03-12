@@ -36,7 +36,6 @@ export function ConfigDiffView() {
   const [globalConfig, setGlobalConfig] = useState<ConfigState>(EMPTY_CONFIG);
   const [projectConfig, setProjectConfig] = useState<ConfigState>(EMPTY_CONFIG);
   const editorFontSize = useSettingsStore((s) => s.settings.editorFontSize);
-  const editorTabSize = useSettingsStore((s) => s.settings.editorTabSize);
   const resolvedTheme = useResolvedTheme();
   const themesDefined = useRef(false);
 
@@ -163,7 +162,6 @@ export function ConfigDiffView() {
               readOnly: true,
               minimap: { enabled: false },
               wordWrap: "off",
-              tabSize: editorTabSize,
               fontSize: editorFontSize,
               lineNumbers: "on",
               renderSideBySide: true,
