@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.1
-milestone_name: Multi-CLI E2E Testing
-status: completed
-stopped_at: All milestones complete — releasing v2.1.0
-last_updated: "2026-03-10T00:00:00.000Z"
-last_activity: "2026-03-10 — v2.1.0 release prep: GSD sync, changelog, version bump"
+milestone: v2.2.1
+milestone_name: Cleanup, Sync Skills, CLI Help & UI Integration
+status: in-progress
+stopped_at: Completed 29-02-PLAN.md
+last_updated: "2026-03-12T23:56:32.000Z"
+last_activity: "2026-03-12 — Phase 29 Plan 02: CLI docs and UI diff view"
 progress:
-  total_phases: 28
+  total_phases: 29
   completed_phases: 28
-  total_plans: 78
-  completed_plans: 78
+  total_plans: 80
+  completed_plans: 80
 ---
 
 # Project State
@@ -20,7 +20,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** LLMs do not enforce policy. LLMs are subject to policy.
-**Current focus:** All milestones complete (v1.2 through v2.1). Releasing v2.1.0.
+**Current focus:** v2.2.1 cleanup — sync skills, CLI help, and UI integration (Phase 29).
 **v2.1:** Multi-CLI E2E Testing (continued) — COMPLETE (Phases 24, 26, 27, shipped 2026-03-09)
 **v2.0:** RuleZ Cleanup and Hardening — COMPLETE (Phase 28, shipped 2026-03-05)
 **v1.9:** Multi-CLI E2E Testing (partial) — COMPLETE (Phases 23, 25, shipped 2026-03-05)
@@ -30,13 +30,13 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 
 ## Current Position
 
-Milestone: v2.1 — Multi-CLI E2E Testing — COMPLETE
-All 28 phases across 10 milestones are complete.
-All 78 plans executed successfully.
-Status: Releasing v2.1.0
-Last activity: 2026-03-10 — v2.1.0 release prep
+Milestone: v2.2.1 — Cleanup, Sync Skills, CLI Help & UI Integration
+Phase: 29 — v2.2.1 cleanup
+Current Plan: 2 of 2 complete (in phase 29)
+Status: In progress
+Last activity: 2026-03-12 — Phase 29 Plan 02 complete (CLI docs + UI diff view)
 
-Next action: Tag and release v2.1.0
+Next action: Continue with remaining plans in phase 29
 
 ## Performance Metrics
 
@@ -76,6 +76,7 @@ Next action: Tag and release v2.1.0
 - Phase 22 added: Tool Name Canonicalization Across Platforms
 - Phases 23-27 added: Multi-CLI E2E Testing (Claude Code, Gemini, Copilot, OpenCode, Codex)
 - Phase 28 added: RuleZ Cleanup and Hardening (all 9 pending todos: regex bug, debug bug, tool_input eval, globset, caching, parallel eval, log worker, skill docs, auto-upgrade)
+- Phase 29 added: v2.2.1 cleanup — sync skills, CLI help, and UI integration
 
 ### Pending Todos
 
@@ -87,8 +88,13 @@ All other todos resolved in Phase 28.
 
 None active.
 
+## Decisions
+
+- Grouped platform CLI commands under "Multi-Platform Commands" heading for mastering-hooks docs
+- Included doctor commands alongside install commands (9 total new entries)
+
 ## Session Continuity
 
-Last session: 2026-03-10
-Stopped at: v2.1.0 release
-Next action: Release v2.1.0
+Last session: 2026-03-12
+Stopped at: Completed 29-02-PLAN.md
+Next action: Continue phase 29 plans

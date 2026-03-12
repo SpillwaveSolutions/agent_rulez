@@ -424,7 +424,7 @@ Phases 24, 26, 27 moved from v1.9 — all three phases complete.
   2. preflight-check.sh uses correct workspace-level paths
   3. mastering-hooks cli-commands.md documents all CLI commands including test, lint, upgrade, and platform installs
   4. ConfigDiffView is accessible via "Diff" button in UI header
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 29-01-PLAN.md — Rename release-cch to release-rulez + fix cch references in both skill copies
