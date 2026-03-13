@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v2.2.1
 milestone_name: Cleanup, Sync Skills, CLI Help & UI Integration
 status: in-progress
-stopped_at: Completed 29-02-PLAN.md
-last_updated: "2026-03-12T23:56:32.000Z"
-last_activity: "2026-03-12 — Phase 29 Plan 02: CLI docs and UI diff view"
+stopped_at: Completed 29-01-PLAN.md
+last_updated: "2026-03-13T00:04:51.000Z"
+last_activity: "2026-03-12 — Phase 29 Plan 01: Rename release-cch skill to release-rulez"
 progress:
   total_phases: 29
   completed_phases: 28
@@ -34,9 +34,9 @@ Milestone: v2.2.1 — Cleanup, Sync Skills, CLI Help & UI Integration
 Phase: 29 — v2.2.1 cleanup
 Current Plan: 2 of 2 complete (in phase 29)
 Status: In progress
-Last activity: 2026-03-12 — Phase 29 Plan 02 complete (CLI docs + UI diff view)
+Last activity: 2026-03-12 — Phase 29 Plans 01 + 02 complete (release skill rename + CLI docs/UI)
 
-Next action: Continue with remaining plans in phase 29
+Next action: Phase 29 complete -- all plans done
 
 ## Performance Metrics
 
@@ -92,9 +92,11 @@ None active.
 
 - Grouped platform CLI commands under "Multi-Platform Commands" heading for mastering-hooks docs
 - Included doctor commands alongside install commands (9 total new entries)
+- Used workspace-level cargo commands in preflight-check.sh instead of cd into cch_cli subdirectory
+- Renamed release-cch skill to release-rulez to match binary rename from commit 39e6185
 
 ## Session Continuity
 
 Last session: 2026-03-12
-Stopped at: Completed 29-02-PLAN.md
-Next action: Continue phase 29 plans
+Stopped at: Completed 29-01-PLAN.md (phase 29 fully complete)
+Next action: Release v2.2.1
