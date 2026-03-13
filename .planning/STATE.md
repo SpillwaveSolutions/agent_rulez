@@ -1,15 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.2.1
-milestone_name: Cleanup, Sync Skills, CLI Help & UI Integration
-status: in-progress
-stopped_at: Completed 29-01-PLAN.md
-last_updated: "2026-03-13T00:04:51.000Z"
-last_activity: "2026-03-12 — Phase 29 Plan 01: Rename release-cch skill to release-rulez"
+milestone: v1.6
+milestone_name: RuleZ UI
+current_plan: 2 of 2 complete (in phase 29)
+status: executing
+stopped_at: Completed 29-01-PLAN.md (phase 29 fully complete)
+last_updated: "2026-03-13T00:09:44.574Z"
+last_activity: 2026-03-12 — Phase 29 Plans 01 + 02 complete (release skill rename + CLI docs/UI)
 progress:
   total_phases: 29
   completed_phases: 28
-  total_plans: 80
+  total_plans: 79
   completed_plans: 80
 ---
 
