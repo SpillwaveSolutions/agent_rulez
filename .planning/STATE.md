@@ -4,10 +4,10 @@ milestone: v2.2.2
 milestone_name: Documentation Audit & Multi-CLI Guides
 status: active
 stopped_at: null
-last_updated: "2026-03-13T03:00:00.000Z"
-last_activity: "2026-03-13 — Milestone v2.2.2 started"
+last_updated: "2026-03-13T04:00:00.000Z"
+last_activity: "2026-03-13 — Roadmap created (4 phases, 11 requirements)"
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,14 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-13)
 
 **Core value:** LLMs do not enforce policy. LLMs are subject to policy.
-**Current focus:** v2.2.2 — Documentation Audit & Multi-CLI Guides
+**Current focus:** v2.2.2 Phase 30 — CLI Reference Docs Update
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 30 (1 of 4) — CLI Reference Docs Update
 Plan: —
-Status: Defining requirements
-Last activity: 2026-03-13 — Milestone v2.2.2 started
+Status: Ready to plan
+Last activity: 2026-03-13 — Roadmap created for v2.2.2 (Phases 30-33)
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -49,6 +51,7 @@ Last activity: 2026-03-13 — Milestone v2.2.2 started
 | v2.0 | 1 | 8 | Complete | 2026-03-05 |
 | v2.1 | 3 | 4 | Complete | 2026-03-09 |
 | v2.2.1 | 1 | 2 | Complete | 2026-03-13 |
+| v2.2.2 | 4 | TBD | In progress | — |
 
 ## Accumulated Context
 
@@ -63,5 +66,5 @@ None active.
 ## Session Continuity
 
 Last session: 2026-03-13
-Stopped at: Defining requirements for v2.2.2
-Next action: Define requirements and create roadmap
+Stopped at: Roadmap created for v2.2.2
+Next action: Plan Phase 30 (CLI Reference Docs Update)

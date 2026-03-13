@@ -49,23 +49,23 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CLIDOC-01 | — | Pending |
-| CLIDOC-02 | — | Pending |
-| CLIDOC-03 | — | Pending |
-| GUIDE-01 | — | Pending |
-| GUIDE-02 | — | Pending |
-| GUIDE-03 | — | Pending |
-| FEAT-01 | — | Pending |
-| FEAT-02 | — | Pending |
-| FEAT-03 | — | Pending |
-| AUDIT-01 | — | Pending |
-| AUDIT-02 | — | Pending |
+| CLIDOC-01 | Phase 30 | Pending |
+| CLIDOC-02 | Phase 30 | Pending |
+| CLIDOC-03 | Phase 30 | Pending |
+| GUIDE-01 | Phase 31 | Pending |
+| GUIDE-02 | Phase 31 | Pending |
+| GUIDE-03 | Phase 31 | Pending |
+| FEAT-01 | Phase 32 | Pending |
+| FEAT-02 | Phase 32 | Pending |
+| FEAT-03 | Phase 32 | Pending |
+| AUDIT-01 | Phase 33 | Pending |
+| AUDIT-02 | Phase 33 | Pending |
 
 **Coverage:**
 - v2.2.2 requirements: 11 total
-- Mapped to phases: 0
-- Unmapped: 11 (pending roadmap)
+- Mapped to phases: 11
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-13*
-*Last updated: 2026-03-13 after initial definition*
+*Last updated: 2026-03-13 after roadmap creation*
