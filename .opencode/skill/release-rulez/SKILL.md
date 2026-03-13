@@ -1,13 +1,13 @@
 ---
-name: release-cch
-description: CCH release workflow automation. Use when asked to "release CCH", "create a release", "prepare release", "tag version", "hotfix release", or "publish CCH". Covers version management from Cargo.toml, changelog generation from conventional commits, PR creation, tagging, hotfix workflows, and GitHub Actions release monitoring.
+name: release-rulez
+description: RuleZ release workflow automation. Use when asked to "release RuleZ", "create a release", "prepare release", "tag version", "hotfix release", or "publish RuleZ". Covers version management from Cargo.toml, changelog generation from conventional commits, PR creation, tagging, hotfix workflows, and GitHub Actions release monitoring.
 metadata:
   version: "1.0.0"
-  project: "cch"
+  project: "rulez"
   source_of_truth: "Cargo.toml"
 ---
 
-# release-cch
+# release-rulez
 
 ## Contents
 
@@ -35,11 +35,11 @@ version = "1.0.0"
 
 | Platform | Target | Asset |
 |----------|--------|-------|
-| Linux x86_64 | x86_64-unknown-linux-gnu | cch-linux-x86_64.tar.gz |
-| Linux ARM64 | aarch64-unknown-linux-gnu | cch-linux-aarch64.tar.gz |
-| macOS Intel | x86_64-apple-darwin | cch-macos-x86_64.tar.gz |
-| macOS Apple Silicon | aarch64-apple-darwin | cch-macos-aarch64.tar.gz |
-| Windows | x86_64-pc-windows-msvc | cch-windows-x86_64.exe.zip |
+| Linux x86_64 | x86_64-unknown-linux-gnu | rulez-linux-x86_64.tar.gz |
+| Linux ARM64 | aarch64-unknown-linux-gnu | rulez-linux-aarch64.tar.gz |
+| macOS Intel | x86_64-apple-darwin | rulez-macos-x86_64.tar.gz |
+| macOS Apple Silicon | aarch64-apple-darwin | rulez-macos-aarch64.tar.gz |
+| Windows | x86_64-pc-windows-msvc | rulez-windows-x86_64.exe.zip |
 
 **Repository**: `SpillwaveSolutions/code_agent_context_hooks`
 
@@ -67,7 +67,7 @@ What do you need?
 
 ```bash
 # Run from repo root
-.opencode/skill/release-cch/scripts/read-version.sh
+.opencode/skill/release-rulez/scripts/read-version.sh
 # Output: 1.0.0
 ```
 
@@ -89,14 +89,14 @@ version = "1.1.0"  # <- Update this
 ### 1.3 Create Release Branch
 
 ```bash
-VERSION=$(.opencode/skill/release-cch/scripts/read-version.sh)
+VERSION=$(.opencode/skill/release-rulez/scripts/read-version.sh)
 git checkout -b release/v${VERSION}
 ```
 
 ### 1.4 Run Pre-flight Checks
 
 ```bash
-.opencode/skill/release-cch/scripts/preflight-check.sh
+.opencode/skill/release-rulez/scripts/preflight-check.sh
 ```
 
 This validates:
@@ -107,13 +107,13 @@ This validates:
 - [ ] Clippy has no warnings
 - [ ] Format check passes
 
-**IMPORTANT:** Integration tests are REQUIRED before any release. They validate that CCH works correctly with the real Claude CLI end-to-end. If Claude CLI is not installed, the preflight check will warn but not block - however, you should ensure integration tests pass in CI before releasing.
+**IMPORTANT:** Integration tests are REQUIRED before any release. They validate that RuleZ works correctly with the real Claude CLI end-to-end. If Claude CLI is not installed, the preflight check will warn but not block - however, you should ensure integration tests pass in CI before releasing.
 
 ### 1.5 Generate Changelog
 
 ```bash
-VERSION=$(.opencode/skill/release-cch/scripts/read-version.sh)
-.opencode/skill/release-cch/scripts/generate-changelog.sh ${VERSION}
+VERSION=$(.opencode/skill/release-rulez/scripts/read-version.sh)
+.opencode/skill/release-rulez/scripts/generate-changelog.sh ${VERSION}
 ```
 
 Review the output and update `CHANGELOG.md` as needed. The script parses conventional commits (`feat:`, `fix:`, `docs:`, `chore:`).
@@ -121,7 +121,7 @@ Review the output and update `CHANGELOG.md` as needed. The script parses convent
 ### 1.6 Commit and Push
 
 ```bash
-VERSION=$(.opencode/skill/release-cch/scripts/read-version.sh)
+VERSION=$(.opencode/skill/release-rulez/scripts/read-version.sh)
 git add CHANGELOG.md Cargo.toml
 git commit -m "chore: prepare v${VERSION} release"
 git push -u origin release/v${VERSION}
@@ -130,13 +130,13 @@ git push -u origin release/v${VERSION}
 ### 1.7 Create Release PR
 
 ```bash
-VERSION=$(.opencode/skill/release-cch/scripts/read-version.sh)
+VERSION=$(.opencode/skill/release-rulez/scripts/read-version.sh)
 gh pr create \
   --title "chore: prepare v${VERSION} release" \
   --body "$(cat <<EOF
 ## Summary
 
-Prepare for the v${VERSION} release of Claude Context Hooks (CCH).
+Prepare for the v${VERSION} release of RuleZ.
 
 ## Changes
 
@@ -174,11 +174,11 @@ gh pr checks <PR_NUMBER> --watch
 All checks must pass before merging:
 
 - Format, Clippy, Unit Tests, Code Coverage
-- **Integration Tests** (CCH + Claude CLI end-to-end validation)
+- **Integration Tests** (RuleZ + Claude CLI end-to-end validation)
 - Build Release (5 platforms)
 - CI Success
 
-**Note:** Integration tests validate that CCH hooks work correctly with the real Claude CLI. These are critical gate checks - do NOT skip them.
+**Note:** Integration tests validate that RuleZ hooks work correctly with the real Claude CLI. These are critical gate checks - do NOT skip them.
 
 ---
 
@@ -200,7 +200,7 @@ git pull
 ### 2.3 Create and Push Tag
 
 ```bash
-VERSION=$(.opencode/skill/release-cch/scripts/read-version.sh)
+VERSION=$(.opencode/skill/release-rulez/scripts/read-version.sh)
 git tag v${VERSION}
 git push origin v${VERSION}
 ```
@@ -214,7 +214,7 @@ This triggers the release workflow automatically.
 ### 3.1 Monitor Workflow
 
 ```bash
-.opencode/skill/release-cch/scripts/verify-release.sh
+.opencode/skill/release-rulez/scripts/verify-release.sh
 ```
 
 Or manually:
@@ -227,17 +227,17 @@ gh run view <RUN_ID> --watch
 ### 3.2 Verify Release Assets
 
 ```bash
-VERSION=$(.opencode/skill/release-cch/scripts/read-version.sh)
+VERSION=$(.opencode/skill/release-rulez/scripts/read-version.sh)
 gh release view v${VERSION}
 ```
 
 Expected assets (6 total):
 
-- cch-linux-x86_64.tar.gz
-- cch-linux-aarch64.tar.gz
-- cch-macos-x86_64.tar.gz
-- cch-macos-aarch64.tar.gz
-- cch-windows-x86_64.exe.zip
+- rulez-linux-x86_64.tar.gz
+- rulez-linux-aarch64.tar.gz
+- rulez-macos-x86_64.tar.gz
+- rulez-macos-aarch64.tar.gz
+- rulez-windows-x86_64.exe.zip
 - checksums.txt
 
 ### 3.3 Announce Release
@@ -270,7 +270,7 @@ git checkout -b hotfix/v1.0.1
 Make the minimal fix needed, then run checks:
 
 ```bash
-cd cch_cli && cargo fmt && cargo clippy --all-targets --all-features -- -D warnings && cargo test
+cargo fmt --all && cargo clippy --all-targets --all-features --workspace -- -D warnings && cargo test --tests --all-features --workspace
 ```
 
 ### 4.3 Update Version
@@ -334,14 +334,14 @@ git push origin v1.0.1
 ### 4.8 Verify Hotfix Release
 
 ```bash
-.opencode/skill/release-cch/scripts/verify-release.sh 1.0.1
+.opencode/skill/release-rulez/scripts/verify-release.sh 1.0.1
 ```
 
 ---
 
 ## Integration Tests (Required)
 
-Integration tests validate CCH works correctly with the real Claude CLI. **These must pass before any release.**
+Integration tests validate RuleZ works correctly with the real Claude CLI. **These must pass before any release.**
 
 ### Running Integration Tests
 
@@ -363,22 +363,22 @@ task integration-test-quick
 
 | Test | What It Validates |
 |------|-------------------|
-| `01-block-force-push` | CCH blocks dangerous git operations |
-| `02-context-injection` | CCH injects context for file types |
-| `03-session-logging` | CCH creates proper audit logs |
-| `04-permission-explanations` | CCH provides permission context |
+| `01-block-force-push` | RuleZ blocks dangerous git operations |
+| `02-context-injection` | RuleZ injects context for file types |
+| `03-session-logging` | RuleZ creates proper audit logs |
+| `04-permission-explanations` | RuleZ provides permission context |
 
 ### Prerequisites
 
 - Claude CLI installed and in PATH
-- CCH binary built (auto-built by test runner)
+- RuleZ binary built (auto-built by test runner)
 
 ### If Tests Fail
 
 1. Check Claude CLI is installed: `which claude`
-2. Check CCH builds: `cd cch_cli && cargo build --release`
+2. Check RuleZ builds: `cargo build --release`
 3. Run with debug: `DEBUG=1 ./test/integration/run-all.sh`
-4. Check logs: `~/.claude/logs/cch.log`
+4. Check logs: `~/.claude/logs/rulez.log`
 
 For details, see [Integration Test README](../../../test/integration/README.md).
 
@@ -393,7 +393,7 @@ For details, see [Integration Test README](../../../test/integration/README.md).
 | `preflight-check.sh` | Run all pre-release checks (includes integration tests) | `./scripts/preflight-check.sh [--json]` |
 | `verify-release.sh` | Monitor release workflow status | `./scripts/verify-release.sh [version]` |
 
-All scripts are located in `.opencode/skill/release-cch/scripts/`.
+All scripts are located in `.opencode/skill/release-rulez/scripts/`.
 
 ---
 
@@ -412,14 +412,14 @@ All scripts are located in `.opencode/skill/release-cch/scripts/`.
 ```bash
 # 1. Update version in Cargo.toml manually
 # 2. Create release branch
-VERSION=$(.opencode/skill/release-cch/scripts/read-version.sh)
+VERSION=$(.opencode/skill/release-rulez/scripts/read-version.sh)
 git checkout -b release/v${VERSION}
 
 # 3. Run checks
-.opencode/skill/release-cch/scripts/preflight-check.sh
+.opencode/skill/release-rulez/scripts/preflight-check.sh
 
 # 4. Generate changelog, review, commit
-.opencode/skill/release-cch/scripts/generate-changelog.sh ${VERSION}
+.opencode/skill/release-rulez/scripts/generate-changelog.sh ${VERSION}
 # Edit CHANGELOG.md as needed
 git add CHANGELOG.md Cargo.toml
 git commit -m "chore: prepare v${VERSION} release"
@@ -436,7 +436,7 @@ git tag v${VERSION}
 git push origin v${VERSION}
 
 # 7. Verify
-.opencode/skill/release-cch/scripts/verify-release.sh
+.opencode/skill/release-rulez/scripts/verify-release.sh
 ```
 
 ### Hotfix Release

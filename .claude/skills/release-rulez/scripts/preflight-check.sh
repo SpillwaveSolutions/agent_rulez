@@ -1,25 +1,15 @@
 #!/bin/bash
 #
 # preflight-check.sh
-# Pre-release verification checks for CCH
+# Pre-release verification checks for RuleZ
 #
 # Usage: ./preflight-check.sh [--json]
-#
-# Checks:
-# - Working directory status
-# - Current branch (main or release/*)
-# - cargo fmt --check
-# - cargo clippy (no warnings)
-# - cargo test (all pass)
-#
-# Exit codes:
-# - 0: All checks pass
-# - 1: One or more checks failed
 #
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Path: .claude/skills/release-rulez/scripts/ -> need to go up 4 levels
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 JSON_OUTPUT=false
 
@@ -65,7 +55,7 @@ check_info() {
 
 # Header
 $JSON_OUTPUT || echo ""
-$JSON_OUTPUT || echo -e "${BLUE}CCH Release Pre-flight Checks${NC}"
+$JSON_OUTPUT || echo -e "${BLUE}RuleZ Release Pre-flight Checks${NC}"
 $JSON_OUTPUT || echo "=============================="
 $JSON_OUTPUT || echo ""
 
@@ -93,38 +83,35 @@ fi
 
 # Check 3: Format check
 check_info "Running cargo fmt --check..."
-cd "$REPO_ROOT/cch_cli"
-if cargo fmt --check > /dev/null 2>&1; then
+if cargo fmt --all --check > /dev/null 2>&1; then
     check_pass "cargo fmt --check passes"
 else
-    check_fail "cargo fmt --check failed - run 'cd cch_cli && cargo fmt'"
+    check_fail "cargo fmt --check failed - run 'cargo fmt --all'"
 fi
 
 # Check 4: Clippy
 check_info "Running cargo clippy..."
-if cargo clippy --all-targets --all-features -- -D warnings > /dev/null 2>&1; then
+if cargo clippy --all-targets --all-features --workspace -- -D warnings > /dev/null 2>&1; then
     check_pass "cargo clippy passes (no warnings)"
 else
     check_fail "cargo clippy has warnings/errors"
-    $JSON_OUTPUT || echo "  Run: cd cch_cli && cargo clippy --all-targets --all-features -- -D warnings"
+    $JSON_OUTPUT || echo "  Run: cargo clippy --all-targets --all-features --workspace -- -D warnings"
 fi
 
 # Check 5: Unit Tests
 check_info "Running cargo test..."
-TEST_OUTPUT=$(cargo test 2>&1)
+TEST_OUTPUT=$(cargo test --tests --all-features --workspace 2>&1)
 if echo "$TEST_OUTPUT" | grep -q "test result: ok"; then
     TEST_SUMMARY=$(echo "$TEST_OUTPUT" | grep "test result:" | head -1)
     check_pass "All unit tests pass: $TEST_SUMMARY"
 else
     check_fail "Unit tests failed"
-    $JSON_OUTPUT || echo "  Run: cd cch_cli && cargo test"
+    $JSON_OUTPUT || echo "  Run: cargo test --tests --all-features --workspace"
 fi
 
 # Check 5b: Integration Tests
 check_info "Running integration tests..."
-cd "$REPO_ROOT"
 if [ -x "$REPO_ROOT/test/integration/run-all.sh" ]; then
-    # Check if Claude CLI is available
     if command -v claude &> /dev/null; then
         INTEGRATION_OUTPUT=$("$REPO_ROOT/test/integration/run-all.sh" 2>&1) || true
         if echo "$INTEGRATION_OUTPUT" | grep -q "All tests passed"; then
@@ -135,21 +122,16 @@ if [ -x "$REPO_ROOT/test/integration/run-all.sh" ]; then
         else
             check_fail "Integration tests failed"
             $JSON_OUTPUT || echo "  Run: ./test/integration/run-all.sh"
-            $JSON_OUTPUT || echo "  Or: task integration-test"
         fi
     else
         check_warn "Claude CLI not available - skipping integration tests"
-        $JSON_OUTPUT || echo "  Integration tests require Claude CLI to be installed"
-        $JSON_OUTPUT || echo "  Install: https://docs.anthropic.com/en/docs/claude-code"
     fi
 else
-    check_fail "Integration test runner not found at test/integration/run-all.sh"
+    check_fail "Integration test runner not found"
 fi
-cd "$REPO_ROOT/cch_cli"
 
 # Check 6: Version in Cargo.toml
 check_info "Checking version..."
-cd "$REPO_ROOT"
 VERSION=$("$SCRIPT_DIR/read-version.sh" 2>/dev/null || echo "")
 if [ -n "$VERSION" ]; then
     check_pass "Version: $VERSION"

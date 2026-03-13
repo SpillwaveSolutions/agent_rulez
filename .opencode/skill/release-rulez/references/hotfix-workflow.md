@@ -1,4 +1,4 @@
-# CCH Hotfix Workflow
+# RuleZ Hotfix Workflow
 
 ## When to Use
 
@@ -21,37 +21,37 @@ Use a hotfix workflow when:
 
 ```
                     main branch
-                         │
-    v1.0.0 ──────────────┼──────────────────────── v1.1.0 (future)
-       │                 │
-       │                 │
-       ▼                 │
-  ┌─────────┐            │
-  │ Hotfix  │            │
-  │ Branch  │            │
-  └────┬────┘            │
-       │                 │
-       ▼                 │
-  hotfix/v1.0.1          │
-       │                 │
-       ├── Fix bug       │
-       ├── Update version│
-       ├── Update changelog
-       │                 │
-       ▼                 │
-   Create PR ────────────┤
-       │                 │
-       ▼                 │
-   Merge to main ────────┤
-       │                 │
-       ▼                 │
-   git tag v1.0.1        │
-       │                 │
-       ▼                 │
-   Release workflow      │
-       │                 │
-       ▼                 │
-   v1.0.1 released       │
+                         |
+    v1.0.0 --------------+-------------------------- v1.1.0 (future)
+       |                 |
+       |                 |
+       v                 |
+  +---------+            |
+  | Hotfix  |            |
+  | Branch  |            |
+  +----+----+            |
+       |                 |
+       v                 |
+  hotfix/v1.0.1          |
+       |                 |
+       +-- Fix bug       |
+       +-- Update version|
+       +-- Update changelog
+       |                 |
+       v                 |
+   Create PR ------------+
+       |                 |
+       v                 |
+   Merge to main --------+
+       |                 |
+       v                 |
+   git tag v1.0.1        |
+       |                 |
+       v                 |
+   Release workflow      |
+       |                 |
+       v                 |
+   v1.0.1 released       |
 ```
 
 ## Step-by-Step
@@ -81,10 +81,9 @@ Make the minimal fix needed. Keep changes focused on the issue.
 # ...
 
 # Run all checks
-cd cch_cli
-cargo fmt
-cargo clippy --all-targets --all-features -- -D warnings
-cargo test
+cargo fmt --all
+cargo clippy --all-targets --all-features --workspace -- -D warnings
+cargo test --tests --all-features --workspace
 ```
 
 ### 3. Update Version
@@ -170,7 +169,7 @@ git push origin v1.0.1
 ### 9. Verify
 
 ```bash
-.opencode/skill/release-cch/scripts/verify-release.sh 1.0.1
+.opencode/skill/release-rulez/scripts/verify-release.sh 1.0.1
 ```
 
 ## Important Notes
@@ -193,19 +192,19 @@ git push origin v1.0.1
 
 ```
 v1.0.0  (initial release)
-   │
-   ├── Bug found in production
-   │
-   ▼
+   |
+   +-- Bug found in production
+   |
+   v
 v1.0.1  (hotfix for critical bug)
-   │
-   ├── Another bug found
-   │
-   ▼
+   |
+   +-- Another bug found
+   |
+   v
 v1.0.2  (another hotfix)
 
 Meanwhile, main branch continues:
-v1.0.0 ──► development ──► v1.1.0 (includes v1.0.1, v1.0.2 fixes)
+v1.0.0 --> development --> v1.1.0 (includes v1.0.1, v1.0.2 fixes)
 ```
 
 ## Cherry-picking (Advanced)

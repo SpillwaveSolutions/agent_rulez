@@ -184,9 +184,9 @@ Step-by-step process:
 </skill>
 
 <skill>
-<name>release-cch</name>
-<description>CCH release workflow automation. Use when asked to "release CCH", "create a release", "prepare release", "tag version", "hotfix release", or "publish CCH". Covers version management from Cargo.toml, changelog generation from conventional commits, PR creation, tagging, hotfix workflows, and GitHub Actions release monitoring.</description>
-<location>.opencode/skill/release-cch/SKILL.md</location>
+<name>release-rulez</name>
+<description>RuleZ release workflow automation. Use when asked to "release RuleZ", "create a release", "prepare release", "tag version", "hotfix release", or "publish RuleZ". Covers version management from Cargo.toml, changelog generation from conventional commits, PR creation, tagging, hotfix workflows, and GitHub Actions release monitoring.</description>
+<location>.opencode/skill/release-rulez/SKILL.md</location>
 </skill>
 
 <skill>

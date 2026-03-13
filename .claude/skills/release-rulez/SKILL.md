@@ -1,13 +1,13 @@
 ---
-name: release-cch
-description: CCH release workflow automation. Use when asked to "release CCH", "create a release", "prepare release", "tag version", "hotfix release", or "publish CCH". Covers version management from Cargo.toml, changelog generation from conventional commits, PR creation, tagging, hotfix workflows, and GitHub Actions release monitoring.
+name: release-rulez
+description: RuleZ release workflow automation. Use when asked to "release RuleZ", "create a release", "prepare release", "tag version", "hotfix release", or "publish RuleZ". Covers version management from Cargo.toml, changelog generation from conventional commits, PR creation, tagging, hotfix workflows, and GitHub Actions release monitoring.
 metadata:
   version: "1.0.0"
-  project: "cch"
+  project: "rulez"
   source_of_truth: "Cargo.toml"
 ---
 
-# release-cch
+# release-rulez
 
 ## Contents
 
@@ -35,11 +35,11 @@ version = "1.0.0"
 
 | Platform | Target | Asset |
 |----------|--------|-------|
-| Linux x86_64 | x86_64-unknown-linux-gnu | cch-linux-x86_64.tar.gz |
-| Linux ARM64 | aarch64-unknown-linux-gnu | cch-linux-aarch64.tar.gz |
-| macOS Intel | x86_64-apple-darwin | cch-macos-x86_64.tar.gz |
-| macOS Apple Silicon | aarch64-apple-darwin | cch-macos-aarch64.tar.gz |
-| Windows | x86_64-pc-windows-msvc | cch-windows-x86_64.exe.zip |
+| Linux x86_64 | x86_64-unknown-linux-gnu | rulez-linux-x86_64.tar.gz |
+| Linux ARM64 | aarch64-unknown-linux-gnu | rulez-linux-aarch64.tar.gz |
+| macOS Intel | x86_64-apple-darwin | rulez-macos-x86_64.tar.gz |
+| macOS Apple Silicon | aarch64-apple-darwin | rulez-macos-aarch64.tar.gz |
+| Windows | x86_64-pc-windows-msvc | rulez-windows-x86_64.exe.zip |
 
 **Repository**: `SpillwaveSolutions/code_agent_context_hooks`
 
@@ -67,7 +67,7 @@ What do you need?
 
 ```bash
 # Run from repo root
-.claude/skills/release-cch/scripts/read-version.sh
+.claude/skills/release-rulez/scripts/read-version.sh
 # Output: 1.0.0
 ```
 
@@ -89,14 +89,14 @@ version = "1.1.0"  # <- Update this
 ### 1.3 Create Release Branch
 
 ```bash
-VERSION=$(.claude/skills/release-cch/scripts/read-version.sh)
+VERSION=$(.claude/skills/release-rulez/scripts/read-version.sh)
 git checkout -b release/v${VERSION}
 ```
 
 ### 1.4 Run Pre-flight Checks
 
 ```bash
-.claude/skills/release-cch/scripts/preflight-check.sh
+.claude/skills/release-rulez/scripts/preflight-check.sh
 ```
 
 This validates:
@@ -112,14 +112,14 @@ This validates:
 ### 1.5 Generate Changelog
 
 ```bash
-VERSION=$(.claude/skills/release-cch/scripts/read-version.sh)
-.claude/skills/release-cch/scripts/generate-changelog.sh ${VERSION}
+VERSION=$(.claude/skills/release-rulez/scripts/read-version.sh)
+.claude/skills/release-rulez/scripts/generate-changelog.sh ${VERSION}
 ```
 
 ### 1.6 Commit and Push
 
 ```bash
-VERSION=$(.claude/skills/release-cch/scripts/read-version.sh)
+VERSION=$(.claude/skills/release-rulez/scripts/read-version.sh)
 git add CHANGELOG.md Cargo.toml
 git commit -m "chore: prepare v${VERSION} release"
 git push -u origin release/v${VERSION}
@@ -128,24 +128,36 @@ git push -u origin release/v${VERSION}
 ### 1.7 Create Release PR
 
 ```bash
-VERSION=$(.claude/skills/release-cch/scripts/read-version.sh)
+VERSION=$(.claude/skills/release-rulez/scripts/read-version.sh)
 gh pr create --title "chore: prepare v${VERSION} release" --body "..."
 ```
 
-### 1.8 Wait for CI
+### 1.8 Monitor CI and Auto-Merge
 
-```bash
-gh pr checks <PR_NUMBER> --watch
+Use `/loop` to poll PR checks every 5 minutes. When all checks pass, automatically merge and continue to Phase 2 (tag and push).
+
 ```
+/loop 5m check PR #<PR_NUMBER> status: run `gh pr checks <PR_NUMBER>`. If all checks pass, merge with `gh pr merge <PR_NUMBER> --squash --delete-branch`, then sync main (`git checkout main && git pull`), tag (`git tag v<VERSION> && git push origin v<VERSION>`), and verify the release workflow started. If checks are still pending, report status and wait. If any check failed, report the failure details and stop.
+```
+
+**What the loop does each cycle:**
+1. Runs `gh pr checks <PR_NUMBER>` to get current status
+2. If all checks pass -> auto-merges the PR, syncs main, creates and pushes the tag, verifies the release workflow triggered, then cancels the loop
+3. If checks are pending -> reports progress (N/M passing) and waits for next cycle
+4. If any check failed -> reports the failure, cancels the loop, and alerts the user
+
+**Important:** The loop handles the full Phase 1.8 -> Phase 2 transition automatically. Once the tag is pushed, proceed to Phase 3 (verify) manually or set up another loop.
 
 ---
 
 ## Phase 2: Execute Release
 
+> **Note:** If you used the `/loop` auto-merge in Phase 1.8, Phase 2 is already done. Skip to Phase 3.
+
 ### 2.1 Merge the Release PR
 
 ```bash
-gh pr merge <PR_NUMBER> --merge --delete-branch
+gh pr merge <PR_NUMBER> --squash --delete-branch
 ```
 
 ### 2.2 Sync Local Main
@@ -158,7 +170,7 @@ git pull
 ### 2.3 Create and Push Tag
 
 ```bash
-VERSION=$(.claude/skills/release-cch/scripts/read-version.sh)
+VERSION=$(.claude/skills/release-rulez/scripts/read-version.sh)
 git tag v${VERSION}
 git push origin v${VERSION}
 ```
@@ -170,13 +182,13 @@ git push origin v${VERSION}
 ### 3.1 Monitor Workflow
 
 ```bash
-.claude/skills/release-cch/scripts/verify-release.sh
+.claude/skills/release-rulez/scripts/verify-release.sh
 ```
 
 ### 3.2 Verify Release Assets
 
 ```bash
-VERSION=$(.claude/skills/release-cch/scripts/read-version.sh)
+VERSION=$(.claude/skills/release-rulez/scripts/read-version.sh)
 gh release view v${VERSION}
 ```
 
@@ -197,7 +209,7 @@ See [hotfix-workflow.md](references/hotfix-workflow.md) for detailed steps.
 | `preflight-check.sh` | Run all pre-release checks | `./scripts/preflight-check.sh [--json]` |
 | `verify-release.sh` | Monitor release workflow status | `./scripts/verify-release.sh [version]` |
 
-All scripts are located in `.claude/skills/release-cch/scripts/`.
+All scripts are located in `.claude/skills/release-rulez/scripts/`.
 
 ---
 

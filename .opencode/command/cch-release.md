@@ -1,5 +1,5 @@
 ---
-description: Execute CCH release workflow - prepare, execute, verify, or hotfix releases
+description: Execute RuleZ release workflow - prepare, execute, verify, or hotfix releases
 ---
 
 ## User Input
@@ -8,9 +8,9 @@ description: Execute CCH release workflow - prepare, execute, verify, or hotfix 
 $ARGUMENTS
 ```
 
-## CCH Release Workflow
+## RuleZ Release Workflow
 
-This command orchestrates the CCH release process using the `release-cch` skill.
+This command orchestrates the RuleZ release process using the `release-rulez` skill.
 
 ### Quick Reference
 
@@ -24,11 +24,11 @@ This command orchestrates the CCH release process using the `release-cch` skill.
 
 ### Workflow
 
-1. **Load the release-cch skill**: Read `.opencode/skill/release-cch/SKILL.md` for detailed instructions.
+1. **Load the release-rulez skill**: Read `.opencode/skill/release-rulez/SKILL.md` for detailed instructions.
 
 2. **Read version** from `Cargo.toml` (single source of truth):
    ```bash
-   .opencode/skill/release-cch/scripts/read-version.sh
+   .opencode/skill/release-rulez/scripts/read-version.sh
    ```
 
 3. **Parse arguments** and execute the appropriate phase:
@@ -39,9 +39,9 @@ This command orchestrates the CCH release process using the `release-cch` skill.
 
    **If `$ARGUMENTS` is `prepare`**:
    - Verify version is updated in `Cargo.toml`
-   - Run preflight checks: `.opencode/skill/release-cch/scripts/preflight-check.sh`
+   - Run preflight checks: `.opencode/skill/release-rulez/scripts/preflight-check.sh`
    - Create release branch: `git checkout -b release/v${VERSION}`
-   - Generate changelog: `.opencode/skill/release-cch/scripts/generate-changelog.sh`
+   - Generate changelog: `.opencode/skill/release-rulez/scripts/generate-changelog.sh`
    - Commit and push release branch
    - Create PR with release checklist
 
@@ -53,7 +53,7 @@ This command orchestrates the CCH release process using the `release-cch` skill.
    - This triggers the release workflow
 
    **If `$ARGUMENTS` is `verify`**:
-   - Run verification: `.opencode/skill/release-cch/scripts/verify-release.sh`
+   - Run verification: `.opencode/skill/release-rulez/scripts/verify-release.sh`
    - Check workflow status
    - Verify release assets
 
@@ -103,17 +103,17 @@ The release PR must pass all checks:
 
 After tagging, the workflow builds and uploads:
 
-- `cch-linux-x86_64.tar.gz`
-- `cch-linux-aarch64.tar.gz`
-- `cch-macos-x86_64.tar.gz`
-- `cch-macos-aarch64.tar.gz`
-- `cch-windows-x86_64.exe.zip`
+- `rulez-linux-x86_64.tar.gz`
+- `rulez-linux-aarch64.tar.gz`
+- `rulez-macos-x86_64.tar.gz`
+- `rulez-macos-aarch64.tar.gz`
+- `rulez-windows-x86_64.exe.zip`
 - `checksums.txt`
 
 ### Troubleshooting
 
 If something goes wrong, see:
-- `.opencode/skill/release-cch/references/troubleshooting.md`
+- `.opencode/skill/release-rulez/references/troubleshooting.md`
 - Or run `/cch-release verify` to diagnose
 
 ### Examples

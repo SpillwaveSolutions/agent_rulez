@@ -32,38 +32,27 @@ RuleZ positions itself as comparable to:
 
 ## Current State
 
-### RuleZ Core (v1.4)
+### RuleZ Core (v2.2.1)
 - Policy engine with blocking, injection, validation, inline scripting, schema validation
-- CLI: init, install, uninstall, validate, logs, explain, debug, repl
-- 634 tests, <3ms latency, comprehensive logging
-- ~23,600 LOC Rust
-- **v1.2 Features:**
-  - `inject_inline` - Embed context directly in YAML
-  - `inject_command` - Dynamic context via shell commands
-  - `enabled_when` - Conditional rule activation with expressions
-- **v1.3 Features:**
-  - `prompt_match` - Regex intent routing with case-insensitive, anchored, AND/OR logic
-  - `require_fields` / `field_types` - Fail-closed field validation with dot-notation paths
-  - `validate_expr` - Inline evalexpr expressions with get_field() / has_field()
-  - `inline_script` - Shell scripts in YAML with timeout protection
-- **v1.4 Features:**
-  - JSON Schema validation (fail-open, <0.1ms overhead)
-  - Debug CLI UserPromptSubmit support with LRU regex cache
-  - Cross-platform E2E test stabilization (macOS symlinks, Windows paths)
-  - CI matrix for E2E tests (ubuntu, macOS, Windows)
-  - Tauri CI build pipeline with E2E gate
+- CLI: init, install, uninstall, validate, logs, explain, debug, repl, test, lint, upgrade
+- Multi-CLI support: Claude Code, Gemini, Copilot, OpenCode (install/doctor commands)
+- Parallel rule evaluation, config caching, globset matching
+- E2E test harness across 5 CLIs (Claude Code, Gemini, Copilot, OpenCode, Codex)
 
 ### Mastering Hooks (Complete)
 - Claude Code skill for RuleZ mastery
-- References: schema, CLI commands, patterns, troubleshooting
-- Future: Convert to plugin format
+- References: schema, 19+ CLI commands documented, patterns, troubleshooting
+- Covers subagent hook patterns
 
-### RuleZ UI (v1.5 Active)
-- Tauri 2.0 desktop app — M1 scaffold complete
-- 18 React components, 3 Zustand stores, Monaco YAML editor with schema validation
-- Dual-mode architecture (Tauri desktop + web browser fallback)
-- Playwright E2E tests with Page Object Model
-- Known issues: Tauri backend still references `cch` binary (needs `rulez` update)
+### RuleZ UI (Complete)
+- Tauri 2.0 desktop app with Monaco YAML editor, log viewer, config management
+- ConfigDiffView with Monaco DiffEditor for config comparison
+- Debug simulator, onboarding wizard, settings panel
+- Playwright E2E tests, CI builds on ubuntu/macOS/Windows
+
+### Release Skill (Complete)
+- Renamed from `release-cch` to `release-rulez` (v2.2.1)
+- Automated release workflow with preflight checks, changelog, and verification
 
 ## Requirements
 
@@ -95,18 +84,11 @@ RuleZ positions itself as comparable to:
 - ✓ REQ-PERF-01..02: Performance quality gates (<0.1ms schema validation) — v1.4
 - ✓ REQ-COMPAT-01..02: Cross-platform compatibility (CI matrix) — v1.4
 
-### Active — v1.5 RuleZ UI
+### Active
 
-- [ ] Fix cch→rulez binary references throughout Tauri backend and config
-- [ ] Production-quality YAML editor with autocomplete, error markers, live preview
-- [ ] Audit log viewer with filtering, search, and rule-to-log correlation
-- [ ] Config management (global + project configs, import/export)
-- [ ] Debug simulator improvements (real rulez binary integration, event replay)
-- [ ] E2E test stabilization and expansion for all UI features
-- [ ] Settings/preferences panel (theme, editor options, paths)
-- [ ] Onboarding flow for first-time users
+(No active requirements — planning next milestone)
 
-See REQUIREMENTS.md for full requirement details with REQ-IDs.
+See REQUIREMENTS.md for next milestone requirements when defined.
 
 ### Out of Scope
 
@@ -166,6 +148,6 @@ See REQUIREMENTS.md for full requirement details with REQ-IDs.
 
 ---
 
-*Last updated: 2026-02-10 after v1.5 milestone started*
+*Last updated: 2026-03-13 after v2.2.1 milestone*
 *Reorganized as monorepo on 2026-02-06*
 *Renamed from CCH to RuleZ*

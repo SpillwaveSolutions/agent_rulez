@@ -8,6 +8,7 @@ import { EditorToolbar } from "../editor/EditorToolbar";
 import { ValidationPanel } from "../editor/ValidationPanel";
 import { YamlEditor } from "../editor/YamlEditor";
 import { FileTabBar } from "../files/FileTabBar";
+import { ConfigDiffView } from "../config/ConfigDiffView";
 import { LogViewer } from "../logs/LogViewer";
 
 export function MainContent() {
@@ -68,6 +69,14 @@ export function MainContent() {
     return (
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <LogViewer />
+      </main>
+    );
+  }
+
+  if (mainView === "diff") {
+    return (
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <ConfigDiffView />
       </main>
     );
   }

@@ -1,10 +1,10 @@
-# release-cch Skill
+# release-rulez Skill
 
-CCH release workflow automation for Claude Code.
+RuleZ release workflow automation for Claude Code.
 
 ## Overview
 
-This skill provides automated release workflows for the Claude Context Hooks (CCH) project, including:
+This skill provides automated release workflows for the RuleZ project, including:
 
 - **Prepare Release**: Create branch, run checks, generate changelog, create PR
 - **Execute Release**: Merge PR, tag, push to trigger CI/CD
@@ -13,20 +13,20 @@ This skill provides automated release workflows for the Claude Context Hooks (CC
 
 ## Usage
 
-Invoke via the `/cch-release` command:
+Invoke via the `/rulez-release` command:
 
 ```bash
-/cch-release           # Interactive mode
-/cch-release prepare   # Prepare a new release
-/cch-release execute   # Execute after PR merge
-/cch-release verify    # Verify release status
-/cch-release hotfix v1.0.0  # Create hotfix
+/rulez-release           # Interactive mode
+/rulez-release prepare   # Prepare a new release
+/rulez-release execute   # Execute after PR merge
+/rulez-release verify    # Verify release status
+/rulez-release hotfix v1.0.0  # Create hotfix
 ```
 
 ## Structure
 
 ```
-.claude/skills/release-cch/
+.claude/skills/release-rulez/
 ├── SKILL.md                    # Main skill documentation
 ├── README.md                   # This file
 ├── scripts/
@@ -63,8 +63,8 @@ All scripts are executable and can be run from the repo root:
 
 ## Migrated From
 
-This skill was migrated from `.opencode/skill/release-cch/` to Claude Code format.
+This skill was migrated from `.opencode/skill/release-rulez/` to Claude Code format.
 
 Key changes:
 - Path depth adjusted for `.claude/skills/` (5 levels vs 4)
-- All path references updated to `.claude/skills/release-cch/`
+- All path references updated to `.claude/skills/release-rulez/`
