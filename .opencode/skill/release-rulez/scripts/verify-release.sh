@@ -31,7 +31,7 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 echo ""
-echo -e "${BLUE}CCH Release Verification: v${VERSION}${NC}"
+echo -e "${BLUE}RuleZ Release Verification: v${VERSION}${NC}"
 echo "======================================"
 echo ""
 
@@ -78,17 +78,17 @@ if [ -n "$ASSETS" ]; then
     echo "$ASSETS" | while read -r asset; do
         echo "  - $asset"
     done
-    
+
     # Verify expected assets
     EXPECTED_ASSETS=(
-        "cch-linux-x86_64.tar.gz"
-        "cch-linux-aarch64.tar.gz"
-        "cch-macos-x86_64.tar.gz"
-        "cch-macos-aarch64.tar.gz"
-        "cch-windows-x86_64.exe.zip"
+        "rulez-linux-x86_64.tar.gz"
+        "rulez-linux-aarch64.tar.gz"
+        "rulez-macos-x86_64.tar.gz"
+        "rulez-macos-aarch64.tar.gz"
+        "rulez-windows-x86_64.exe.zip"
         "checksums.txt"
     )
-    
+
     MISSING=0
     for expected in "${EXPECTED_ASSETS[@]}"; do
         if ! echo "$ASSETS" | grep -q "$expected"; then
@@ -96,7 +96,7 @@ if [ -n "$ASSETS" ]; then
             ((MISSING++)) || true
         fi
     done
-    
+
     if [ $MISSING -gt 0 ]; then
         echo -e "${YELLOW}[WARN]${NC} $MISSING expected asset(s) missing"
     fi

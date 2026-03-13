@@ -48,7 +48,7 @@ Replace `${DATE}` with today's date in YYYY-MM-DD format
 ### Added
 
 - Support for custom rule priorities
-- New `cch status` command for quick health checks
+- New `rulez status` command for quick health checks
 - Environment variable override for log level
 
 ### Fixed

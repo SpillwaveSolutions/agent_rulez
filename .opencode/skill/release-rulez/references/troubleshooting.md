@@ -6,9 +6,9 @@
 
 | Issue | Cause | Solution |
 |-------|-------|----------|
-| "cargo fmt failed" | Code not formatted | `cd cch_cli && cargo fmt` |
-| "clippy warnings" | Lint issues | `cd cch_cli && cargo clippy --fix` |
-| "tests failed" | Broken tests | `cd cch_cli && cargo test` to reproduce |
+| "cargo fmt failed" | Code not formatted | `cargo fmt --all` |
+| "clippy warnings" | Lint issues | `cargo clippy --all-targets --all-features --workspace -- -D warnings` |
+| "tests failed" | Broken tests | `cargo test --tests --all-features --workspace` to reproduce |
 | "not on correct branch" | Wrong branch | `git checkout main` or create release branch |
 | "uncommitted changes" | Dirty working dir | Commit or stash changes |
 
@@ -25,14 +25,14 @@
 
    **Format failure**:
    ```bash
-   cd cch_cli && cargo fmt
+   cargo fmt --all
    git add -A && git commit -m "style: fix formatting"
    git push
    ```
 
    **Clippy failure**:
    ```bash
-   cd cch_cli && cargo clippy --all-targets --all-features -- -D warnings
+   cargo clippy --all-targets --all-features --workspace -- -D warnings
    # Fix reported issues
    git add -A && git commit -m "fix: address clippy warnings"
    git push
@@ -40,7 +40,7 @@
 
    **Test failure**:
    ```bash
-   cd cch_cli && cargo test
+   cargo test --tests --all-features --workspace
    # Find and fix failing test
    git add -A && git commit -m "fix: repair broken test"
    git push
@@ -111,7 +111,7 @@ gh run view <RUN_ID> --log
 **Solution**:
 ```bash
 # Read current version
-.opencode/skill/release-cch/scripts/read-version.sh
+.opencode/skill/release-rulez/scripts/read-version.sh
 
 # Should match your intended tag
 # If not, update Cargo.toml and re-run release
