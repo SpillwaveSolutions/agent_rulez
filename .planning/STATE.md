@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.2.1
-milestone_name: Cleanup, Sync Skills, CLI Help & UI Integration
-status: completed
-stopped_at: v2.2.1 milestone complete
-last_updated: "2026-03-13T00:30:00.000Z"
-last_activity: "2026-03-13 — v2.2.1 milestone complete, preparing release"
+milestone: v2.2.2
+milestone_name: Documentation Audit & Multi-CLI Guides
+status: active
+stopped_at: null
+last_updated: "2026-03-13T03:00:00.000Z"
+last_activity: "2026-03-13 — Milestone v2.2.2 started"
 progress:
-  total_phases: 29
-  completed_phases: 29
-  total_plans: 80
-  completed_plans: 80
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
@@ -20,27 +20,20 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-13)
 
 **Core value:** LLMs do not enforce policy. LLMs are subject to policy.
-**Current focus:** v2.2.1 complete — preparing release.
-**v2.2.1:** Cleanup, Sync Skills, CLI Help & UI Integration — COMPLETE (Phase 29, shipped 2026-03-13)
-**v2.1:** Multi-CLI E2E Testing (continued) — COMPLETE (Phases 24, 26, 27, shipped 2026-03-09)
-**v2.0:** RuleZ Cleanup and Hardening — COMPLETE (Phase 28, shipped 2026-03-05)
+**Current focus:** v2.2.2 — Documentation Audit & Multi-CLI Guides
 
 ## Current Position
 
-Milestone: v2.2.1 — Cleanup, Sync Skills, CLI Help & UI Integration — COMPLETE
-All 29 phases across 11 milestones are complete.
-All 80 plans executed successfully.
-Status: Releasing v2.2.1
-Last activity: 2026-03-13 — v2.2.1 milestone complete
-
-Next action: Cut v2.2.1 release
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-13 — Milestone v2.2.2 started
 
 ## Performance Metrics
 
 **Velocity (all milestones):**
 - Total plans completed: 80
 - Average duration: ~3min per plan
-- v2.2.1 releasing 2026-03-13
 
 **By Milestone:**
 
@@ -70,5 +63,5 @@ None active.
 ## Session Continuity
 
 Last session: 2026-03-13
-Stopped at: v2.2.1 milestone complete
-Next action: Cut v2.2.1 release
+Stopped at: Defining requirements for v2.2.2
+Next action: Define requirements and create roadmap

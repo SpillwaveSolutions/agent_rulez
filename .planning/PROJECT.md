@@ -86,9 +86,17 @@ RuleZ positions itself as comparable to:
 
 ### Active
 
-(No active requirements — planning next milestone)
+See REQUIREMENTS.md for v2.2.2 milestone requirements.
 
-See REQUIREMENTS.md for next milestone requirements when defined.
+## Current Milestone: v2.2.2 Documentation Audit & Multi-CLI Guides
+
+**Goal:** Ensure all documentation is accurate and complete for v2.2.1, with polished per-CLI usage guides for Claude Code, Gemini, and OpenCode.
+
+**Target features:**
+- Audit and update all mastering-hooks reference docs to reflect v2.0–v2.2.1 changes
+- Create/update per-CLI usage guides (Claude Code, Gemini, OpenCode)
+- Document new CLI commands: `rulez test`, `rulez lint`, `rulez upgrade`
+- Update docs for parallel eval, config caching, external logging, globset matching
 
 ### Out of Scope
 
@@ -148,6 +156,6 @@ See REQUIREMENTS.md for next milestone requirements when defined.
 
 ---
 
-*Last updated: 2026-03-13 after v2.2.1 milestone*
+*Last updated: 2026-03-13 after v2.2.2 milestone start*
 *Reorganized as monorepo on 2026-02-06*
 *Renamed from CCH to RuleZ*
