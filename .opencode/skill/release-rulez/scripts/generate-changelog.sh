@@ -59,7 +59,7 @@ OTHER=""
 # Parse commits
 while IFS= read -r commit; do
     [ -z "$commit" ] && continue
-    
+
     case "$commit" in
         feat!:*)
             msg="${commit#feat!: }"

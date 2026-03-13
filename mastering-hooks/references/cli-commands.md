@@ -404,6 +404,307 @@ rulez run security-check --dry-run
 
 ---
 
+### test
+
+Run batch test scenarios against your rules configuration. Accepts a YAML test file defining scenarios with expected outcomes (allow, block, or inject), reports pass/fail for each, and exits with code 1 if any test fails.
+
+```bash
+rulez test <TEST_FILE> [OPTIONS]
+
+Options:
+  -v, --verbose    Show detailed output for each test case (e.g., block reasons)
+```
+
+**Test file format** (`tests.yaml`):
+
+```yaml
+tests:
+  - name: "Block force push"
+    event_type: PreToolUse
+    tool: Bash
+    command: "git push --force"
+    expected: block
+
+  - name: "Allow normal read"
+    event_type: PreToolUse
+    tool: Read
+    path: "src/main.rs"
+    expected: allow
+
+  - name: "Inject Python standards"
+    event_type: PreToolUse
+    tool: Write
+    path: "app.py"
+    expected: inject
+```
+
+Each test case supports fields: `name`, `event_type`, `tool`, `command`, `path`, `prompt`, and `expected` (one of `allow`, `block`, `inject`).
+
+**Examples**:
+
+```bash
+# Run all test scenarios
+rulez test tests.yaml
+
+# Verbose output (shows block reasons on failure)
+rulez test tests.yaml --verbose
+```
+
+**Sample output**:
+
+```
+Running 3 test(s) from tests.yaml
+============================================================
+
+  PASS  Block force push
+  PASS  Allow normal read
+  FAIL  Inject Python standards
+        expected: inject, actual: allow
+
+============================================================
+2 passed, 1 failed, 3 total
+```
+
+---
+
+### lint
+
+Analyze rule configuration for quality issues: duplicate rule names, overlapping rules, dead (disabled) rules, missing descriptions, invalid regex, conflicting actions, and missing priorities.
+
+```bash
+rulez lint [OPTIONS]
+
+Options:
+  -c, --config <PATH>    Path to configuration file (default: .claude/hooks.yaml)
+  -v, --verbose          Show detailed analysis (e.g., glob consolidation suggestions)
+```
+
+Diagnostics are categorized by severity:
+- **ERROR** -- Issues that will cause incorrect behavior (duplicate names, no matchers, conflicting actions)
+- **WARN** -- Issues worth investigating (overlapping rules, dead rules, missing descriptions, invalid regex)
+- **INFO** -- Optimization suggestions (missing priority, glob consolidation)
+
+Exits with code 1 if any errors are found.
+
+**Examples**:
+
+```bash
+# Lint default config
+rulez lint
+
+# Lint a specific file
+rulez lint --config /path/to/hooks.yaml
+
+# Show verbose analysis with optimization hints
+rulez lint --verbose
+```
+
+**Sample output**:
+
+```
+rulez lint -- Rule Quality Analysis
+==================================
+
+Loaded 5 rules from .claude/hooks.yaml
+
+[ERROR] duplicate-rule-name: Rules at positions 1 and 3 both have the name 'block-push'
+[WARN]  dead-rule: Rule 'old-checker' is disabled (metadata.enabled: false) -- consider removing it
+[WARN]  no-description: Rule 'quick-fix' has no description
+[INFO]  missing-priority: Rule 'standards' has no explicit priority (using default 0)
+
+Summary: 1 error, 2 warnings, 1 info
+```
+
+---
+
+### upgrade
+
+Self-update the rulez binary to the latest GitHub release. Downloads the appropriate binary for your platform and replaces the current installation.
+
+```bash
+rulez upgrade [OPTIONS]
+
+Options:
+  --check    Only check for updates, do not install
+```
+
+**Examples**:
+
+```bash
+# Check if an update is available
+rulez upgrade --check
+
+# Download and install the latest version
+rulez upgrade
+```
+
+**Sample output**:
+
+```
+Current version: 2.2.0
+Checking GitHub releases for latest version...
+Latest version: 2.3.0
+Upgrade available: 2.2.0 -> 2.3.0
+Downloading and installing 2.3.0...
+Successfully upgraded to 2.3.0!
+Restart rulez to use the new version.
+```
+
+---
+
+## Multi-Platform Commands
+
+RuleZ supports multiple AI coding assistants. Each platform has `install` and `doctor` subcommands.
+
+### gemini install
+
+Install RuleZ hooks for Gemini CLI. Registers hook entries in Gemini's `settings.json` for all supported events.
+
+```bash
+rulez gemini install [OPTIONS]
+
+Options:
+  --scope <SCOPE>       Settings scope: project, user, or system (default: project)
+  -b, --binary <PATH>   Path to rulez binary (auto-detected if not specified)
+  --print               Print JSON snippet without writing (alias: --dry-run)
+```
+
+**Events registered**: BeforeTool, AfterTool, BeforeAgent, AfterAgent, BeforeModel, AfterModel, BeforeToolSelection, SessionStart, SessionEnd, Notification, PreCompact
+
+**Examples**:
+
+```bash
+# Install for current project
+rulez gemini install
+
+# Install for user scope
+rulez gemini install --scope user
+
+# Preview what would be written
+rulez gemini install --print
+```
+
+---
+
+### gemini doctor
+
+Diagnose Gemini hook installation and configuration.
+
+```bash
+rulez gemini doctor [OPTIONS]
+
+Options:
+  --json    Output machine-readable JSON
+```
+
+**Examples**:
+
+```bash
+# Run diagnostics
+rulez gemini doctor
+
+# Machine-readable output
+rulez gemini doctor --json
+```
+
+---
+
+### copilot install
+
+Install RuleZ hooks for GitHub Copilot CLI. Creates hook files in `.github/hooks/` and wrapper scripts.
+
+```bash
+rulez copilot install [OPTIONS]
+
+Options:
+  -b, --binary <PATH>   Path to rulez binary (auto-detected if not specified)
+  --print               Print JSON snippet without writing (alias: --dry-run)
+```
+
+**Events registered**: preToolUse, postToolUse
+
+**Examples**:
+
+```bash
+# Install for current project
+rulez copilot install
+
+# Preview the hooks file
+rulez copilot install --print
+```
+
+---
+
+### copilot doctor
+
+Diagnose Copilot hook installation and configuration.
+
+```bash
+rulez copilot doctor [OPTIONS]
+
+Options:
+  --json    Output machine-readable JSON
+```
+
+**Examples**:
+
+```bash
+rulez copilot doctor
+rulez copilot doctor --json
+```
+
+---
+
+### opencode install
+
+Install RuleZ hooks for OpenCode. Registers hook entries in OpenCode's settings for all supported events.
+
+```bash
+rulez opencode install [OPTIONS]
+
+Options:
+  --scope <SCOPE>       Settings scope: project or user (default: project)
+  -b, --binary <PATH>   Path to rulez binary (auto-detected if not specified)
+  --print               Print JSON snippet without writing (alias: --dry-run)
+```
+
+**Events registered**: file.edited, tool.execute.before, tool.execute.after, session.updated
+
+**Examples**:
+
+```bash
+# Install for current project
+rulez opencode install
+
+# Install for user scope
+rulez opencode install --scope user
+
+# Preview what would be written
+rulez opencode install --print
+```
+
+---
+
+### opencode doctor
+
+Diagnose OpenCode hook installation and configuration.
+
+```bash
+rulez opencode doctor [OPTIONS]
+
+Options:
+  --json    Output machine-readable JSON
+```
+
+**Examples**:
+
+```bash
+rulez opencode doctor
+rulez opencode doctor --json
+```
+
+---
+
 ## Exit Codes
 
 | Code | Meaning |

@@ -1,6 +1,6 @@
 ## Summary
 
-Prepare for the v${VERSION} release of Claude Context Hooks (CCH).
+Prepare for the v${VERSION} release of RuleZ.
 
 ## Changes
 
@@ -34,7 +34,7 @@ Prepare for the v${VERSION} release of Claude Context Hooks (CCH).
 
 4. Verify release:
    ```bash
-   .claude/skills/release-cch/scripts/verify-release.sh
+   .opencode/skill/release-rulez/scripts/verify-release.sh
    ```
 
 ## Build Targets
@@ -48,3 +48,7 @@ This release will build cross-platform binaries for:
 | macOS Intel | x86_64-apple-darwin |
 | macOS Apple Silicon | aarch64-apple-darwin |
 | Windows | x86_64-pc-windows-msvc |
+
+## What's in This Release
+
+<!-- Copy relevant section from CHANGELOG.md -->

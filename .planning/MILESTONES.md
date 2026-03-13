@@ -1,5 +1,14 @@
 # Project Milestones: RuleZ (AI Policy Engine)
 
+## v2.2.1 Cleanup, Sync Skills, CLI Help & UI Integration (Shipped: 2026-03-13)
+
+**Phases completed:** 29 phases, 79 plans, 8 tasks
+
+**Key accomplishments:**
+- (none recorded)
+
+---
+
 ## v1.2 P2 Features (Shipped: 2026-02-07)
 
 **Delivered:** Advanced injection and conditional rule features for dynamic context generation and environment-aware rule activation.

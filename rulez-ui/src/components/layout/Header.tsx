@@ -72,6 +72,18 @@ export function Header() {
           >
             Logs
           </button>
+          <button
+            type="button"
+            onClick={() => setMainView("diff")}
+            className={`px-2 py-0.5 text-xs rounded transition-colors ${
+              mainView === "diff"
+                ? "bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 shadow-sm"
+                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+            }`}
+            aria-label="Diff"
+          >
+            Diff
+          </button>
         </div>
 
         {/* Mode indicator */}
