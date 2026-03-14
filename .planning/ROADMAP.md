@@ -97,7 +97,7 @@ Phases execute in numeric order: 30 -> 31 -> 32 -> 33
 | 24, 26, 27 | v2.1 | 4/4 | Complete | 2026-03-09 |
 | 29 | v2.2.1 | 2/2 | Complete | 2026-03-13 |
 | 30. CLI Reference Docs Update | v2.2.2 | 2/2 | Complete | 2026-03-14 |
-| 31. Multi-CLI Usage Guides | 2/2 | Complete   | 2026-03-14 | - |
+| 31. Multi-CLI Usage Guides | 2/2 | Complete    | 2026-03-14 | - |
 | 32. Feature Documentation | v2.2.2 | 0/TBD | Not started | - |
 | 33. Accuracy Audit | v2.2.2 | 0/TBD | Not started | - |
 
