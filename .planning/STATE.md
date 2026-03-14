@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: milestone
-status: completed
-stopped_at: Completed 30-01-PLAN.md
-last_updated: "2026-03-14T21:43:25.065Z"
-last_activity: 2026-03-14 — Completed 30-01 CLI Reference Docs Update
+status: executing
+stopped_at: Completed 31-01-PLAN.md
+last_updated: "2026-03-14T22:56:36.150Z"
+last_activity: 2026-03-14 — Completed 31-01 Claude Code Usage Guide
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
-  percent: 100
+  total_plans: 4
+  completed_plans: 3
+  percent: 25
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-13)
 
 **Core value:** LLMs do not enforce policy. LLMs are subject to policy.
-**Current focus:** v2.2.2 Phase 30 — CLI Reference Docs Update
+**Current focus:** v2.2.2 Phase 31 — Multi-CLI Usage Guides
 
 ## Current Position
 
-Phase: 30 (1 of 4) — CLI Reference Docs Update
-Plan: 1 of 2 complete (30-01, 30-02 done)
-Status: Phase 30 complete
-Last activity: 2026-03-14 — Completed 30-01 CLI Reference Docs Update
+Phase: 31 (2 of 4) — Multi-CLI Usage Guides
+Plan: 1 of 4 complete (31-01 done)
+Status: In progress
+Last activity: 2026-03-14 — Completed 31-01 Claude Code Usage Guide
 
-Progress: [██████████] 100% (Phase 30)
+Progress: [███-------] 25% (Phase 31)
 
 ## Performance Metrics
 
@@ -66,6 +66,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-03-14
-Stopped at: Completed 30-01-PLAN.md
-Next action: Continue to Phase 31 or remaining plans
+Last session: 2026-03-14T22:56:36.148Z
+Stopped at: Completed 31-01-PLAN.md
+Next action: Continue to 31-02 (Gemini CLI usage guide)

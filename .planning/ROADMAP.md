@@ -55,7 +55,7 @@ Plans:
   1. A Claude Code user can follow the guide end-to-end to install RuleZ, create a hooks.yaml, verify it fires, and troubleshoot common issues
   2. A Gemini CLI user can follow the guide to install RuleZ, understand dual-fire events, and verify hook execution
   3. An OpenCode user can follow the guide to install RuleZ, set up the plugin, and verify hook execution
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
 - [ ] 31-01-PLAN.md — Create Claude Code usage guide (install, configure, verify, troubleshoot)
 - [ ] 31-02-PLAN.md — Create Gemini CLI and OpenCode usage guides with platform-specific details
@@ -97,7 +97,7 @@ Phases execute in numeric order: 30 -> 31 -> 32 -> 33
 | 24, 26, 27 | v2.1 | 4/4 | Complete | 2026-03-09 |
 | 29 | v2.2.1 | 2/2 | Complete | 2026-03-13 |
 | 30. CLI Reference Docs Update | v2.2.2 | 2/2 | Complete | 2026-03-14 |
-| 31. Multi-CLI Usage Guides | v2.2.2 | 0/2 | Not started | - |
+| 31. Multi-CLI Usage Guides | 1/2 | In Progress|  | - |
 | 32. Feature Documentation | v2.2.2 | 0/TBD | Not started | - |
 | 33. Accuracy Audit | v2.2.2 | 0/TBD | Not started | - |
 
