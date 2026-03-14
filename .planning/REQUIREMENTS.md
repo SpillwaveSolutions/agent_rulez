@@ -16,8 +16,8 @@ Requirements for documentation audit and multi-CLI guides release.
 ### Multi-CLI Usage Guides
 
 - [x] **GUIDE-01**: Claude Code usage guide covers install, configure, verify, and troubleshoot workflow
-- [ ] **GUIDE-02**: Gemini CLI usage guide covers install, dual-fire events, and verify workflow
-- [ ] **GUIDE-03**: OpenCode usage guide covers install, plugin setup, and verify workflow
+- [x] **GUIDE-02**: Gemini CLI usage guide covers install, dual-fire events, and verify workflow
+- [x] **GUIDE-03**: OpenCode usage guide covers install, plugin setup, and verify workflow
 
 ### Feature Documentation
 
@@ -53,8 +53,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CLIDOC-02 | Phase 30 | Complete |
 | CLIDOC-03 | Phase 30 | Complete |
 | GUIDE-01 | Phase 31 | Complete |
-| GUIDE-02 | Phase 31 | Pending |
-| GUIDE-03 | Phase 31 | Pending |
+| GUIDE-02 | Phase 31 | Complete |
+| GUIDE-03 | Phase 31 | Complete |
 | FEAT-01 | Phase 32 | Pending |
 | FEAT-02 | Phase 32 | Pending |
 | FEAT-03 | Phase 32 | Pending |
