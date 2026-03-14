@@ -93,14 +93,14 @@ project/
 | Command | Purpose |
 |---------|---------|
 | `rulez init` | Create .claude/hooks.yaml in current project |
-| `rulez install --project` | Register RuleZ hook with Claude Code |
+| `rulez install` | Register RuleZ hook with Claude Code (project-local by default; `--global/-g` for global) |
 | `rulez uninstall` | Remove RuleZ hook from Claude Code |
 | `rulez validate` | Validate hooks.yaml configuration |
 | `rulez debug <event> --tool <name> -v` | Simulate event to test rule matching |
 | `rulez repl` | Interactive debug mode (REPL) |
-| `rulez logs --tail 20` | Query and display audit logs |
+| `rulez logs --limit 20` | Query and display audit logs |
 | `rulez explain rule <name>` | Analyze specific rule |
-| `rulez explain config` | Overview all rules |
+| `rulez explain rules` | Overview all rules |
 | `rulez test <file.yaml>` | Run batch test scenarios from YAML file |
 | `rulez lint` | Analyze rule quality and detect issues |
 | `rulez upgrade` | Check for and install newer binary releases |
