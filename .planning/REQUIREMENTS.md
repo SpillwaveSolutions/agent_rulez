@@ -9,7 +9,7 @@ Requirements for documentation audit and multi-CLI guides release.
 
 ### CLI Docs Audit
 
-- [ ] **CLIDOC-01**: `cli-commands.md` documents all CLI commands including `test`, `lint`, `upgrade` with accurate flags and examples
+- [x] **CLIDOC-01**: `cli-commands.md` documents all CLI commands including `test`, `lint`, `upgrade` with accurate flags and examples
 - [x] **CLIDOC-02**: `hooks-yaml-schema.md` reflects parallel eval, config caching, globset matching, and external logging fields
 - [x] **CLIDOC-03**: `quick-reference.md` updated with latest events, actions, matchers, and CLI commands
 
@@ -49,7 +49,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CLIDOC-01 | Phase 30 | Pending |
+| CLIDOC-01 | Phase 30 | Complete |
 | CLIDOC-02 | Phase 30 | Complete |
 | CLIDOC-03 | Phase 30 | Complete |
 | GUIDE-01 | Phase 31 | Pending |

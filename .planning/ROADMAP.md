@@ -27,7 +27,7 @@
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 30: CLI Reference Docs Update** - Update cli-commands.md, hooks-yaml-schema.md, and quick-reference.md to reflect v2.0-v2.2.1 changes
+- [x] **Phase 30: CLI Reference Docs Update** - Update cli-commands.md, hooks-yaml-schema.md, and quick-reference.md to reflect v2.0-v2.2.1 changes (completed 2026-03-14)
 - [ ] **Phase 31: Multi-CLI Usage Guides** - Create per-CLI usage guides for Claude Code, Gemini, and OpenCode
 - [ ] **Phase 32: Feature Documentation** - Document external logging, rulez lint, and rulez test with configuration examples
 - [ ] **Phase 33: Accuracy Audit** - Cross-check all docs against source code and CLI help output, fix stale references
@@ -42,7 +42,7 @@
   1. A user reading cli-commands.md can find accurate documentation for `rulez test`, `rulez lint`, and `rulez upgrade` with correct flags and examples
   2. A user reading hooks-yaml-schema.md sees parallel eval, config caching, globset matching, and external logging fields documented
   3. A user reading quick-reference.md finds all current events, actions, matchers, and CLI commands in one place
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 30-01-PLAN.md — Update cli-commands.md with all CLI commands, flags, and examples
 - [ ] 30-02-PLAN.md — Update hooks-yaml-schema.md and quick-reference.md with engine features and current reference data
@@ -93,7 +93,7 @@ Phases execute in numeric order: 30 -> 31 -> 32 -> 33
 | 28 | v2.0 | 8/8 | Complete | 2026-03-05 |
 | 24, 26, 27 | v2.1 | 4/4 | Complete | 2026-03-09 |
 | 29 | v2.2.1 | 2/2 | Complete | 2026-03-13 |
-| 30. CLI Reference Docs Update | 1/2 | In Progress|  | - |
+| 30. CLI Reference Docs Update | 2/2 | Complete   | 2026-03-14 | - |
 | 31. Multi-CLI Usage Guides | v2.2.2 | 0/TBD | Not started | - |
 | 32. Feature Documentation | v2.2.2 | 0/TBD | Not started | - |
 | 33. Accuracy Audit | v2.2.2 | 0/TBD | Not started | - |

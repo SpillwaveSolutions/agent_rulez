@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.2
-milestone_name: milestone
-status: planning
-stopped_at: Completed 30-02-PLAN.md
-last_updated: "2026-03-14T21:38:43.321Z"
-last_activity: 2026-03-13 — Roadmap created for v2.2.2 (Phases 30-33)
+milestone: v2.2.2
+milestone_name: Documentation Audit & Multi-CLI Guides
+status: active
+stopped_at: Completed 30-01-PLAN.md
+last_updated: "2026-03-14T21:39:12Z"
+last_activity: "2026-03-14 — Completed 30-01 CLI Reference Docs Update"
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 2
-  completed_plans: 1
-  percent: 0
+  completed_plans: 2
+  percent: 100
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-13)
 ## Current Position
 
 Phase: 30 (1 of 4) — CLI Reference Docs Update
-Plan: —
-Status: Ready to plan
-Last activity: 2026-03-13 — Roadmap created for v2.2.2 (Phases 30-33)
+Plan: 1 of 2 complete (30-01, 30-02 done)
+Status: Phase 30 complete
+Last activity: 2026-03-14 — Completed 30-01 CLI Reference Docs Update
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██████████] 100% (Phase 30)
 
 ## Performance Metrics
 
@@ -52,8 +52,7 @@ Progress: [░░░░░░░░░░] 0%
 | v2.0 | 1 | 8 | Complete | 2026-03-05 |
 | v2.1 | 3 | 4 | Complete | 2026-03-09 |
 | v2.2.1 | 1 | 2 | Complete | 2026-03-13 |
-| v2.2.2 | 4 | TBD | In progress | — |
-| Phase 30 P02 | 2min | 2 tasks | 2 files |
+| v2.2.2 | 4 | 2+ | In progress | — |
 
 ## Accumulated Context
 
@@ -67,6 +66,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-03-14T21:38:43.318Z
-Stopped at: Completed 30-02-PLAN.md
-Next action: Plan Phase 30 (CLI Reference Docs Update)
+Last session: 2026-03-14
+Stopped at: Completed 30-01-PLAN.md
+Next action: Continue to Phase 31 or remaining plans
