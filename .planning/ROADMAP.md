@@ -42,7 +42,10 @@
   1. A user reading cli-commands.md can find accurate documentation for `rulez test`, `rulez lint`, and `rulez upgrade` with correct flags and examples
   2. A user reading hooks-yaml-schema.md sees parallel eval, config caching, globset matching, and external logging fields documented
   3. A user reading quick-reference.md finds all current events, actions, matchers, and CLI commands in one place
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 30-01-PLAN.md — Update cli-commands.md with all CLI commands, flags, and examples
+- [ ] 30-02-PLAN.md — Update hooks-yaml-schema.md and quick-reference.md with engine features and current reference data
 
 ### Phase 31: Multi-CLI Usage Guides
 **Goal**: Users of Claude Code, Gemini CLI, and OpenCode each have a dedicated guide for installing, configuring, and verifying RuleZ
@@ -90,7 +93,7 @@ Phases execute in numeric order: 30 -> 31 -> 32 -> 33
 | 28 | v2.0 | 8/8 | Complete | 2026-03-05 |
 | 24, 26, 27 | v2.1 | 4/4 | Complete | 2026-03-09 |
 | 29 | v2.2.1 | 2/2 | Complete | 2026-03-13 |
-| 30. CLI Reference Docs Update | v2.2.2 | 0/TBD | Not started | - |
+| 30. CLI Reference Docs Update | v2.2.2 | 0/2 | Not started | - |
 | 31. Multi-CLI Usage Guides | v2.2.2 | 0/TBD | Not started | - |
 | 32. Feature Documentation | v2.2.2 | 0/TBD | Not started | - |
 | 33. Accuracy Audit | v2.2.2 | 0/TBD | Not started | - |
@@ -99,4 +102,4 @@ Phases execute in numeric order: 30 -> 31 -> 32 -> 33
 
 ---
 
-*Created 2026-02-06 -- Updated 2026-03-13 v2.2.2 roadmap created.*
+*Created 2026-02-06 -- Updated 2026-03-14 Phase 30 planned (2 plans).*
