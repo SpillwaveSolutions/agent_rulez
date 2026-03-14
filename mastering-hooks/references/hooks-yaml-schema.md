@@ -334,6 +334,108 @@ rules:
 
 ---
 
+## Engine Behavior (v2.0+)
+
+These sections document internal engine behaviors that affect rule evaluation. No user configuration is required unless noted.
+
+### Parallel Rule Evaluation
+
+When 10 or more rules are enabled, RuleZ automatically switches to parallel matching using `tokio::join_all`. This improves evaluation latency for large rule sets.
+
+- **Threshold:** `PARALLEL_THRESHOLD = 10` (compile-time constant)
+- **Phase 1 (parallel):** All rule matchers are evaluated concurrently
+- **Phase 2 (sequential):** Matched rule actions execute in priority order
+
+Below the threshold, all evaluation is sequential. No user configuration is needed.
+
+### Config Caching
+
+`Config::from_file()` caches parsed configuration with mtime-based invalidation. If the hooks.yaml file has not been modified (same filesystem mtime), subsequent calls return the cached config without re-reading from disk.
+
+- Caching is automatic and process-scoped (no cross-process shared state)
+- Any file modification (save, touch) invalidates the cache immediately
+- No user configuration is needed
+
+### Globset Matching
+
+The `directories` matcher uses the `globset` crate for file pattern matching instead of naive string contains. Patterns in `directories` fields support full glob syntax.
+
+```yaml
+matchers:
+  directories:
+    - "src/**"           # All files under src/
+    - "**/*.rs"          # All Rust files anywhere
+    - "tests/unit/**"    # Unit test files only
+```
+
+Internally, `build_glob_set()` compiles patterns into an optimized set. Multiple patterns use OR semantics (any pattern match satisfies the matcher). Invalid glob patterns are skipped with a warning.
+
+### Regex Fail-Closed
+
+Invalid regex patterns in matchers (`command_match`, `prompt_match`, `block_if_match`) cause the rule to **not match** rather than crashing or matching everything. This is a fail-closed safety design.
+
+- `get_or_compile_regex()` returns an error for invalid patterns
+- The calling matcher treats the error as "no match"
+- A warning is logged for debugging
+- This also applies to `enabled_when` expression errors and inline script failures
+
+### tool_input Fields in Eval Context
+
+`build_eval_context()` injects fields from the tool invocation's `tool_input` JSON object into the `enabled_when` evaluation context with a `tool_input_` prefix.
+
+```yaml
+matchers:
+  enabled_when: "tool_input_command =~ 'git push'"   # Bash tool command
+  enabled_when: "tool_input_file_path =~ '\\.py$'"    # File path field
+```
+
+**Supported types:**
+
+| JSON Type | evalexpr Type | Example |
+|-----------|---------------|---------|
+| string    | String        | `tool_input_command == "ls"` |
+| boolean   | Boolean       | `tool_input_dangerouslyDisableSandbox == true` |
+| number    | Float         | `tool_input_timeout > 30.0` |
+
+**Important:** All numbers are exposed as `Float` (f64). Use `30.0` not `30` in comparisons, because `Float(30.0) != Int(30)` in evalexpr.
+
+Arrays, objects, and null values in tool_input are skipped (not supported by evalexpr).
+
+### External Logging
+
+RuleZ supports forwarding audit logs to external backends via the `logging` section in the settings file. Backends send logs using `curl` (no TLS library dependency).
+
+```yaml
+logging:
+  backends:
+    - type: otlp
+      endpoint: "https://otel-collector.example.com/v1/logs"
+      headers:
+        Authorization: "Bearer $OTEL_TOKEN"
+      timeout_secs: 5
+
+    - type: datadog
+      endpoint: "https://http-intake.logs.datadoghq.com/api/v2/logs"
+      api_key: "$DD_API_KEY"
+      timeout_secs: 5
+
+    - type: splunk
+      endpoint: "https://splunk.example.com:8088/services/collector"
+      token: "$SPLUNK_HEC_TOKEN"
+      sourcetype: "rulez"
+      timeout_secs: 5
+```
+
+| Backend | Required Fields | Optional Fields |
+|---------|----------------|-----------------|
+| `otlp` | `endpoint` | `headers`, `timeout_secs` (default: 5) |
+| `datadog` | `api_key` | `endpoint` (default: Datadog US), `timeout_secs` |
+| `splunk` | `endpoint`, `token` | `sourcetype` (default: "rulez"), `timeout_secs` |
+
+Environment variable references (e.g., `$DD_API_KEY`) are expanded at runtime.
+
+---
+
 ## Validation
 
 Validate your configuration:
