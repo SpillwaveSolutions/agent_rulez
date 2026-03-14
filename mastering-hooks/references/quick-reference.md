@@ -52,11 +52,12 @@ See [platform-adapters.md](platform-adapters.md) for full mapping table.
 
 | Action | Purpose | Key Fields |
 |--------|---------|------------|
-| `inject` | Add context to AI assistant | `source`, `path`/`content` |
-| `run` | Execute script | `command`, `timeout` |
-| `block` | Prevent tool execution | `reason` |
-| `block_if_match` | Conditional block | `pattern`, `reason` |
-| `require_fields` | Validate inputs | `fields`, `message` |
+| `inject` | Inject file content into AI context | `path` |
+| `inject_inline` | Inject inline markdown into AI context | `content` (string) |
+| `inject_command` | Inject shell command output into context | `command` (string) |
+| `run` | Execute script, use JSON output | `command`, `timeout` |
+| `block` | Unconditionally block tool execution | `reason` |
+| `block_if_match` | Block if regex matches in tool input | `pattern`, `reason` |
 
 ## Response Format (for scripts)
 
@@ -87,19 +88,49 @@ project/
 │       └── install.json    # RuleZ installation audit trail
 ```
 
-## Common Commands
+## CLI Commands
 
 | Command | Purpose |
 |---------|---------|
-| `rulez --version --json` | Check installation and API version |
-| `rulez init` | Create .claude/hooks.yaml |
-| `rulez validate` | Validate configuration |
-| `rulez install --project` | Register with Claude Code |
-| `rulez debug <event> --tool <name> -v` | Debug hook matching |
-| `rulez logs --tail 20` | View recent hook executions |
+| `rulez init` | Create .claude/hooks.yaml in current project |
+| `rulez install --project` | Register RuleZ hook with Claude Code |
+| `rulez uninstall` | Remove RuleZ hook from Claude Code |
+| `rulez validate` | Validate hooks.yaml configuration |
+| `rulez debug <event> --tool <name> -v` | Simulate event to test rule matching |
+| `rulez repl` | Interactive debug mode (REPL) |
+| `rulez logs --tail 20` | Query and display audit logs |
 | `rulez explain rule <name>` | Analyze specific rule |
 | `rulez explain config` | Overview all rules |
-| `rulez repl` | Interactive debug mode |
+| `rulez test <file.yaml>` | Run batch test scenarios from YAML file |
+| `rulez lint` | Analyze rule quality and detect issues |
+| `rulez upgrade` | Check for and install newer binary releases |
+| `rulez gemini install` | Install RuleZ for Gemini CLI |
+| `rulez gemini hook` | Process Gemini CLI hook events |
+| `rulez gemini doctor` | Diagnose Gemini CLI integration |
+| `rulez copilot install` | Install RuleZ for GitHub Copilot |
+| `rulez copilot hook` | Process Copilot hook events |
+| `rulez copilot doctor` | Diagnose Copilot integration |
+| `rulez opencode install` | Install RuleZ for OpenCode |
+| `rulez opencode hook` | Process OpenCode hook events |
+| `rulez opencode doctor` | Diagnose OpenCode integration |
+| `rulez --version --json` | Check installation and API version |
+
+### Global Options
+
+| Option | Purpose |
+|--------|---------|
+| `--debug-logs` | Enable debug logging with full event and rule details |
+| `-h, --help` | Print help |
+| `-V, --version` | Print version |
+
+### Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success |
+| 1 | Configuration error |
+| 2 | Validation error |
+| 3 | Runtime error |
 
 ## Debug Event Aliases
 
