@@ -450,7 +450,7 @@ All three backends receive every log entry. If one backend is down, the other tw
 4. **Verify rules are matching.** Run `rulez debug` to confirm rules fire before checking the backend:
 
    ```bash
-   rulez debug PreToolUse --tool Write --input '{"file_path": "test.txt"}'
+   rulez debug PreToolUse --tool Write --path test.txt -v
    ```
 
 ### Environment variable not expanded
