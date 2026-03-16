@@ -48,10 +48,10 @@ See [platform-adapters.md](platform-adapters.md) for full mapping table.
 | `tools` | Tool name | `[Write, Edit, Bash]` |
 | `extensions` | File extension | `[.py, .js, .ts]` |
 | `directories` | Path prefix | `[src/, tests/]` |
-| `operations` | Bash operations | `[git, npm, docker]` |
+| `operations` | Event type filter | `[PreToolUse, PostToolUse]` |
 | `command_match` | Regex on command | `"rm -rf.*"` |
 | `prompt_match` | Regex on user input | `"(?i)deploy"` |
-| `enabled_when` | Conditional expression | `"env.CI == 'true'"` |
+| `enabled_when` | Conditional expression | `"env_CI == 'true'"` |
 
 ## Action Types
 
@@ -63,6 +63,8 @@ See [platform-adapters.md](platform-adapters.md) for full mapping table.
 | `run` | Execute script, use JSON output | `command`, `timeout` |
 | `block` | Unconditionally block tool execution | `reason` |
 | `block_if_match` | Block if regex matches in tool input | `pattern`, `reason` |
+| `validate_expr` | Evaluate expression, block if false | `expression`, `reason` |
+| `inline_script` | Run inline script (no file needed) | `script`, `timeout` |
 
 ## Response Format (for scripts)
 
