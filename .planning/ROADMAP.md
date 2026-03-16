@@ -29,7 +29,7 @@
 
 - [x] **Phase 30: CLI Reference Docs Update** - Update cli-commands.md, hooks-yaml-schema.md, and quick-reference.md to reflect v2.0-v2.2.1 changes (completed 2026-03-14)
 - [x] **Phase 31: Multi-CLI Usage Guides** - Create per-CLI usage guides for Claude Code, Gemini, and OpenCode (completed 2026-03-14)
-- [ ] **Phase 32: Feature Documentation** - Document external logging, rulez lint, and rulez test with configuration examples
+- [x] **Phase 32: Feature Documentation** - Document external logging, rulez lint, and rulez test with configuration examples (completed 2026-03-16)
 - [ ] **Phase 33: Accuracy Audit** - Cross-check all docs against source code and CLI help output, fix stale references
 
 ## Phase Details
@@ -68,7 +68,7 @@ Plans:
   1. A user can configure OTLP, Datadog, or Splunk logging backends by following the external logging documentation and its configuration examples
   2. A user can understand all `rulez lint` rules (duplicate names, overlapping rules, dead rules, missing descriptions) and interpret lint output
   3. A user can create a test YAML file and run `rulez test` to validate their hooks configuration, following the batch testing documentation
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 32-01-PLAN.md — Create external logging feature documentation (OTLP, Datadog, Splunk)
 - [ ] 32-02-PLAN.md — Create rulez lint and rulez test feature documentation
@@ -101,7 +101,7 @@ Phases execute in numeric order: 30 -> 31 -> 32 -> 33
 | 29 | v2.2.1 | 2/2 | Complete | 2026-03-13 |
 | 30. CLI Reference Docs Update | v2.2.2 | 2/2 | Complete | 2026-03-14 |
 | 31. Multi-CLI Usage Guides | 2/2 | Complete    | 2026-03-14 | - |
-| 32. Feature Documentation | 1/2 | In Progress|  | - |
+| 32. Feature Documentation | 2/2 | Complete   | 2026-03-16 | - |
 | 33. Accuracy Audit | v2.2.2 | 0/TBD | Not started | - |
 
 **Total:** 33 phases across 12 milestones. 82 plans complete, 4 phases pending (v2.2.2).

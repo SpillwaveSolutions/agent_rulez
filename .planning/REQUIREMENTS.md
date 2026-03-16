@@ -22,8 +22,8 @@ Requirements for documentation audit and multi-CLI guides release.
 ### Feature Documentation
 
 - [x] **FEAT-01**: External logging backends (OTLP, Datadog, Splunk) documented with configuration examples
-- [ ] **FEAT-02**: `rulez lint` rules documented (duplicate names, overlapping rules, dead rules, missing descriptions)
-- [ ] **FEAT-03**: `rulez test` batch testing workflow documented with example test files
+- [x] **FEAT-02**: `rulez lint` rules documented (duplicate names, overlapping rules, dead rules, missing descriptions)
+- [x] **FEAT-03**: `rulez test` batch testing workflow documented with example test files
 
 ### Accuracy Audit
 
@@ -56,8 +56,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GUIDE-02 | Phase 31 | Complete |
 | GUIDE-03 | Phase 31 | Complete |
 | FEAT-01 | Phase 32 | Complete |
-| FEAT-02 | Phase 32 | Pending |
-| FEAT-03 | Phase 32 | Pending |
+| FEAT-02 | Phase 32 | Complete |
+| FEAT-03 | Phase 32 | Complete |
 | AUDIT-01 | Phase 33 | Pending |
 | AUDIT-02 | Phase 33 | Pending |
 
