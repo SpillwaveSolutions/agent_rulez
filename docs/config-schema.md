@@ -1,3 +1,8 @@
+---
+last_modified: 2026-03-16
+last_validated: 2026-03-16
+---
+
 # RuleZ Configuration Schema
 
 This document describes the `hooks.yaml` configuration format used by RuleZ. Configuration files are loaded from:
@@ -20,7 +25,7 @@ settings:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `version` | string | Yes | Configuration format version. Use `"1"` or `"1.0"`. |
+| `version` | string | Yes | Configuration format version. Use `"1"` or `"1.0"` (both accepted). |
 | `rules` | array | Yes | Array of [Rule](#rule-schema) objects defining policy enforcement logic. |
 | `settings` | object | No | [Global settings](#settings-schema) for logging, timeouts, and behavior. |
 
@@ -46,6 +51,8 @@ rules:
       confidence: high
       tags: ["security", "git"]
 ```
+
+Note: `enabled_when` is a rule-level field, not a matcher field.
 
 ### Rule fields
 
