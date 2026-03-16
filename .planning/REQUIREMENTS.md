@@ -27,8 +27,8 @@ Requirements for documentation audit and multi-CLI guides release.
 
 ### Accuracy Audit
 
-- [ ] **AUDIT-01**: All docs cross-checked against `rulez --help` output and source code for correctness
-- [ ] **AUDIT-02**: Stale field names, command flags, examples, and file paths fixed across all reference docs
+- [x] **AUDIT-01**: All docs cross-checked against `rulez --help` output and source code for correctness
+- [x] **AUDIT-02**: Stale field names, command flags, examples, and file paths fixed across all reference docs
 
 ## Future Requirements
 
@@ -58,8 +58,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FEAT-01 | Phase 32 | Complete |
 | FEAT-02 | Phase 32 | Complete |
 | FEAT-03 | Phase 32 | Complete |
-| AUDIT-01 | Phase 33 | Pending |
-| AUDIT-02 | Phase 33 | Pending |
+| AUDIT-01 | Phase 33 | Complete |
+| AUDIT-02 | Phase 33 | Complete |
 
 **Coverage:**
 - v2.2.2 requirements: 11 total
