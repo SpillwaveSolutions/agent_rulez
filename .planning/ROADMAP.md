@@ -30,7 +30,7 @@
 - [x] **Phase 30: CLI Reference Docs Update** - Update cli-commands.md, hooks-yaml-schema.md, and quick-reference.md to reflect v2.0-v2.2.1 changes (completed 2026-03-14)
 - [x] **Phase 31: Multi-CLI Usage Guides** - Create per-CLI usage guides for Claude Code, Gemini, and OpenCode (completed 2026-03-14)
 - [x] **Phase 32: Feature Documentation** - Document external logging, rulez lint, and rulez test with configuration examples (completed 2026-03-16)
-- [ ] **Phase 33: Accuracy Audit** - Cross-check all docs against source code and CLI help output, fix stale references
+- [x] **Phase 33: Accuracy Audit** - Cross-check all docs against source code and CLI help output, fix stale references (completed 2026-03-16)
 
 ## Phase Details
 
@@ -80,10 +80,10 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Every CLI command documented in reference docs matches `rulez --help` and `rulez <cmd> --help` output exactly (flags, descriptions, defaults)
   2. All field names, file paths, and configuration examples in docs match the current source code (no stale references from pre-v2.0 versions)
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
-- [ ] 33-01-PLAN.md — Audit CLI reference docs and schema docs against --help output and source code
-- [ ] 33-02-PLAN.md — Audit guides, feature docs, skill docs, and templates for stale references and cross-doc consistency
+- [x] 33-01-PLAN.md — Audit CLI reference docs and schema docs against --help output and source code
+- [x] 33-02-PLAN.md — Audit guides, feature docs, skill docs, and templates for stale references and cross-doc consistency
 
 ## Progress
 
@@ -105,9 +105,9 @@ Phases execute in numeric order: 30 -> 31 -> 32 -> 33
 | 30. CLI Reference Docs Update | v2.2.2 | 2/2 | Complete | 2026-03-14 |
 | 31. Multi-CLI Usage Guides | 2/2 | Complete    | 2026-03-14 | - |
 | 32. Feature Documentation | 2/2 | Complete    | 2026-03-16 | - |
-| 33. Accuracy Audit | 1/2 | In Progress|  | - |
+| 33. Accuracy Audit | 2/2 | Complete | 2026-03-16 | - |
 
-**Total:** 33 phases across 12 milestones. 82 plans complete, 4 phases pending (v2.2.2).
+**Total:** 33 phases across 12 milestones. 83 plans complete. v2.2.2 milestone complete.
 
 ---
 
