@@ -80,7 +80,10 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Every CLI command documented in reference docs matches `rulez --help` and `rulez <cmd> --help` output exactly (flags, descriptions, defaults)
   2. All field names, file paths, and configuration examples in docs match the current source code (no stale references from pre-v2.0 versions)
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 33-01-PLAN.md — Audit CLI reference docs and schema docs against --help output and source code
+- [ ] 33-02-PLAN.md — Audit guides, feature docs, skill docs, and templates for stale references and cross-doc consistency
 
 ## Progress
 
@@ -102,10 +105,10 @@ Phases execute in numeric order: 30 -> 31 -> 32 -> 33
 | 30. CLI Reference Docs Update | v2.2.2 | 2/2 | Complete | 2026-03-14 |
 | 31. Multi-CLI Usage Guides | 2/2 | Complete    | 2026-03-14 | - |
 | 32. Feature Documentation | 2/2 | Complete    | 2026-03-16 | - |
-| 33. Accuracy Audit | v2.2.2 | 0/TBD | Not started | - |
+| 33. Accuracy Audit | v2.2.2 | 0/2 | Not started | - |
 
 **Total:** 33 phases across 12 milestones. 82 plans complete, 4 phases pending (v2.2.2).
 
 ---
 
-*Created 2026-02-06 -- Updated 2026-03-16 Phase 32 planned (2 plans).*
+*Created 2026-02-06 -- Updated 2026-03-16 Phase 33 planned (2 plans).*
