@@ -1,3 +1,8 @@
+---
+last_modified: 2026-03-16
+last_validated: 2026-03-16
+---
+
 # Platform Adapters Reference
 
 RuleZ supports multiple AI coding assistant platforms through adapter-based event translation. Write rules using RuleZ event types and adapters handle the translation automatically.

@@ -1,3 +1,8 @@
+---
+last_modified: 2026-03-16
+last_validated: 2026-03-16
+---
+
 # Agent Inline Hooks Reference
 
 How to define, embed, and manage RuleZ hooks for Claude Code subagents.

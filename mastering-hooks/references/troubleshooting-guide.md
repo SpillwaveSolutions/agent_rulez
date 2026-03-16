@@ -1,3 +1,8 @@
+---
+last_modified: 2026-03-16
+last_validated: 2026-03-16
+---
+
 # RuleZ Troubleshooting Guide
 
 Systematic procedures for diagnosing and fixing RuleZ issues.
@@ -17,7 +22,7 @@ rulez validate
 cat .claude/settings.json | grep -A10 hooks
 
 # 4. What rules exist?
-rulez explain config
+rulez explain rules
 
 # 5. Debug specific event
 rulez debug PreToolUse --tool Write --path test.py -v
@@ -51,7 +56,7 @@ rulez debug PreToolUse --tool Write --path test.py -v
 
 2. **Re-register if missing**:
    ```bash
-   rulez install --project
+   rulez install
    ```
 
 3. **Check config location**:
@@ -287,29 +292,27 @@ hooks:
    ```yaml
    # Debug by adding a simple always-true rule
    - name: debug-enabled-when
-     event: PreToolUse
-     match:
-       enabled_when: "true"
-     action:
-       type: inject
-       source: inline
-       content: "Debug: enabled_when evaluated"
+     enabled_when: "true"
+     matchers:
+       operations: [PreToolUse]
+     actions:
+       inject_inline: "Debug: enabled_when evaluated"
    ```
 
 **Common mistakes**:
 
 ```yaml
 # Wrong: using = instead of ==
-enabled_when: "env.CI = 'true'"
+enabled_when: 'env_CI = "true"'
 
 # Wrong: missing quotes around string
-enabled_when: "env.CI == true"
+enabled_when: "env_CI == true"
 
-# Wrong: wrong variable path
-enabled_when: "CI == 'true'"  # Should be env.CI
+# Wrong: wrong variable path (dot notation not supported)
+enabled_when: "env.CI == 'true'"  # Should be env_CI
 
-# Correct
-enabled_when: "env.CI == 'true'"
+# Correct (evalexpr uses underscores, not dots)
+enabled_when: 'env_CI == "true"'
 ```
 
 ---
@@ -322,7 +325,7 @@ enabled_when: "env.CI == 'true'"
 
 1. **Verify injection happened**:
    ```bash
-   rulez logs --tail 5
+   rulez logs --limit 5
    ```
    Look for "injected X bytes context"
 
@@ -408,15 +411,13 @@ Note: Claude Code does **not** send a `timestamp` field. RuleZ defaults to `Utc:
    # Create minimal test rule
    cat > .claude/hooks-test.yaml << 'EOF'
    version: "1"
-   hooks:
+   rules:
      - name: test-rule
-       event: PreToolUse
-       match:
+       matchers:
+         operations: [PreToolUse]
          tools: [Write]
-       action:
-         type: inject
-         source: inline
-         content: "TEST: Hook fired!"
+       actions:
+         inject_inline: "TEST: Hook fired!"
    EOF
 
    rulez validate --config .claude/hooks-test.yaml
@@ -429,7 +430,7 @@ Note: Claude Code does **not** send a `timestamp` field. RuleZ defaults to `Utc:
 
 3. **Check logs**:
    ```bash
-   rulez logs --tail 20 --json | jq .
+   rulez logs --limit 20 --json | jq .
    ```
 
 4. **Incrementally add complexity** until you find what breaks.
@@ -441,7 +442,7 @@ Note: Claude Code does **not** send a `timestamp` field. RuleZ defaults to `Utc:
 ### Reading Log Output
 
 ```bash
-rulez logs --tail 10
+rulez logs --limit 10
 ```
 
 **Log entry format**:
@@ -459,17 +460,17 @@ TIMESTAMP | EVENT | RULE_NAME | STATUS
 ### Filtering Logs
 
 ```bash
-# Only errors
-rulez logs --status error
+# Only blocked decisions
+rulez logs --decision blocked
 
-# Specific rule
-rulez logs --rule python-standards
+# Filter by mode
+rulez logs --mode enforce
 
-# Last hour
-rulez logs --since 1h
+# Logs since a specific time (RFC3339 format)
+rulez logs --since 2026-03-14T00:00:00Z
 
-# JSON for parsing
-rulez logs --json | jq 'select(.status == "error")'
+# Show more entries
+rulez logs --limit 50
 ```
 
 ---
@@ -480,10 +481,10 @@ If you've tried the above and still have issues:
 
 1. **Gather diagnostic info**:
    ```bash
-   rulez --version --json > rulez-debug.txt
+   rulez --version > rulez-debug.txt
    rulez validate >> rulez-debug.txt 2>&1
    cat .claude/hooks.yaml >> rulez-debug.txt
-   rulez logs --tail 50 --json >> rulez-debug.txt
+   rulez logs --limit 50 >> rulez-debug.txt
    ```
 
 2. **Check for known issues** in project documentation
