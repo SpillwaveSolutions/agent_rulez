@@ -1,3 +1,8 @@
+---
+last_modified: 2026-03-16
+last_validated: 2026-03-16
+---
+
 # External Logging Backends
 
 RuleZ always writes audit logs to a local NDJSON file (`~/.claude/logs/rulez.log`). External logging backends let you forward those same log entries to centralized observability platforms -- OTLP collectors, Datadog, or Splunk -- so your team can monitor policy enforcement alongside other infrastructure telemetry.
@@ -39,7 +44,7 @@ settings:
 Trigger a rule to verify logs flow:
 
 ```bash
-rulez debug PreToolUse --tool Write --input '{"file_path": "test.txt", "content": "hello"}'
+rulez debug PreToolUse --tool Write --path test.txt -v
 ```
 
 Expected output:
@@ -195,7 +200,7 @@ For the full event payload structure, see [Event Schema](../event-schema.md).
 2. Trigger a rule:
 
    ```bash
-   rulez debug PreToolUse --tool Write --input '{"file_path": "test.txt", "content": "hello"}'
+   rulez debug PreToolUse --tool Write --path test.txt -v
    ```
 
 3. Check the collector logs or your observability platform for an entry with `service.name: rulez`.
@@ -274,7 +279,7 @@ The `status` field is `"error"` when the outcome is `Block`, and `"info"` otherw
 2. Trigger a rule:
 
    ```bash
-   rulez debug PreToolUse --tool Write --input '{"file_path": "test.txt", "content": "hello"}'
+   rulez debug PreToolUse --tool Write --path test.txt -v
    ```
 
 3. In the Datadog console, navigate to **Logs** and filter by `service:rulez`. You should see the log entry within 30 seconds.
@@ -349,7 +354,7 @@ For the full event payload structure, see [Event Schema](../event-schema.md).
 2. Trigger a rule:
 
    ```bash
-   rulez debug PreToolUse --tool Bash --input '{"command": "rm -rf /tmp/test"}'
+   rulez debug PreToolUse --tool Bash --command "rm -rf /tmp/test" -v
    ```
 
 3. In Splunk, search for events with `sourcetype=rulez`:

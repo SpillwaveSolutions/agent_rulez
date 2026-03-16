@@ -1,3 +1,8 @@
+---
+last_modified: 2026-03-16
+last_validated: 2026-03-16
+---
+
 # RuleZ for Gemini CLI
 
 A complete guide to using RuleZ with the Gemini CLI. Covers installation, configuration, dual-fire events, verification, and troubleshooting.
@@ -120,31 +125,32 @@ RuleZ uses the same `hooks.yaml` configuration file across all platforms. Your e
 ### Gemini-Tailored Example
 
 ```yaml
-hooks:
+version: "1"
+
+rules:
   - name: inject-project-context
-    event: BeforeAgent
     description: "Inject project context when agent starts"
-    matchers: []
-    action:
-      type: inject
+    matchers:
+      operations: [BeforeAgent]
+    actions:
       inject_command: "cat .claude/context/project-overview.md"
 
   - name: block-force-push
-    event: PreToolUse
     description: "Block force push to main"
     matchers:
-      - tools: [Bash]
-        command_pattern: "git push.*--force.*main"
-    action:
-      type: block
-      message: "Force push to main is prohibited by policy"
+      operations: [PreToolUse]
+      tools: [Bash]
+      command_match: "git push.*--force.*main"
+    actions:
+      block: true
 
   - name: audit-model-calls
-    event: BeforeModel
     description: "Log all model inference calls (Gemini-only)"
-    matchers: []
-    action:
-      type: audit
+    mode: audit
+    matchers:
+      operations: [BeforeModel]
+    actions:
+      inject_inline: "Audit: model inference detected"
 ```
 
 Note that `BeforeModel` rules will only fire on Gemini CLI since no other platform emits this event.

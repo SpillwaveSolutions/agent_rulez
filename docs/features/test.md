@@ -1,3 +1,8 @@
+---
+last_modified: 2026-03-16
+last_validated: 2026-03-16
+---
+
 # RuleZ Test -- Batch Test Scenarios
 
 Validate your hooks configuration by running test scenarios from a YAML file. Catch rule regressions before they reach production.
@@ -21,13 +26,13 @@ Create a file called `tests/hooks-test.yaml` with two simple test cases -- one t
 ```yaml
 tests:
   - name: "Block rm -rf commands"
-    event_type: "tool_execute"
+    event_type: "PreToolUse"
     tool: "Bash"
     command: "rm -rf /"
     expected: "block"
 
   - name: "Allow ls commands"
-    event_type: "tool_execute"
+    event_type: "PreToolUse"
     tool: "Bash"
     command: "ls -la"
     expected: "allow"
@@ -60,7 +65,7 @@ Modify the second test to expect `block` instead of `allow`:
 
 ```yaml
   - name: "Allow ls commands"
-    event_type: "tool_execute"
+    event_type: "PreToolUse"
     tool: "Bash"
     command: "ls -la"
     expected: "block"          # This will fail -- ls is allowed
@@ -105,7 +110,7 @@ A test file has a top-level `tests` array. Each entry is a TestCase with the fol
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `name` | string | Yes | Descriptive name for the test case. Shown in pass/fail output. |
-| `event_type` | string | Yes | Event to simulate. Common values: `tool_execute`, `tool_result`, `notification`. |
+| `event_type` | string | Yes | Event to simulate. Common values: `PreToolUse`, `PostToolUse`, `SessionStart`. Supports aliases like `pre`, `post`, `session`. |
 | `tool` | string | No | Tool name to simulate (e.g., `Bash`, `Write`, `Read`, `Grep`). |
 | `command` | string | No | Command string for Bash tool scenarios (e.g., `rm -rf /`). |
 | `path` | string | No | File path for Write/Read tool scenarios (e.g., `src/main.rs`). |
@@ -115,9 +120,11 @@ A test file has a top-level `tests` array. Each entry is a TestCase with the fol
 ### Field details
 
 **`event_type`** must be one of the event types RuleZ recognizes. The most common are:
-- `tool_execute` -- Before a tool runs (used by most block/inject rules)
-- `tool_result` -- After a tool returns output
-- `notification` -- System notification events
+- `PreToolUse` (alias: `pre`) -- Before a tool runs (used by most block/inject rules)
+- `PostToolUse` (alias: `post`) -- After a tool returns output
+- `SessionStart` (alias: `session`) -- When a session begins
+
+See the [CLI Commands Reference](../../mastering-hooks/references/cli-commands.md) for the full list of event types and aliases.
 
 **`expected`** determines the pass/fail check:
 - `allow` -- The event passes through with no block and no context injection
@@ -185,37 +192,37 @@ rules:
 ```yaml
 tests:
   - name: "Block dangerous rm -rf"
-    event_type: "tool_execute"
+    event_type: "PreToolUse"
     tool: "Bash"
     command: "rm -rf /"
     expected: "block"
 
   - name: "Allow safe ls command"
-    event_type: "tool_execute"
+    event_type: "PreToolUse"
     tool: "Bash"
     command: "ls -la src/"
     expected: "allow"
 
   - name: "Inject Python standards on .py write"
-    event_type: "tool_execute"
+    event_type: "PreToolUse"
     tool: "Write"
     path: "src/main.py"
     expected: "inject"
 
   - name: "Block writing .env files"
-    event_type: "tool_execute"
+    event_type: "PreToolUse"
     tool: "Write"
     path: "config/.env"
     expected: "block"
 
   - name: "Allow reading any file"
-    event_type: "tool_execute"
+    event_type: "PreToolUse"
     tool: "Read"
     path: "src/main.rs"
     expected: "allow"
 
   - name: "Block git force-push"
-    event_type: "tool_execute"
+    event_type: "PreToolUse"
     tool: "Bash"
     command: "git push origin main --force"
     expected: "block"
@@ -273,14 +280,15 @@ The test file path is incorrect or the file does not exist.
 - Check the file exists: `ls tests/hooks-test.yaml`
 - Use an absolute or correct relative path: `rulez test ./tests/hooks-test.yaml`
 
-### "unknown event type 'tool_exec'"
+### "unknown event type" error
 
-The `event_type` field contains a typo. Valid event types include:
-- `tool_execute`
-- `tool_result`
-- `notification`
+The `event_type` field contains an unrecognized value. Valid event types include:
+- `PreToolUse` (aliases: `pre`, `pretooluse`, `pre-tool-use`)
+- `PostToolUse` (aliases: `post`, `posttooluse`, `post-tool-use`)
+- `SessionStart` (aliases: `session`, `start`, `sessionstart`)
+- `BeforeAgent` (aliases: `subagent`, `beforeagent`, `before-agent`)
 
-Check spelling carefully -- `tool_execute` not `tool_exec` or `toolExecute`.
+Check spelling carefully -- event types are case-insensitive but must match one of the recognized names or aliases.
 
 ### Test expects "block" but gets "allow"
 
@@ -288,7 +296,7 @@ The rule's matchers do not match the simulated event. Common causes:
 
 - **Wrong tool name:** Rule matches `Bash` but test uses `bash` (tool names are case-sensitive)
 - **Missing command:** Rule uses `command_match` but test case has no `command` field
-- **Regex mismatch:** The `command_match` regex does not match the test command string. Use `rulez debug tool_execute --tool Bash --command "your command"` to test interactively
+- **Regex mismatch:** The `command_match` regex does not match the test command string. Use `rulez debug pre --tool Bash --command "your command" -v` to test interactively
 - **Rule disabled:** Check that the rule does not have `metadata.enabled: false`
 
 ### Tests pass locally but fail in CI
@@ -303,4 +311,4 @@ RuleZ loads configuration from `.claude/hooks.yaml` by default. In CI:
 
 - [CLI Commands Reference](../../mastering-hooks/references/cli-commands.md) -- Full `rulez test` flag reference
 - [Hooks YAML Schema](../../mastering-hooks/references/hooks-yaml-schema.md) -- Complete rule syntax and field definitions
-- [External Logging](../../docs/features/external-logging.md) -- Audit logging for test runs
+- [External Logging](external-logging.md) -- Audit logging for test runs

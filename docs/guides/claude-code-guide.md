@@ -1,3 +1,8 @@
+---
+last_modified: 2026-03-16
+last_validated: 2026-03-16
+---
+
 # RuleZ for Claude Code -- Usage Guide
 
 A complete guide to installing, configuring, verifying, and troubleshooting RuleZ with Claude Code.
@@ -88,42 +93,40 @@ RuleZ rules are defined in `.claude/hooks.yaml`. Each rule specifies an event to
 Here is a practical example with three rules:
 
 ```yaml
-hooks:
+version: "1"
+
+rules:
   - name: block-force-push
     description: "Prevent force push to main branch"
-    event: PreToolUse
     matchers:
+      operations: [PreToolUse]
       tools: [Bash]
       command_match: "git\\s+push\\s+--force.*main"
-    action:
-      type: block
-      reason: "Force push to main is prohibited. Use a feature branch and PR instead."
+    actions:
+      block: true
 
   - name: python-standards
     description: "Inject Python coding standards on .py file writes"
-    event: PreToolUse
     matchers:
+      operations: [PreToolUse]
       tools: [Write, Edit]
       extensions: [.py]
-    action:
-      type: inject
-      path: .claude/context/python-standards.md
+    actions:
+      inject: .claude/context/python-standards.md
 
   - name: warn-large-files
     description: "Warn when editing files over 500 lines"
-    event: PreToolUse
     matchers:
+      operations: [PreToolUse]
       tools: [Write, Edit]
-    action:
-      type: run
-      command: |
+    actions:
+      run: |
         LINE_COUNT=$(wc -l < "$TOOL_INPUT_FILE_PATH" 2>/dev/null || echo 0)
         if [ "$LINE_COUNT" -gt 500 ]; then
           echo '{"continue": true, "context": "WARNING: This file has '"$LINE_COUNT"' lines. Consider splitting it."}'
         else
           echo '{"continue": true}'
         fi
-      timeout: 5
 ```
 
 For the full schema reference, see [hooks-yaml-schema.md](../../mastering-hooks/references/hooks-yaml-schema.md).
@@ -135,10 +138,10 @@ For the full schema reference, see [hooks-yaml-schema.md](../../mastering-hooks/
 | `tools` | Match tool names | `[Write, Edit, Bash]` |
 | `extensions` | Match file extensions | `[.py, .js, .ts]` |
 | `directories` | Match path prefixes | `[src/, tests/]` |
-| `operations` | Match Bash operations | `[git, npm, docker]` |
+| `operations` | Filter by event type | `[PreToolUse, PostToolUse]` |
 | `command_match` | Regex on command text | `"rm -rf.*"` |
 | `prompt_match` | Regex on user input | `"(?i)deploy"` |
-| `enabled_when` | Conditional expression | `"env.CI == 'true'"` |
+| `enabled_when` | Conditional expression | `'env_CI == "true"'` |
 
 ### Action types
 

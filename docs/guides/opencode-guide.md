@@ -1,3 +1,8 @@
+---
+last_modified: 2026-03-16
+last_validated: 2026-03-16
+---
+
 # RuleZ for OpenCode
 
 A complete guide to using RuleZ with OpenCode. Covers installation, plugin setup, event mapping, verification, and troubleshooting.
@@ -160,33 +165,34 @@ RuleZ uses the same `hooks.yaml` configuration file across all platforms. Your e
 ### OpenCode-Tailored Example
 
 ```yaml
-hooks:
+version: "1"
+
+rules:
   - name: block-force-push
-    event: PreToolUse
     description: "Block force push to main"
     matchers:
-      - tools: [Bash]
-        command_pattern: "git push.*--force.*main"
-    action:
-      type: block
-      message: "Force push to main is prohibited by policy"
+      operations: [PreToolUse]
+      tools: [Bash]
+      command_match: "git push.*--force.*main"
+    actions:
+      block: true
 
   - name: inject-standards
-    event: PreToolUse
     description: "Inject coding standards for Python files"
     matchers:
-      - tools: [Write, Edit]
-        extensions: [.py]
-    action:
-      type: inject
-      inject_command: "cat .claude/context/python-standards.md"
+      operations: [PreToolUse]
+      tools: [Write, Edit]
+      extensions: [.py]
+    actions:
+      inject: .claude/context/python-standards.md
 
   - name: audit-session-changes
-    event: UserPromptSubmit
     description: "Log all prompt submissions"
-    matchers: []
-    action:
-      type: audit
+    mode: audit
+    matchers:
+      operations: [UserPromptSubmit]
+    actions:
+      inject_inline: "Audit: prompt submitted"
 ```
 
 ### Response Format

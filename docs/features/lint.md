@@ -1,3 +1,8 @@
+---
+last_modified: 2026-03-16
+last_validated: 2026-03-16
+---
+
 # RuleZ Lint -- Rule Quality Analysis
 
 Static analysis for your hooks configuration. Catch misconfigurations, dead rules, and quality issues before they cause runtime surprises.
@@ -163,7 +168,7 @@ rules:
   - name: audit-tool-executions
     description: "Log tool execution events"
     matchers:
-      operations: [tool_execute]  # Only match tool executions
+      operations: [PreToolUse]  # Only match tool executions
     actions:
       run: "logger 'tool executed'"
 ```
@@ -235,7 +240,7 @@ rules:
 rules:
   - name: deny-rm-rf-v1
     matchers:
-      operations: [tool_execute]
+      operations: [PreToolUse]
       tools: [Bash]
       command_match: "rm\\s+-rf"
     actions:
@@ -243,7 +248,7 @@ rules:
 
   - name: deny-rm-rf-v2       # Overlaps with v1!
     matchers:
-      operations: [tool_execute]
+      operations: [PreToolUse]
       tools: [Bash]
       command_match: "rm\\s+-rf"
     actions:
@@ -258,7 +263,7 @@ rules:
   - name: deny-rm-rf
     description: "Block all rm -rf commands"
     matchers:
-      operations: [tool_execute]
+      operations: [PreToolUse]
       tools: [Bash]
       command_match: "rm\\s+-rf"
     actions:
@@ -283,7 +288,7 @@ rules:
   - name: old-audit-logger
     description: "Legacy audit logging"
     matchers:
-      operations: [tool_execute]
+      operations: [PreToolUse]
     actions:
       run: "logger 'tool executed'"
     metadata:
@@ -298,7 +303,7 @@ rules:
   - name: audit-logger
     description: "Audit logging for tool executions"
     matchers:
-      operations: [tool_execute]
+      operations: [PreToolUse]
     actions:
       run: "logger 'tool executed'"
     metadata:
