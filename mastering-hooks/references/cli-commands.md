@@ -1,3 +1,8 @@
+---
+last_modified: 2026-03-16
+last_validated: 2026-03-16
+---
+
 # RuleZ CLI Commands Reference
 
 Complete reference for all RuleZ CLI commands. All flag names and descriptions match `rulez --help` and `rulez <cmd> --help` output as of v2.2.1.
@@ -26,7 +31,7 @@ Options:
 | `rulez repl` | Start interactive debug mode |
 | `rulez validate` | Validate configuration file |
 | `rulez logs` | Query and display logs |
-| `rulez explain` | Explain rules or events |
+| `rulez explain` | Explain rules or events (use 'rulez explain --help' for subcommands) |
 | `rulez test` | Run batch test scenarios from a YAML file |
 | `rulez lint` | Analyze rule quality and detect issues |
 | `rulez upgrade` | Check for and install newer rulez binary releases |
@@ -286,8 +291,6 @@ Options:
 | `compact`, `precompact`, `pre-compact` | `PreCompact` |
 | `subagent`, `beforeagent`, `before-agent`, `subagentstart` | `BeforeAgent` |
 | `afteragent`, `after-agent`, `subagentstop` | `AfterAgent` |
-| `idle`, `teammateidle` | `TeammateIdle` |
-| `task`, `taskcompleted` | `TaskCompleted` |
 
 **Examples**:
 
@@ -767,3 +770,9 @@ rulez opencode doctor --json
 | `RULEZ_LOG_FILE` | Log file path | `~/.claude/logs/rulez.log` |
 | `RULEZ_TIMEOUT` | Default script timeout | `30` |
 | `NO_COLOR` | Disable colored output | (unset) |
+
+---
+
+## Known --help Stale Text
+
+The `--binary` flag description in `rulez gemini install --help`, `rulez copilot install --help`, and `rulez opencode install --help` still says "Path to CCH binary" instead of "Path to RuleZ binary". This is a stale reference to the old binary name. The docs above use the correct name. A Rust code fix is needed to update the clap help text.

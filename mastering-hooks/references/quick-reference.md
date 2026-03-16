@@ -1,3 +1,8 @@
+---
+last_modified: 2026-03-16
+last_validated: 2026-03-16
+---
+
 # RuleZ Quick Reference
 
 Fast lookup tables for events, matchers, actions, and file locations.
@@ -113,7 +118,7 @@ project/
 | `rulez opencode install` | Install RuleZ for OpenCode |
 | `rulez opencode hook` | Process OpenCode hook events |
 | `rulez opencode doctor` | Diagnose OpenCode integration |
-| `rulez --version --json` | Check installation and API version |
+| `rulez --version` | Print version information |
 
 ### Global Options
 
@@ -141,9 +146,7 @@ project/
 | `session`, `start`, `sessionstart` | `SessionStart` |
 | `end`, `sessionend`, `session-end` | `SessionEnd` |
 | `permission`, `perm`, `permissionrequest` | `PermissionRequest` |
-| `prompt`, `user-prompt`, `userpromptsubmit` | `UserPromptSubmit` |
+| `prompt`, `user-prompt`, `userpromptsubmit`, `user-prompt-submit` | `UserPromptSubmit` |
 | `compact`, `precompact`, `pre-compact` | `PreCompact` |
 | `subagent`, `beforeagent`, `before-agent`, `subagentstart` | `BeforeAgent` |
 | `afteragent`, `after-agent`, `subagentstop` | `AfterAgent` |
-| `idle`, `teammateidle` | `TeammateIdle` |
-| `task`, `taskcompleted` | `TaskCompleted` |
