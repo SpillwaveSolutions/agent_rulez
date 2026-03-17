@@ -91,7 +91,37 @@ RuleZ positions itself as comparable to:
 
 ### Active
 
-(Next milestone — use `/gsd:new-milestone` to define)
+- [ ] PROFILE-01: Runtime profiles define per-platform conventions (dirs, separators, tool style)
+- [ ] PROFILE-02: Skill discovery scans .claude/skills/, .claude/commands/, and extra dirs
+- [ ] PROFILE-03: Extra skill sources (mastering-hooks at repo root) discovered automatically
+- [ ] XFORM-01: Tool names converted from PascalCase to runtime conventions
+- [ ] XFORM-02: Path references rewritten (~/.claude/ -> runtime equivalents)
+- [ ] XFORM-03: Command filenames flattened (dot to hyphen) with cross-reference rewriting
+- [ ] XFORM-04: YAML frontmatter converted (allowed-tools -> tools, color hex, strip unsupported)
+- [ ] XFORM-05: MCP tools excluded for Gemini, preserved for OpenCode
+- [ ] CLI-01: `rulez skills install --runtime <rt>` installs to target runtime
+- [ ] CLI-02: `rulez skills install --dry-run` previews without writing
+- [ ] CLI-03: `rulez skills clean --runtime <rt>` removes generated files
+- [ ] CONFIG-01: Auto-update GEMINI.md skill registry with marker sections
+- [ ] CONFIG-02: Auto-generate AGENTS.md for Codex with skill registry
+- [ ] CONFIG-03: Mastering-hooks platform references rewritten context-aware
+- [ ] DX-01: `rulez skills status` shows human-readable dates and freshness
+- [ ] DX-02: `rulez skills diff --runtime <rt>` shows colored diff of changes
+- [ ] DX-03: `rulez skills sync` installs to all detected runtimes
+- [ ] DX-04: Colorized output with progress indicators
+
+## Current Milestone: v2.3.0 Multi-Runtime Skill Portability
+
+**Goal:** Build an installer-based conversion pipeline that transforms canonical Claude Code skills into runtime-specific installations. Author once in `.claude/`, convert at install time, run everywhere.
+
+**Target features:**
+- Runtime profiles and skill discovery (Phase 34 — DONE)
+- Content transformation engine with 6 transform types (Phase 35 — DONE)
+- CLI integration with file writer (Phase 36 — DONE)
+- Config file generation for GEMINI.md, AGENTS.md (Phase 37)
+- DX polish: status, diff, sync, clean (Phase 38)
+
+**Plan:** `docs/plans/multi-runtime-skill-portability.md`
 
 ## Shipped: v2.2.2 Documentation Audit & Multi-CLI Guides (2026-03-17)
 
@@ -137,6 +167,9 @@ All documentation audited against source code, per-CLI usage guides created for 
 | LazyLock pre-compiled validators | <0.1ms validation overhead at runtime | ✓ Good |
 | ubuntu-22.04 for Tauri builds | webkit2gtk-4.1 requirement, ubuntu-latest may break | ✓ Good |
 | E2E gate before Tauri builds | Fast feedback (2-3min) prevents expensive failed builds | ✓ Good |
+| Hardcoded Rust transforms, not YAML-configurable | 4 well-known runtimes + Custom variant covers long tail | — Pending |
+| Clean-install writer (rm + recreate) | Prevents orphan files across versions, proven in GSD | — Pending |
+| `rulez skills` subcommand family, not extending `rulez install` | Hook registration and skill distribution are orthogonal | — Pending |
 
 ## Quality Gates
 
@@ -155,6 +188,6 @@ All documentation audited against source code, per-CLI usage guides created for 
 
 ---
 
-*Last updated: 2026-03-17 after v2.2.2 milestone completion*
+*Last updated: 2026-03-16 after v2.3.0 milestone start*
 *Reorganized as monorepo on 2026-02-06*
 *Renamed from CCH to RuleZ*

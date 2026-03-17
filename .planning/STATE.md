@@ -1,33 +1,44 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.2.2
-milestone_name: Documentation Audit & Multi-CLI Guides
-status: completed
-stopped_at: Milestone v2.2.2 archived
-last_updated: "2026-03-17T00:00:00.000Z"
-last_activity: 2026-03-17 — Milestone v2.2.2 archived and completed
+milestone: v2.3.0
+milestone_name: Multi-Runtime Skill Portability
+status: in_progress
+stopped_at: Phases 34-36 implemented, Phase 37 next
+last_updated: "2026-03-16T00:00:00.000Z"
+last_activity: 2026-03-16 — Milestone v2.3.0 started, Phases 34-36 implemented
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 8
-  completed_plans: 8
-  percent: 100
+  total_phases: 5
+  completed_phases: 3
+  total_plans: 0
+  completed_plans: 0
+  percent: 60
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-17)
+See: .planning/PROJECT.md (updated 2026-03-16)
 
 **Core value:** LLMs do not enforce policy. LLMs are subject to policy.
-**Current focus:** Planning next milestone
+**Current focus:** Multi-Runtime Skill Portability (v2.3.0)
 
 ## Current Position
 
-Milestone: v2.2.2 — Documentation Audit & Multi-CLI Guides
-Status: SHIPPED (2026-03-17)
-Next action: `/gsd:new-milestone` to start next milestone
+Milestone: v2.3.0 — Multi-Runtime Skill Portability
+Status: IN PROGRESS (60% — 3/5 phases complete)
+Current phase: Phase 37 — Config File Generation and Mastering-Hooks
+Next action: `/gsd:plan-phase 37`
+
+## Phase Progress
+
+| Phase | Name | Status |
+|-------|------|--------|
+| 34 | Runtime Profiles and Skill Discovery | ✓ Complete |
+| 35 | Transformation Engine | ✓ Complete |
+| 36 | CLI Integration and File Writer | ✓ Complete |
+| 37 | Config File Generation and Mastering-Hooks | ○ Pending |
+| 38 | Status, Diff, Sync, and DX Polish | ○ Pending |
 
 ## Performance Metrics
 
@@ -50,6 +61,7 @@ Next action: `/gsd:new-milestone` to start next milestone
 | v2.1 | 3 | 4 | Complete | 2026-03-09 |
 | v2.2.1 | 1 | 2 | Complete | 2026-03-13 |
 | v2.2.2 | 4 | 8 | Complete | 2026-03-17 |
+| v2.3.0 | 5 | — | In Progress | — |
 
 ## Accumulated Context
 
@@ -63,6 +75,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-03-17
-Stopped at: Milestone v2.2.2 archived
-Next action: `/gsd:new-milestone` to start next milestone
+Last session: 2026-03-16
+Stopped at: Phases 34-36 implemented, Phase 37 next
+Next action: `/gsd:plan-phase 37`
