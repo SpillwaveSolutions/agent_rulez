@@ -31,8 +31,8 @@
 - [x] **Phase 34: Runtime Profiles and Skill Discovery** - Data model and discovery layer for all supported runtimes
 - [x] **Phase 35: Transformation Engine** - Content transformation pipeline with 6 transform types
 - [x] **Phase 36: CLI Integration and File Writer** - `rulez skills install` and `rulez skills clean` with file writer
-- [ ] **Phase 37: Config File Generation and Mastering-Hooks** - Auto-generate GEMINI.md/AGENTS.md skill registries and handle mastering-hooks
-- [ ] **Phase 38: Status, Diff, Sync, and DX Polish** - Complete `rulez skills` subcommand family with status/diff/sync and colorized output
+- [x] **Phase 37: Config File Generation and Mastering-Hooks** - Auto-generate GEMINI.md/AGENTS.md skill registries and handle mastering-hooks
+- [x] **Phase 38: Status, Diff, Sync, and DX Polish** - Complete `rulez skills` subcommand family with status/diff/sync and colorized output
 
 ## Phase Details
 

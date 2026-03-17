@@ -29,17 +29,17 @@
 
 ### Config — Config file generation
 
-- [ ] **CONFIG-01**: After installing to `.gemini/skills/`, auto-update `GEMINI.md` skill registry section using `<!-- RULEZ_SKILLS_START -->` / `<!-- RULEZ_SKILLS_END -->` markers
-- [ ] **CONFIG-02**: Auto-generate `AGENTS.md` for Codex with skill registry section
-- [ ] **CONFIG-03**: Preserve non-skill sections of config files during update
-- [ ] **CONFIG-04**: Mastering-hooks platform references rewritten with context-aware handling (lives at repo root, not in `.claude/skills/`)
+- [x] **CONFIG-01**: After installing to `.gemini/skills/`, auto-update `GEMINI.md` skill registry section using `<!-- RULEZ_SKILLS_START -->` / `<!-- RULEZ_SKILLS_END -->` markers
+- [x] **CONFIG-02**: Auto-generate `AGENTS.md` for Codex with skill registry section
+- [x] **CONFIG-03**: Preserve non-skill sections of config files during update
+- [x] **CONFIG-04**: Mastering-hooks platform references rewritten with context-aware handling (lives at repo root, not in `.claude/skills/`)
 
 ### DX — Developer experience polish
 
-- [ ] **DX-01**: `rulez skills status` shows human-readable relative timestamps (e.g., "2 hours ago") and mtime freshness comparison
-- [ ] **DX-02**: `rulez skills diff --runtime <rt>` shows colored diff of what would change if skills were re-installed
-- [ ] **DX-03**: `rulez skills sync` installs to all detected runtimes in one command with per-runtime progress
-- [ ] **DX-04**: Colorized terminal output with progress indicators for install/sync operations
+- [x] **DX-01**: `rulez skills status` shows human-readable relative timestamps (e.g., "2 hours ago") and mtime freshness comparison
+- [x] **DX-02**: `rulez skills diff --runtime <rt>` shows colored diff of what would change if skills were re-installed
+- [x] **DX-03**: `rulez skills sync` installs to all detected runtimes in one command with per-runtime progress
+- [x] **DX-04**: Colorized terminal output with progress indicators for install/sync operations
 
 ## Future Requirements
 
@@ -74,21 +74,21 @@
 | CLI-02 | Phase 36 | Complete |
 | CLI-03 | Phase 36 | Complete |
 | CLI-04 | Phase 36 | Complete |
-| CONFIG-01 | Phase 37 | Pending |
-| CONFIG-02 | Phase 37 | Pending |
-| CONFIG-03 | Phase 37 | Pending |
-| CONFIG-04 | Phase 37 | Pending |
-| DX-01 | Phase 38 | Pending |
-| DX-02 | Phase 38 | Pending |
-| DX-03 | Phase 38 | Pending |
-| DX-04 | Phase 38 | Pending |
+| CONFIG-01 | Phase 37 | Complete |
+| CONFIG-02 | Phase 37 | Complete |
+| CONFIG-03 | Phase 37 | Complete |
+| CONFIG-04 | Phase 37 | Complete |
+| DX-01 | Phase 38 | Complete |
+| DX-02 | Phase 38 | Complete |
+| DX-03 | Phase 38 | Complete |
+| DX-04 | Phase 38 | Complete |
 
 **Coverage:**
 - v2.3.0 requirements: 21 total
 - Mapped to phases: 21
 - Unmapped: 0 ✓
-- Complete: 13 (Phases 34-36)
-- Pending: 8 (Phases 37-38)
+- Complete: 21 (Phases 34-38)
+- Pending: 0 ✓
 
 ---
 *Requirements defined: 2026-03-16*

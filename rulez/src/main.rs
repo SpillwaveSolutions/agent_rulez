@@ -11,6 +11,7 @@ mod logging;
 mod models;
 mod opencode;
 mod schema;
+mod skills;
 
 #[derive(Parser)]
 #[command(name = "rulez")]
@@ -143,6 +144,11 @@ enum Commands {
         #[arg(short, long)]
         verbose: bool,
     },
+    /// Manage skills across AI coding runtimes
+    Skills {
+        #[command(subcommand)]
+        subcommand: SkillsSubcommand,
+    },
 }
 
 /// Subcommands for the explain command
@@ -213,6 +219,52 @@ enum GeminiSubcommand {
     },
     /// Run Gemini hook runner (stdin -> Gemini JSON response)
     Hook,
+}
+
+/// Subcommands for skill distribution across runtimes
+#[derive(Subcommand)]
+enum SkillsSubcommand {
+    /// Install skills to a target runtime
+    Install {
+        /// Target runtime: claude, opencode, gemini, codex, skills
+        #[arg(long)]
+        runtime: String,
+        /// Installation scope: project or global
+        #[arg(long, default_value = "project")]
+        scope: String,
+        /// Custom output directory (required for --runtime skills)
+        #[arg(long)]
+        dir: Option<String>,
+        /// Preview what would be installed without writing files
+        #[arg(long)]
+        dry_run: bool,
+    },
+    /// Show installation status across runtimes
+    Status,
+    /// Remove generated skill files for a runtime
+    Clean {
+        /// Target runtime to clean
+        #[arg(long)]
+        runtime: String,
+        /// Custom directory (for custom runtime)
+        #[arg(long)]
+        dir: Option<String>,
+    },
+    /// Install to all known runtimes at once
+    Sync {
+        /// Preview what would be installed
+        #[arg(long)]
+        dry_run: bool,
+    },
+    /// Show what would change if skills were re-installed
+    Diff {
+        /// Target runtime to diff
+        #[arg(long)]
+        runtime: String,
+        /// Custom directory (for custom runtime)
+        #[arg(long)]
+        dir: Option<String>,
+    },
 }
 
 /// Subcommands for OpenCode CLI utilities
@@ -388,6 +440,28 @@ async fn main() -> Result<()> {
         Some(Commands::Lint { config, verbose }) => {
             cli::lint::run(config, verbose).await?;
         }
+        Some(Commands::Skills { subcommand }) => match subcommand {
+            SkillsSubcommand::Install {
+                runtime,
+                scope,
+                dir,
+                dry_run,
+            } => {
+                cli::skills::install(&runtime, &scope, dir.as_deref(), dry_run).await?;
+            }
+            SkillsSubcommand::Status => {
+                cli::skills::status().await?;
+            }
+            SkillsSubcommand::Clean { runtime, dir } => {
+                cli::skills::clean(&runtime, dir.as_deref()).await?;
+            }
+            SkillsSubcommand::Sync { dry_run } => {
+                cli::skills::sync(dry_run).await?;
+            }
+            SkillsSubcommand::Diff { runtime, dir } => {
+                cli::skills::diff(&runtime, dir.as_deref()).await?;
+            }
+        },
         None => {
             // No subcommand provided, read from stdin for hook processing
             process_hook_event(&cli, &config).await?;
