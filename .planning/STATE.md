@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.3.0
 milestone_name: Multi-Runtime Skill Portability
 status: in_progress
-stopped_at: Phases 34-36 implemented, Phase 37 next
-last_updated: "2026-03-16T00:00:00.000Z"
-last_activity: 2026-03-16 — Milestone v2.3.0 started, Phases 34-36 implemented
+stopped_at: Roadmap created — Phase 37 is next
+last_updated: "2026-03-17T00:00:00.000Z"
+last_activity: 2026-03-17 — Roadmap created for v2.3.0 with Phases 34-38
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 0
+  total_plans: 5
   completed_plans: 0
   percent: 60
 ---
@@ -30,15 +30,17 @@ Status: IN PROGRESS (60% — 3/5 phases complete)
 Current phase: Phase 37 — Config File Generation and Mastering-Hooks
 Next action: `/gsd:plan-phase 37`
 
+Progress: [██████░░░░] 60%
+
 ## Phase Progress
 
-| Phase | Name | Status |
-|-------|------|--------|
-| 34 | Runtime Profiles and Skill Discovery | ✓ Complete |
-| 35 | Transformation Engine | ✓ Complete |
-| 36 | CLI Integration and File Writer | ✓ Complete |
-| 37 | Config File Generation and Mastering-Hooks | ○ Pending |
-| 38 | Status, Diff, Sync, and DX Polish | ○ Pending |
+| Phase | Name | Requirements | Status |
+|-------|------|--------------|--------|
+| 34 | Runtime Profiles and Skill Discovery | PROFILE-01..04 | ✓ Complete |
+| 35 | Transformation Engine | XFORM-01..05 | ✓ Complete |
+| 36 | CLI Integration and File Writer | CLI-01..04 | ✓ Complete |
+| 37 | Config File Generation and Mastering-Hooks | CONFIG-01..04 | ○ Pending |
+| 38 | Status, Diff, Sync, and DX Polish | DX-01..04 | ○ Pending |
 
 ## Performance Metrics
 
@@ -61,9 +63,16 @@ Next action: `/gsd:plan-phase 37`
 | v2.1 | 3 | 4 | Complete | 2026-03-09 |
 | v2.2.1 | 1 | 2 | Complete | 2026-03-13 |
 | v2.2.2 | 4 | 8 | Complete | 2026-03-17 |
-| v2.3.0 | 5 | — | In Progress | — |
+| v2.3.0 | 5 | TBD | In Progress | — |
 
 ## Accumulated Context
+
+### Decisions
+
+- v2.3.0: Hardcoded Rust transforms (not YAML-configurable) — 4 well-known runtimes cover the cases
+- v2.3.0: Clean-install writer (rm + recreate target dir) — prevents orphan files
+- v2.3.0: `rulez skills` subcommand family (not extending `rulez install`) — orthogonal concerns
+- v2.3.0: Copilot excluded — VSCode extension model is fundamentally different from file-based skills
 
 ### Pending Todos
 
@@ -75,6 +84,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-03-16
-Stopped at: Phases 34-36 implemented, Phase 37 next
+Last session: 2026-03-17
+Stopped at: Roadmap created for v2.3.0 — Phases 34-36 marked complete, Phases 37-38 ready to plan
 Next action: `/gsd:plan-phase 37`
