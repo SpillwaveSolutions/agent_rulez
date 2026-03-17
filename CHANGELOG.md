@@ -5,6 +5,26 @@ All notable changes to RuleZ (AI Policy Engine) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] - 2026-03-17
+
+### Added
+
+- **`rulez skills` subcommand family** — New CLI for managing skills across AI coding runtimes (install, status, diff, sync, clean)
+- **Multi-runtime skill portability** — Author skills once in `.claude/`, convert at install time to OpenCode, Gemini CLI, Codex, or custom runtimes
+- **6 content transforms** — Tool name mapping, path reference rewriting, command name flattening, YAML frontmatter conversion, color hex conversion, MCP tool handling
+- **Config file generation** — Auto-updates GEMINI.md and AGENTS.md with skill registry sections using idempotent marker-based replacement
+- **`rulez skills diff`** — Shows what would change if skills were re-installed, comparing transformed content against existing files
+- **`rulez skills status`** — Human-readable relative timestamps (e.g., "2h ago") showing installation freshness per runtime
+- **`rulez skills sync`** — Install to all detected runtimes (OpenCode, Gemini, Codex) in one command
+- **Custom runtime support** — `--runtime skills --dir .qwen/skills` for generic skill-based runtimes
+- **Mastering-hooks auto-discovery** — Repo-root skill sources discovered and installed alongside `.claude/skills/`
+
+### Architecture
+
+- New `rulez/src/skills/` module tree: profiles, discovery, transform pipeline, transforms (6 types), writer, config_gen
+- 42 unit tests covering all transform types, discovery, writing, config gen, and CLI helpers
+- Clean-install writer pattern (remove + recreate) prevents orphaned files across versions
+
 ## [2.2.1] - 2026-03-13
 
 ### Fixed

@@ -1,46 +1,51 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.2.1
-milestone_name: Cleanup, Sync Skills, CLI Help & UI Integration
+milestone: v2.3.0
+milestone_name: Multi-Runtime Skill Portability
 status: completed
-stopped_at: v2.2.1 milestone complete
-last_updated: "2026-03-13T00:30:00.000Z"
-last_activity: "2026-03-13 — v2.2.1 milestone complete, preparing release"
+stopped_at: All 5 phases complete — ready for milestone archive
+last_updated: "2026-03-17T00:00:00.000Z"
+last_activity: 2026-03-17 — Phases 37-38 implemented, all requirements satisfied
 progress:
-  total_phases: 29
-  completed_phases: 29
-  total_plans: 80
-  completed_plans: 80
+  total_phases: 5
+  completed_phases: 5
+  total_plans: 5
+  completed_plans: 5
+  percent: 100
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-13)
+See: .planning/PROJECT.md (updated 2026-03-17)
 
 **Core value:** LLMs do not enforce policy. LLMs are subject to policy.
-**Current focus:** v2.2.1 complete — preparing release.
-**v2.2.1:** Cleanup, Sync Skills, CLI Help & UI Integration — COMPLETE (Phase 29, shipped 2026-03-13)
-**v2.1:** Multi-CLI E2E Testing (continued) — COMPLETE (Phases 24, 26, 27, shipped 2026-03-09)
-**v2.0:** RuleZ Cleanup and Hardening — COMPLETE (Phase 28, shipped 2026-03-05)
+**Current focus:** v2.3.0 complete — ready for release
 
 ## Current Position
 
-Milestone: v2.2.1 — Cleanup, Sync Skills, CLI Help & UI Integration — COMPLETE
-All 29 phases across 11 milestones are complete.
-All 80 plans executed successfully.
-Status: Releasing v2.2.1
-Last activity: 2026-03-13 — v2.2.1 milestone complete
+Milestone: v2.3.0 — Multi-Runtime Skill Portability
+Status: COMPLETE (100% — 5/5 phases)
+Next action: `/gsd:complete-milestone` or create PR
 
-Next action: Cut v2.2.1 release
+Progress: [██████████] 100%
+
+## Phase Progress
+
+| Phase | Name | Requirements | Status |
+|-------|------|--------------|--------|
+| 34 | Runtime Profiles and Skill Discovery | PROFILE-01..04 | ✓ Complete |
+| 35 | Transformation Engine | XFORM-01..05 | ✓ Complete |
+| 36 | CLI Integration and File Writer | CLI-01..04 | ✓ Complete |
+| 37 | Config File Generation and Mastering-Hooks | CONFIG-01..04 | ✓ Complete |
+| 38 | Status, Diff, Sync, and DX Polish | DX-01..04 | ✓ Complete |
 
 ## Performance Metrics
 
 **Velocity (all milestones):**
-- Total plans completed: 80
+- Total plans completed: 88
 - Average duration: ~3min per plan
-- v2.2.1 releasing 2026-03-13
 
 **By Milestone:**
 
@@ -56,8 +61,17 @@ Next action: Cut v2.2.1 release
 | v2.0 | 1 | 8 | Complete | 2026-03-05 |
 | v2.1 | 3 | 4 | Complete | 2026-03-09 |
 | v2.2.1 | 1 | 2 | Complete | 2026-03-13 |
+| v2.2.2 | 4 | 8 | Complete | 2026-03-17 |
+| v2.3.0 | 5 | 5 | Complete | 2026-03-17 |
 
 ## Accumulated Context
+
+### Decisions
+
+- v2.3.0: Hardcoded Rust transforms (not YAML-configurable) — 4 well-known runtimes cover the cases
+- v2.3.0: Clean-install writer (rm + recreate target dir) — prevents orphan files
+- v2.3.0: `rulez skills` subcommand family (not extending `rulez install`) — orthogonal concerns
+- v2.3.0: Copilot excluded — VSCode extension model is fundamentally different from file-based skills
 
 ### Pending Todos
 
@@ -69,6 +83,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-03-13
-Stopped at: v2.2.1 milestone complete
-Next action: Cut v2.2.1 release
+Last session: 2026-03-17
+Stopped at: All phases complete, milestone ready for archive
+Next action: `/gsd:complete-milestone` or create PR

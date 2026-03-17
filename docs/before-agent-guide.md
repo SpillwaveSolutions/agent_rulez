@@ -1,3 +1,8 @@
+---
+last_modified: 2026-03-16
+last_validated: 2026-03-16
+---
+
 # BeforeAgent Event Guide: Subagent Governance with RuleZ
 
 How to use BeforeAgent, AfterAgent, and PreToolUse events to govern subagent behavior across AI coding platforms.
@@ -59,27 +64,25 @@ Key distinction: `BeforeAgent` does not fire again for individual tool calls wit
 Use `BeforeAgent` to prevent subagents from starting if their task description mentions production deployments, and use `PreToolUse` as a safety net to block writes to production paths.
 
 ```yaml
-hooks:
+version: "1"
+
+rules:
   # Gate at agent spawn -- block tasks that target production
   - name: block-production-agents
     matchers:
       operations: [BeforeAgent]
-    conditions:
-      - field: tool_input.task
-        pattern: "(?i)(deploy|production|prod environment)"
+      prompt_match: "(?i)(deploy|production|prod environment)"
     actions:
-      block: "Subagent tasks targeting production are not permitted. Use the deployment pipeline instead."
+      block: true
 
   # Safety net -- block writes to production paths from any context
   - name: block-production-writes
     matchers:
       operations: [PreToolUse]
       tools: [Write, Edit, Bash]
-    conditions:
-      - field: tool_input.file_path
-        pattern: "^/opt/production/|^/srv/prod/"
+      command_match: "(/opt/production/|/srv/prod/)"
     actions:
-      block: "Direct modifications to production paths are not allowed."
+      block: true
 ```
 
 **What happens**: If a subagent is spawned with a task like "deploy the new version to production", the `BeforeAgent` hook blocks it before any tools run. If a subagent with a different task description somehow tries to write to a production path, the `PreToolUse` hook catches it.
@@ -89,16 +92,16 @@ hooks:
 Use `BeforeAgent` with an inject action to give a subagent specialized policy context when it starts.
 
 ```yaml
-hooks:
+version: "1"
+
+rules:
   # Inject security review context when a review agent spawns
   - name: security-review-context
     matchers:
       operations: [BeforeAgent]
-    conditions:
-      - field: tool_input.task
-        pattern: "(?i)(security|vulnerability|audit|CVE)"
+      prompt_match: "(?i)(security|vulnerability|audit|CVE)"
     actions:
-      inject: |
+      inject_inline: |
         ## Security Review Policy
 
         When performing security reviews:
@@ -114,11 +117,8 @@ hooks:
     matchers:
       operations: [PreToolUse]
       tools: [Write, Edit]
-    conditions:
-      - field: agent_context
-        pattern: "(?i)security review"
     actions:
-      block: "Security review agents operate in read-only mode."
+      block: true
 ```
 
 **What happens**: When a subagent is spawned with a security-related task, `BeforeAgent` injects the security review policy as context. The `PreToolUse` hook then enforces read-only access for the duration of the subagent.
@@ -128,33 +128,35 @@ hooks:
 Use `AfterAgent` with a script to log every subagent lifecycle event for compliance auditing.
 
 ```yaml
-hooks:
+version: "1"
+
+rules:
   # Log when any subagent starts
   - name: audit-agent-start
     matchers:
       operations: [BeforeAgent]
     actions:
-      run: |
+      inline_script: |
         #!/bin/bash
+        INPUT=$(cat -)
         TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-        TASK=$(echo "$HOOK_INPUT" | jq -r '.tool_input.task // "unknown"')
+        TASK=$(echo "$INPUT" | jq -r '.tool_input.task // "unknown"')
         echo "{\"event\":\"agent_start\",\"task\":\"$TASK\",\"timestamp\":\"$TIMESTAMP\"}" \
           >> ~/.claude/logs/agent-audit.jsonl
-        echo '{"continue": true}'
 
   # Log when any subagent completes
   - name: audit-agent-end
     matchers:
       operations: [AfterAgent]
     actions:
-      run: |
+      inline_script: |
         #!/bin/bash
+        INPUT=$(cat -)
         TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-        TASK=$(echo "$HOOK_INPUT" | jq -r '.tool_input.task // "unknown"')
-        TOOL_COUNT=$(echo "$HOOK_INPUT" | jq -r '.extra.tool_count // 0')
+        TASK=$(echo "$INPUT" | jq -r '.tool_input.task // "unknown"')
+        TOOL_COUNT=$(echo "$INPUT" | jq -r '.extra.tool_count // 0')
         echo "{\"event\":\"agent_end\",\"task\":\"$TASK\",\"tools_used\":$TOOL_COUNT,\"timestamp\":\"$TIMESTAMP\"}" \
           >> ~/.claude/logs/agent-audit.jsonl
-        echo '{"continue": true}'
 ```
 
 **What happens**: Every subagent spawn and completion is recorded to `~/.claude/logs/agent-audit.jsonl` with timestamps and task descriptions. This creates a compliance-ready audit trail of all agent activity.
@@ -205,7 +207,7 @@ rulez debug PreToolUse --tool Write --path src/main.rs -v
 rulez debug BeforeAgent -v
 
 # Review audit logs for hook activity
-rulez logs --event BeforeAgent --last 10
+rulez logs --limit 10
 ```
 
 ### See Also
