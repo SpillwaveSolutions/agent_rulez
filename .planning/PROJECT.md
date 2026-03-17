@@ -32,7 +32,7 @@ RuleZ positions itself as comparable to:
 
 ## Current State
 
-### RuleZ Core (v2.2.1)
+### RuleZ Core (v2.2.2)
 - Policy engine with blocking, injection, validation, inline scripting, schema validation
 - CLI: init, install, uninstall, validate, logs, explain, debug, repl, test, lint, upgrade
 - Multi-CLI support: Claude Code, Gemini, Copilot, OpenCode (install/doctor commands)
@@ -84,19 +84,18 @@ RuleZ positions itself as comparable to:
 - ✓ REQ-PERF-01..02: Performance quality gates (<0.1ms schema validation) — v1.4
 - ✓ REQ-COMPAT-01..02: Cross-platform compatibility (CI matrix) — v1.4
 
+- ✓ CLIDOC-01..03: CLI reference docs updated with all commands and flags — v2.2.2
+- ✓ GUIDE-01..03: Per-CLI usage guides (Claude Code, Gemini, OpenCode) — v2.2.2
+- ✓ FEAT-01..03: Feature documentation (external logging, lint, test) — v2.2.2
+- ✓ AUDIT-01..02: Accuracy audit against source code and --help output — v2.2.2
+
 ### Active
 
-See REQUIREMENTS.md for v2.2.2 milestone requirements.
+(Next milestone — use `/gsd:new-milestone` to define)
 
-## Current Milestone: v2.2.2 Documentation Audit & Multi-CLI Guides
+## Shipped: v2.2.2 Documentation Audit & Multi-CLI Guides (2026-03-17)
 
-**Goal:** Ensure all documentation is accurate and complete for v2.2.1, with polished per-CLI usage guides for Claude Code, Gemini, and OpenCode.
-
-**Target features:**
-- Audit and update all mastering-hooks reference docs to reflect v2.0–v2.2.1 changes
-- Create/update per-CLI usage guides (Claude Code, Gemini, OpenCode)
-- Document new CLI commands: `rulez test`, `rulez lint`, `rulez upgrade`
-- Update docs for parallel eval, config caching, external logging, globset matching
+All documentation audited against source code, per-CLI usage guides created for Claude Code/Gemini/OpenCode, feature docs for external logging/lint/test. 11/11 requirements satisfied, 4 phases, 8 plans.
 
 ### Out of Scope
 
@@ -156,6 +155,6 @@ See REQUIREMENTS.md for v2.2.2 milestone requirements.
 
 ---
 
-*Last updated: 2026-03-13 after v2.2.2 milestone start*
+*Last updated: 2026-03-17 after v2.2.2 milestone completion*
 *Reorganized as monorepo on 2026-02-06*
 *Renamed from CCH to RuleZ*

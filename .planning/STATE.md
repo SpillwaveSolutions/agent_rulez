@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.2
-milestone_name: milestone
+milestone: v2.2.2
+milestone_name: Documentation Audit & Multi-CLI Guides
 status: completed
-stopped_at: Completed 33-02 accuracy audit
-last_updated: "2026-03-16T22:04:26.393Z"
-last_activity: 2026-03-16 — Completed 33-02 Accuracy Audit (guides, features, skill docs, template)
+stopped_at: Milestone v2.2.2 archived
+last_updated: "2026-03-17T00:00:00.000Z"
+last_activity: 2026-03-17 — Milestone v2.2.2 archived and completed
 progress:
   total_phases: 4
   completed_phases: 4
@@ -18,24 +18,21 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-13)
+See: .planning/PROJECT.md (updated 2026-03-17)
 
 **Core value:** LLMs do not enforce policy. LLMs are subject to policy.
-**Current focus:** Phase 33 — Accuracy Audit
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: 33 — Accuracy Audit
-Plan: 2 of 2 complete (33-01, 33-02 done)
-Status: Complete
-Last activity: 2026-03-16 — Completed 33-02 Accuracy Audit (guides, features, skill docs, template)
-
-Progress: [██████████] 100% (Phase 33)
+Milestone: v2.2.2 — Documentation Audit & Multi-CLI Guides
+Status: SHIPPED (2026-03-17)
+Next action: `/gsd:new-milestone` to start next milestone
 
 ## Performance Metrics
 
 **Velocity (all milestones):**
-- Total plans completed: 80
+- Total plans completed: 83
 - Average duration: ~3min per plan
 
 **By Milestone:**
@@ -52,12 +49,7 @@ Progress: [██████████] 100% (Phase 33)
 | v2.0 | 1 | 8 | Complete | 2026-03-05 |
 | v2.1 | 3 | 4 | Complete | 2026-03-09 |
 | v2.2.1 | 1 | 2 | Complete | 2026-03-13 |
-| v2.2.2 | 4 | 2+ | In progress | -- |
-| Phase 31 P02 | 3min | 2 tasks | 2 files |
-| Phase 32 P01 | 3min | 1 tasks | 1 files |
-| Phase 32 P02 | 3min | 2 tasks | 2 files |
-| Phase 33 P01 | 7min | 2 tasks | 5 files |
-| Phase 33 P02 | 8min | 2 tasks | 13 files |
+| v2.2.2 | 4 | 8 | Complete | 2026-03-17 |
 
 ## Accumulated Context
 
@@ -71,6 +63,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-03-16T21:53:00Z
-Stopped at: Completed 33-02 accuracy audit
-Next action: Next phase or milestone planning
+Last session: 2026-03-17
+Stopped at: Milestone v2.2.2 archived
+Next action: `/gsd:new-milestone` to start next milestone

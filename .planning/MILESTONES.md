@@ -1,5 +1,31 @@
 # Project Milestones: RuleZ (AI Policy Engine)
 
+## v2.2.2 Documentation Audit & Multi-CLI Guides (Shipped: 2026-03-17)
+
+**Delivered:** Complete documentation overhaul — all reference docs audited against source code, per-CLI usage guides created, and new feature documentation for external logging, lint, and test.
+
+**Phases completed:** 30-33 (8 plans total)
+
+**Key accomplishments:**
+
+- Accurate CLI reference for all 14 rulez commands with flags verified against --help output
+- Complete hooks-yaml-schema.md with parallel eval, config caching, globset, and external logging fields
+- Quick-reference.md updated with all 22 CLI commands, action types, and exit codes
+- End-to-end usage guides for Claude Code, Gemini CLI, and OpenCode
+- Tutorial-first feature documentation for external logging (OTLP, Datadog, Splunk), lint (9 rules), and test
+- 13 docs audited with `last_validated` frontmatter for audit trail
+
+**Stats:**
+
+- 4 phases, 8 plans
+- 42 files changed, 5,856 insertions, 521 deletions
+- 36 commits over 3 days (2026-03-14 → 2026-03-16)
+- Requirements: 11/11 satisfied
+
+**Git range:** `1c86551` → `2339853`
+
+---
+
 ## v2.2.1 Cleanup, Sync Skills, CLI Help & UI Integration (Shipped: 2026-03-13)
 
 **Phases completed:** 29 phases, 79 plans, 8 tasks
