@@ -1,40 +1,50 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.2.2
-milestone_name: Documentation Audit & Multi-CLI Guides
-status: active
-stopped_at: null
-last_updated: "2026-03-13T04:00:00.000Z"
-last_activity: "2026-03-13 — Roadmap created (4 phases, 11 requirements)"
+milestone: v2.3.0
+milestone_name: Multi-Runtime Skill Portability
+status: completed
+stopped_at: All 5 phases complete — ready for milestone archive
+last_updated: "2026-03-17T00:00:00.000Z"
+last_activity: 2026-03-17 — Phases 37-38 implemented, all requirements satisfied
 progress:
-  total_phases: 4
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_phases: 5
+  completed_phases: 5
+  total_plans: 5
+  completed_plans: 5
+  percent: 100
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-13)
+See: .planning/PROJECT.md (updated 2026-03-17)
 
 **Core value:** LLMs do not enforce policy. LLMs are subject to policy.
-**Current focus:** v2.2.2 Phase 30 — CLI Reference Docs Update
+**Current focus:** v2.3.0 complete — ready for release
 
 ## Current Position
 
-Phase: 30 (1 of 4) — CLI Reference Docs Update
-Plan: —
-Status: Ready to plan
-Last activity: 2026-03-13 — Roadmap created for v2.2.2 (Phases 30-33)
+Milestone: v2.3.0 — Multi-Runtime Skill Portability
+Status: COMPLETE (100% — 5/5 phases)
+Next action: `/gsd:complete-milestone` or create PR
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██████████] 100%
+
+## Phase Progress
+
+| Phase | Name | Requirements | Status |
+|-------|------|--------------|--------|
+| 34 | Runtime Profiles and Skill Discovery | PROFILE-01..04 | ✓ Complete |
+| 35 | Transformation Engine | XFORM-01..05 | ✓ Complete |
+| 36 | CLI Integration and File Writer | CLI-01..04 | ✓ Complete |
+| 37 | Config File Generation and Mastering-Hooks | CONFIG-01..04 | ✓ Complete |
+| 38 | Status, Diff, Sync, and DX Polish | DX-01..04 | ✓ Complete |
 
 ## Performance Metrics
 
 **Velocity (all milestones):**
-- Total plans completed: 80
+- Total plans completed: 88
 - Average duration: ~3min per plan
 
 **By Milestone:**
@@ -51,13 +61,23 @@ Progress: [░░░░░░░░░░] 0%
 | v2.0 | 1 | 8 | Complete | 2026-03-05 |
 | v2.1 | 3 | 4 | Complete | 2026-03-09 |
 | v2.2.1 | 1 | 2 | Complete | 2026-03-13 |
-| v2.2.2 | 4 | TBD | In progress | — |
+| v2.2.2 | 4 | 8 | Complete | 2026-03-17 |
+| v2.3.0 | 5 | 5 | Complete | 2026-03-17 |
 
 ## Accumulated Context
+
+### Decisions
+
+- v2.3.0: Hardcoded Rust transforms (not YAML-configurable) — 4 well-known runtimes cover the cases
+- v2.3.0: Clean-install writer (rm + recreate target dir) — prevents orphan files
+- v2.3.0: `rulez skills` subcommand family (not extending `rulez install`) — orthogonal concerns
+- v2.3.0: Copilot excluded — VSCode extension model is fundamentally different from file-based skills
 
 ### Pending Todos
 
 - [ ] Offload Log Filtering to Web Worker or Rust (ui) — deferred, low priority
+- [ ] Add colorized terminal output to rulez skills CLI (cli) — DX-04 tech debt from v2.3.0
+- [ ] Add context-aware mastering-hooks transform for Gemini runtime (cli) — CONFIG-04 tech debt from v2.3.0
 
 ### Blockers/Concerns
 
@@ -65,6 +85,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-03-13
-Stopped at: Roadmap created for v2.2.2
-Next action: Plan Phase 30 (CLI Reference Docs Update)
+Last session: 2026-03-17
+Stopped at: All phases complete, milestone ready for archive
+Next action: `/gsd:complete-milestone` or create PR

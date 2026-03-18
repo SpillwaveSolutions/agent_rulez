@@ -122,3 +122,5 @@ pub mod logging;
 pub mod models;
 /// OpenCode plugin integration types.
 pub mod opencode;
+/// Multi-runtime skill portability layer.
+pub mod skills;

@@ -1,51 +1,58 @@
+---
+last_modified: 2026-03-16
+last_validated: 2026-03-16
+---
+
 # RuleZ CLI Commands Reference
 
-Complete reference for all RuleZ binary commands.
+Complete reference for all RuleZ CLI commands. All flag names and descriptions match `rulez --help` and `rulez <cmd> --help` output as of v2.2.1.
 
 ## Global Options
 
-```bash
+These options are available on every command and subcommand:
+
+```
 rulez [OPTIONS] <COMMAND>
 
 Options:
-  --config <PATH>    Override config file path
-  --json             Output in JSON format
-  --verbose, -v      Increase verbosity (use -vv, -vvv for more)
-  --quiet, -q        Suppress non-error output
-  --help, -h         Show help
-  --version, -V      Show version
+      --debug-logs  Enable debug logging with full event and rule details
+  -h, --help        Print help
+  -V, --version     Print version
 ```
+
+## Command Index
+
+| Command | Description |
+|---------|-------------|
+| `rulez init` | Initialize RuleZ configuration in current project |
+| `rulez install` | Install RuleZ hook into Claude Code settings |
+| `rulez uninstall` | Uninstall RuleZ hook from Claude Code settings |
+| `rulez debug` | Simulate an event to test rules |
+| `rulez repl` | Start interactive debug mode |
+| `rulez validate` | Validate configuration file |
+| `rulez logs` | Query and display logs |
+| `rulez explain` | Explain rules or events (use 'rulez explain --help' for subcommands) |
+| `rulez test` | Run batch test scenarios from a YAML file |
+| `rulez lint` | Analyze rule quality and detect issues |
+| `rulez upgrade` | Check for and install newer rulez binary releases |
+| `rulez gemini` | Gemini CLI utilities (install, hook, doctor) |
+| `rulez copilot` | Copilot CLI utilities (install, hook, doctor) |
+| `rulez opencode` | OpenCode CLI utilities (install, hook, doctor) |
 
 ---
 
 ## Commands
 
-### version
-
-Display version and API information.
-
-```bash
-rulez --version
-# Output: rulez 1.8.0
-
-rulez --version --json
-# Output: {"version": "1.8.0", "api_version": "1.8.0", "git_sha": "abc1234"}
-```
-
-**Use case**: Verify installation, check API compatibility.
-
----
-
 ### init
 
 Initialize RuleZ configuration in current project.
 
-```bash
+```
 rulez init [OPTIONS]
 
 Options:
-  --force           Overwrite existing configuration
-  --template <NAME> Use a specific template (default, minimal, security)
+  -f, --force          Overwrite existing configuration
+      --with-examples  Create example context and validator files
 ```
 
 **Examples**:
@@ -57,8 +64,8 @@ rulez init
 # Overwrite existing config
 rulez init --force
 
-# Use minimal template
-rulez init --template minimal
+# Create config with example files
+rulez init --with-examples
 ```
 
 **Created files**:
@@ -69,50 +76,36 @@ rulez init --template minimal
     └── .gitkeep         # Placeholder for context files
 ```
 
-**Default template contents**:
-```yaml
-version: "1"
-
-hooks:
-  # Example: Inject coding standards for Python files
-  # - name: python-standards
-  #   event: PreToolUse
-  #   match:
-  #     tools: [Write, Edit]
-  #     extensions: [.py]
-  #   action:
-  #     type: inject
-  #     source: file
-  #     path: .claude/context/python-standards.md
-```
-
 ---
 
 ### install
 
-Register RuleZ with Claude Code.
+Install RuleZ hook into Claude Code settings.
 
-```bash
+```
 rulez install [OPTIONS]
 
 Options:
-  --project         Install for current project only (default)
-  --user            Install globally for user
+  -g, --global           Install globally instead of project-local
+  -b, --binary <BINARY>  Path to RuleZ binary (auto-detected if not specified)
 ```
 
 **Examples**:
 
 ```bash
-# Install for current project
-rulez install --project
+# Install for current project (default)
+rulez install
 
 # Install globally
-rulez install --user
+rulez install --global
+
+# Use specific binary path
+rulez install --binary /usr/local/bin/rulez
 ```
 
 **What it does**:
-1. Locates `.claude/settings.json`
-2. Adds hook configuration entries
+1. Locates `.claude/settings.json` (project) or `~/.claude/settings.json` (global)
+2. Adds hook configuration entries for all supported events
 3. Creates `.claude/rulez/install.json` audit trail
 
 **Verification**:
@@ -124,14 +117,23 @@ cat .claude/settings.json | grep -A5 hooks
 
 ### uninstall
 
-Remove RuleZ registration from Claude Code.
+Uninstall RuleZ hook from Claude Code settings.
 
-```bash
+```
 rulez uninstall [OPTIONS]
 
 Options:
-  --project         Uninstall from current project (default)
-  --user            Uninstall globally
+  -g, --global      Uninstall from global settings instead of project-local
+```
+
+**Examples**:
+
+```bash
+# Uninstall from current project
+rulez uninstall
+
+# Uninstall from global settings
+rulez uninstall --global
 ```
 
 ---
@@ -140,12 +142,11 @@ Options:
 
 Validate configuration file.
 
-```bash
+```
 rulez validate [OPTIONS]
 
 Options:
-  --config <PATH>   Validate specific file
-  --strict          Fail on warnings too
+  -c, --config <CONFIG>  Path to configuration file
 ```
 
 **Examples**:
@@ -156,9 +157,6 @@ rulez validate
 
 # Validate specific file
 rulez validate --config /path/to/hooks.yaml
-
-# Strict mode (warnings are errors)
-rulez validate --strict
 ```
 
 **Output examples**:
@@ -171,46 +169,47 @@ Configuration valid: 5 hooks defined
 # Error
 $ rulez validate
 Error: Invalid event type 'PreTool' at hooks[0]
-  Valid events: PreToolUse, PostToolUse, BeforeAgent, AfterAgent, ...
-
-# Warning (non-strict)
-$ rulez validate
-Warning: Hook 'unused-rule' has no matching events in typical usage
-Configuration valid: 5 hooks defined (1 warning)
+  Valid events: PreToolUse, PostToolUse, SessionStart, SessionEnd, ...
 ```
 
 ---
 
 ### explain
 
-Analyze and explain configuration.
+Explain rules or events. Has three subcommands plus legacy direct usage.
 
-```bash
-rulez explain <SUBCOMMAND>
+```
+rulez explain [OPTIONS] [EVENT_ID] [COMMAND]
 
-Subcommands:
-  config            Explain entire configuration
-  rule <NAME>       Explain specific rule
-  event <EVENT>     Show rules for specific event
+Commands:
+  rule   Explain a specific rule's configuration and governance
+  rules  List all configured rules
+  event  Explain an event by session ID
 ```
 
-**Examples**:
+#### explain rule
+
+```
+rulez explain rule [OPTIONS] <NAME>
+
+Arguments:
+  <NAME>  Name of the rule to explain
+
+Options:
+      --json        Output as JSON for machine parsing
+      --no-stats    Skip activity statistics (faster)
+```
+
+**Example**:
 
 ```bash
-# Full configuration overview
-rulez explain config
-
-# Specific rule
 rulez explain rule python-standards
-
-# Rules for an event
-rulez explain event PreToolUse
 ```
 
-**Sample output** for `rulez explain rule python-standards`:
+**Sample output**:
 ```
 Rule: python-standards
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+---
 Event:      PreToolUse
 Priority:   50 (medium)
 Enabled:    true
@@ -232,22 +231,51 @@ Effect:
   into Claude's context before the tool executes.
 ```
 
+#### explain rules
+
+List all configured rules.
+
+```
+rulez explain rules
+```
+
+#### explain event
+
+Explain an event by session ID.
+
+```
+rulez explain event <EVENT_ID>
+
+Arguments:
+  <EVENT_ID>  Session/event ID
+```
+
+**Example**:
+
+```bash
+rulez explain event abc123-session-id
+```
+
 ---
 
 ### debug
 
-Debug hook matching and execution.
+Simulate an event to test rules. Useful for verifying rule matching without waiting for real events.
 
-```bash
-rulez debug <EVENT> [OPTIONS]
+```
+rulez debug [OPTIONS] <EVENT_TYPE>
+
+Arguments:
+  <EVENT_TYPE>  Event type: PreToolUse, PostToolUse, SessionStart,
+                PermissionRequest, UserPromptSubmit, SessionEnd, PreCompact
 
 Options:
-  --tool <NAME>        Simulate tool name
-  --path <PATH>        Simulate file path
-  --command <CMD>      Simulate Bash command
-  --prompt <TEXT>      Simulate user prompt
-  --verbose, -v        Show detailed matching
-  --dry-run            Don't execute actions
+  -t, --tool <TOOL>        Tool name (e.g., Bash, Write, Read)
+  -c, --command <COMMAND>  Command or pattern to test (for Bash/Glob/Grep)
+  -p, --path <PATH>        File path (for Write/Edit/Read)
+      --prompt <PROMPT>     User prompt text (for UserPromptSubmit events)
+  -v, --verbose            Show verbose rule evaluation
+      --json               Output structured JSON (for programmatic consumption)
 ```
 
 **Event aliases** (case-insensitive):
@@ -263,8 +291,6 @@ Options:
 | `compact`, `precompact`, `pre-compact` | `PreCompact` |
 | `subagent`, `beforeagent`, `before-agent`, `subagentstart` | `BeforeAgent` |
 | `afteragent`, `after-agent`, `subagentstop` | `AfterAgent` |
-| `idle`, `teammateidle` | `TeammateIdle` |
-| `task`, `taskcompleted` | `TaskCompleted` |
 
 **Examples**:
 
@@ -281,14 +307,14 @@ rulez debug prompt --prompt "Deploy to production" -v
 # Debug agent events
 rulez debug beforeagent -v
 
-# Use short alias
-rulez debug subagent -v
+# JSON output for scripting
+rulez debug pre --tool Write --path test.py --json
 ```
 
 **Sample output**:
 ```
 Debugging PreToolUse event
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+---
 Simulated context:
   tool.name: Write
   tool.input.path: src/main.py
@@ -305,101 +331,69 @@ Rule matching:
 Matched rules: 1
   1. python-standards (priority: 50)
      Action: inject from .claude/context/python-standards.md
-
-Dry run: No actions executed
 ```
 
 ---
 
 ### repl
 
-Interactive debug mode for testing rules in real-time.
+Start interactive debug mode for testing rules in real-time.
 
-```bash
-rulez repl [OPTIONS]
-
-Options:
-  --config <PATH>   Use specific config file
 ```
+rulez repl
+```
+
+Launches an interactive prompt where you can simulate events, test rule matching, and iterate on configuration without restarting.
 
 ---
 
 ### logs
 
-Query hook execution logs.
+Query and display execution logs.
 
-```bash
+```
 rulez logs [OPTIONS]
 
 Options:
-  --tail <N>         Show last N entries (default: 10)
-  --since <TIME>     Show logs since time (e.g., "1h", "30m", "2024-01-01")
-  --event <EVENT>    Filter by event type
-  --rule <NAME>      Filter by rule name
-  --status <STATUS>  Filter by status (matched, blocked, error)
-  --json             Output as JSON
+  -l, --limit <LIMIT>        Number of recent log entries to show [default: 10]
+      --since <SINCE>        Show logs since timestamp (RFC3339 format)
+      --mode <MODE>          Filter by policy mode (enforce, warn, audit)
+      --decision <DECISION>  Filter by decision (allowed, blocked, warned, audited)
 ```
 
 **Examples**:
 
 ```bash
-# Last 10 entries
+# Last 10 entries (default)
 rulez logs
 
 # Last 50 entries
-rulez logs --tail 50
+rulez logs --limit 50
 
-# Logs from last hour
-rulez logs --since 1h
+# Logs since a specific time
+rulez logs --since 2026-03-14T00:00:00Z
 
-# Only blocked actions
-rulez logs --status blocked
+# Only blocked decisions
+rulez logs --decision blocked
 
-# Specific rule
-rulez logs --rule python-standards --tail 20
-
-# JSON output for parsing
-rulez logs --json | jq '.[] | select(.status == "error")'
+# Only entries in enforce mode
+rulez logs --mode enforce
 ```
 
 **Sample output**:
 ```
 RuleZ Execution Log
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-2024-01-15 14:32:01 | PreToolUse | python-standards | matched
+---
+2026-03-14 14:32:01 | PreToolUse | python-standards | allowed
   Tool: Write, Path: src/api/handler.py
-  Action: injected 1.2KB context
+  Action: injected context
 
-2024-01-15 14:31:45 | PreToolUse | block-force-push | blocked
+2026-03-14 14:31:45 | PreToolUse | block-force-push | blocked
   Tool: Bash, Command: git push --force origin main
   Reason: Force push to main is prohibited
 
-2024-01-15 14:30:12 | PreToolUse | (no match)
+2026-03-14 14:30:12 | PreToolUse | (no match) | allowed
   Tool: Read, Path: README.md
-```
-
----
-
-### run (Manual Execution)
-
-Manually execute a hook for testing.
-
-```bash
-rulez run <RULE_NAME> [OPTIONS]
-
-Options:
-  --context <JSON>   Provide simulated context
-  --dry-run          Show what would happen
-```
-
-**Examples**:
-
-```bash
-# Test a rule manually
-rulez run python-standards --context '{"tool": {"name": "Write", "input": {"path": "test.py"}}}'
-
-# Dry run
-rulez run security-check --dry-run
 ```
 
 ---
@@ -408,11 +402,14 @@ rulez run security-check --dry-run
 
 Run batch test scenarios against your rules configuration. Accepts a YAML test file defining scenarios with expected outcomes (allow, block, or inject), reports pass/fail for each, and exits with code 1 if any test fails.
 
-```bash
-rulez test <TEST_FILE> [OPTIONS]
+```
+rulez test [OPTIONS] <TEST_FILE>
+
+Arguments:
+  <TEST_FILE>  Path to test scenarios YAML file
 
 Options:
-  -v, --verbose    Show detailed output for each test case (e.g., block reasons)
+  -v, --verbose     Show detailed output for each test case
 ```
 
 **Test file format** (`tests.yaml`):
@@ -471,12 +468,12 @@ Running 3 test(s) from tests.yaml
 
 Analyze rule configuration for quality issues: duplicate rule names, overlapping rules, dead (disabled) rules, missing descriptions, invalid regex, conflicting actions, and missing priorities.
 
-```bash
+```
 rulez lint [OPTIONS]
 
 Options:
-  -c, --config <PATH>    Path to configuration file (default: .claude/hooks.yaml)
-  -v, --verbose          Show detailed analysis (e.g., glob consolidation suggestions)
+  -c, --config <CONFIG>  Path to configuration file
+  -v, --verbose          Show detailed analysis
 ```
 
 Diagnostics are categorized by severity:
@@ -521,11 +518,11 @@ Summary: 1 error, 2 warnings, 1 info
 
 Self-update the rulez binary to the latest GitHub release. Downloads the appropriate binary for your platform and replaces the current installation.
 
-```bash
+```
 rulez upgrade [OPTIONS]
 
 Options:
-  --check    Only check for updates, do not install
+      --check       Only check for updates, do not install
 ```
 
 **Examples**:
@@ -541,10 +538,10 @@ rulez upgrade
 **Sample output**:
 
 ```
-Current version: 2.2.0
+Current version: 2.2.1
 Checking GitHub releases for latest version...
 Latest version: 2.3.0
-Upgrade available: 2.2.0 -> 2.3.0
+Upgrade available: 2.2.1 -> 2.3.0
 Downloading and installing 2.3.0...
 Successfully upgraded to 2.3.0!
 Restart rulez to use the new version.
@@ -552,24 +549,35 @@ Restart rulez to use the new version.
 
 ---
 
-## Multi-Platform Commands
+## Multi-CLI Commands
 
-RuleZ supports multiple AI coding assistants. Each platform has `install` and `doctor` subcommands.
+RuleZ supports multiple AI coding assistants. Each platform has `install`, `hook`, and `doctor` subcommands.
 
-### gemini install
+### gemini
+
+Gemini CLI utilities.
+
+```
+rulez gemini <COMMAND>
+
+Commands:
+  install  Install Gemini hook settings
+  hook     Run Gemini hook runner (stdin -> Gemini JSON response)
+  doctor   Diagnose Gemini hook installation and configuration
+```
+
+#### gemini install
 
 Install RuleZ hooks for Gemini CLI. Registers hook entries in Gemini's `settings.json` for all supported events.
 
-```bash
+```
 rulez gemini install [OPTIONS]
 
 Options:
-  --scope <SCOPE>       Settings scope: project, user, or system (default: project)
-  -b, --binary <PATH>   Path to rulez binary (auto-detected if not specified)
-  --print               Print JSON snippet without writing (alias: --dry-run)
+      --scope <SCOPE>    Settings scope (project, user, system) [default: project]
+  -b, --binary <BINARY>  Path to rulez binary (auto-detected if not specified)
+      --print            Print JSON snippet without writing
 ```
-
-**Events registered**: BeforeTool, AfterTool, BeforeAgent, AfterAgent, BeforeModel, AfterModel, BeforeToolSelection, SessionStart, SessionEnd, Notification, PreCompact
 
 **Examples**:
 
@@ -584,44 +592,58 @@ rulez gemini install --scope user
 rulez gemini install --print
 ```
 
----
+#### gemini hook
 
-### gemini doctor
+Run the Gemini hook runner. Reads event JSON from stdin and outputs a Gemini-compatible JSON response. This is called by Gemini CLI automatically -- you do not normally invoke this directly.
+
+```
+rulez gemini hook
+```
+
+#### gemini doctor
 
 Diagnose Gemini hook installation and configuration.
 
-```bash
+```
 rulez gemini doctor [OPTIONS]
 
 Options:
-  --json    Output machine-readable JSON
+      --json        Output machine-readable JSON
 ```
 
 **Examples**:
 
 ```bash
-# Run diagnostics
 rulez gemini doctor
-
-# Machine-readable output
 rulez gemini doctor --json
 ```
 
 ---
 
-### copilot install
+### copilot
+
+Copilot CLI utilities.
+
+```
+rulez copilot <COMMAND>
+
+Commands:
+  install  Install Copilot hook files into .github/hooks
+  hook     Run Copilot hook runner (stdin -> Copilot JSON response)
+  doctor   Diagnose Copilot hook installation and configuration
+```
+
+#### copilot install
 
 Install RuleZ hooks for GitHub Copilot CLI. Creates hook files in `.github/hooks/` and wrapper scripts.
 
-```bash
+```
 rulez copilot install [OPTIONS]
 
 Options:
-  -b, --binary <PATH>   Path to rulez binary (auto-detected if not specified)
-  --print               Print JSON snippet without writing (alias: --dry-run)
+  -b, --binary <BINARY>  Path to rulez binary (auto-detected if not specified)
+      --print            Print JSON snippet without writing
 ```
-
-**Events registered**: preToolUse, postToolUse
 
 **Examples**:
 
@@ -633,17 +655,23 @@ rulez copilot install
 rulez copilot install --print
 ```
 
----
+#### copilot hook
 
-### copilot doctor
+Run the Copilot hook runner. Reads event JSON from stdin and outputs a Copilot-compatible JSON response. This is called by Copilot CLI automatically -- you do not normally invoke this directly.
+
+```
+rulez copilot hook
+```
+
+#### copilot doctor
 
 Diagnose Copilot hook installation and configuration.
 
-```bash
+```
 rulez copilot doctor [OPTIONS]
 
 Options:
-  --json    Output machine-readable JSON
+      --json        Output machine-readable JSON
 ```
 
 **Examples**:
@@ -655,20 +683,31 @@ rulez copilot doctor --json
 
 ---
 
-### opencode install
+### opencode
+
+OpenCode CLI utilities.
+
+```
+rulez opencode <COMMAND>
+
+Commands:
+  install  Install OpenCode hook settings
+  hook     Run OpenCode hook runner (stdin -> RuleZ JSON response)
+  doctor   Diagnose OpenCode hook installation and configuration
+```
+
+#### opencode install
 
 Install RuleZ hooks for OpenCode. Registers hook entries in OpenCode's settings for all supported events.
 
-```bash
+```
 rulez opencode install [OPTIONS]
 
 Options:
-  --scope <SCOPE>       Settings scope: project or user (default: project)
-  -b, --binary <PATH>   Path to rulez binary (auto-detected if not specified)
-  --print               Print JSON snippet without writing (alias: --dry-run)
+      --scope <SCOPE>    Settings scope (project, user) [default: project]
+  -b, --binary <BINARY>  Path to rulez binary (auto-detected if not specified)
+      --print            Print JSON snippet without writing
 ```
-
-**Events registered**: file.edited, tool.execute.before, tool.execute.after, session.updated
 
 **Examples**:
 
@@ -683,17 +722,23 @@ rulez opencode install --scope user
 rulez opencode install --print
 ```
 
----
+#### opencode hook
 
-### opencode doctor
+Run the OpenCode hook runner. Reads event JSON from stdin and outputs a RuleZ JSON response. This is called by OpenCode automatically -- you do not normally invoke this directly.
+
+```
+rulez opencode hook
+```
+
+#### opencode doctor
 
 Diagnose OpenCode hook installation and configuration.
 
-```bash
+```
 rulez opencode doctor [OPTIONS]
 
 Options:
-  --json    Output machine-readable JSON
+      --json        Output machine-readable JSON
 ```
 
 **Examples**:
@@ -710,7 +755,7 @@ rulez opencode doctor --json
 | Code | Meaning |
 |------|---------|
 | 0 | Success |
-| 1 | Configuration error |
+| 1 | Configuration error (also used by `rulez test` and `rulez lint` on failure) |
 | 2 | Validation error |
 | 3 | Runtime error |
 
@@ -728,17 +773,6 @@ rulez opencode doctor --json
 
 ---
 
-## Shell Completion
+## Known --help Stale Text
 
-Generate shell completions:
-
-```bash
-# Bash
-rulez completions bash > /etc/bash_completion.d/rulez
-
-# Zsh
-rulez completions zsh > ~/.zsh/completions/_rulez
-
-# Fish
-rulez completions fish > ~/.config/fish/completions/rulez.fish
-```
+The `--binary` flag description in `rulez gemini install --help`, `rulez copilot install --help`, and `rulez opencode install --help` still says "Path to CCH binary" instead of "Path to RuleZ binary". This is a stale reference to the old binary name. The docs above use the correct name. A Rust code fix is needed to update the clap help text.

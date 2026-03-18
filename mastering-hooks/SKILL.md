@@ -2,9 +2,11 @@
 name: mastering-hooks
 description: Master RuleZ, the high-performance AI policy engine for development workflows. Use when asked to "install rulez", "create hooks", "debug hooks", "hook not firing", "configure context injection", "validate hooks.yaml", "PreToolUse", "PostToolUse", "block dangerous commands", "multi-platform hooks", "Gemini CLI hooks", "Copilot hooks", "OpenCode hooks", "dual-fire events", or "cross-platform rules". Covers installation, rule creation, multi-platform adapters, troubleshooting, and optimization.
 metadata:
-  version: "2.0.0"
+  version: "2.2.1"
   author: RuleZ Team
-  api_version: "1.8.0"
+  api_version: "2.2.1"
+last_modified: 2026-03-16
+last_validated: 2026-03-16
 ---
 
 # mastering-hooks
@@ -68,16 +70,11 @@ What do you need?
 **Use when**: Setting up RuleZ for the first time in a project or user-wide.
 
 **Checklist**:
-1. Verify RuleZ binary is installed: `rulez --version --json`
+1. Verify RuleZ binary is installed: `rulez --version`
 2. Initialize configuration: `rulez init` (creates `.claude/hooks.yaml`)
-3. Register with Claude Code: `rulez install --project` or `rulez install --user`
+3. Register with Claude Code: `rulez install` (project-local) or `rulez install --global`
 4. Validate configuration: `rulez validate`
 5. Verify installation: Check `.claude/settings.json` for hook entries
-
-**Expected output** from `rulez --version --json`:
-```json
-{"version": "1.8.0", "api_version": "1.8.0", "git_sha": "abc1234"}
-```
 
 **Reference**: [cli-commands.md](references/cli-commands.md)
 
@@ -97,16 +94,14 @@ What do you need?
 
 **Rule anatomy**:
 ```yaml
-hooks:
+rules:
   - name: rule-name           # kebab-case identifier
-    event: PreToolUse         # When to trigger
-    match:
+    matchers:
+      operations: [PreToolUse]  # When to trigger
       tools: [Write, Edit]    # What to match
       extensions: [.py]       # Optional: file filters
-    action:
-      type: inject            # What to do
-      source: file            # file | inline | command
-      path: .claude/context/python-standards.md
+    actions:
+      inject: .claude/context/python-standards.md  # What to do
 ```
 
 **Reference**: [hooks-yaml-schema.md](references/hooks-yaml-schema.md) | [rule-patterns.md](references/rule-patterns.md)
@@ -119,7 +114,7 @@ hooks:
 
 **Checklist**:
 1. Run `rulez explain rule <rule-name>` for specific rule analysis
-2. Run `rulez explain config` for full configuration overview
+2. Run `rulez explain rules` for full configuration overview
 3. Check rule precedence (first match wins within same event)
 4. Identify potential conflicts or overlaps
 
@@ -143,7 +138,7 @@ Action: Injects content from .claude/context/python-standards.md
 1. **Validate config**: `rulez validate` - catches YAML/schema errors
 2. **Check registration**: `cat .claude/settings.json | grep hooks`
 3. **Enable debug logging**: `rulez debug PreToolUse --tool Write --verbose`
-4. **Check logs**: `rulez logs --tail 20`
+4. **Check logs**: `rulez logs --limit 20`
 5. **Verify file paths**: Ensure all `path:` references exist
 
 **Common issues**:
@@ -185,7 +180,7 @@ Action: Injects content from .claude/context/python-standards.md
 - Some platforms fire **dual events** (e.g., Gemini's `BeforeAgent` fires both `BeforeAgent` and `UserPromptSubmit`)
 
 **Checklist**:
-1. Install RuleZ: `rulez install --project`
+1. Install RuleZ: `rulez install`
 2. Write rules using standard RuleZ event types
 3. Test with `rulez debug <event>` to verify matching
 4. Review [platform-adapters.md](references/platform-adapters.md) for platform-specific event mappings
@@ -221,46 +216,41 @@ Action: Injects content from .claude/context/python-standards.md
 # .claude/hooks.yaml
 version: "1"
 
-hooks:
+rules:
   # Inject Python standards before writing Python files
   - name: python-standards
-    event: PreToolUse
-    match:
+    matchers:
+      operations: [PreToolUse]
       tools: [Write, Edit]
       extensions: [.py]
-    action:
-      type: inject
-      source: file
-      path: .claude/context/python-standards.md
+    actions:
+      inject: .claude/context/python-standards.md
 
   # Block dangerous git commands
   - name: block-force-push
-    event: PreToolUse
-    match:
+    priority: 10
+    matchers:
+      operations: [PreToolUse]
       tools: [Bash]
       command_match: "git push.*--force"
-    action:
-      type: block
-      reason: "Force push requires explicit approval."
+    actions:
+      block: true
 
   # Run security check before committing
   - name: pre-commit-security
-    event: PreToolUse
-    match:
+    matchers:
+      operations: [PreToolUse]
       tools: [Bash]
       command_match: "git commit"
-    action:
-      type: run
-      command: .claude/validators/check-secrets.sh
-      timeout: 30
+    actions:
+      run: .claude/validators/check-secrets.sh
 
   # Track agent activity (works on Claude Code and Gemini)
   - name: log-agent-start
-    event: BeforeAgent
-    match: {}
-    action:
-      type: inject
-      source: inline
-      content: |
+    description: Ensure agents follow project conventions
+    matchers:
+      operations: [BeforeAgent]
+    actions:
+      inject_inline: |
         **Agent Policy**: Follow project conventions in CLAUDE.md.
 ```

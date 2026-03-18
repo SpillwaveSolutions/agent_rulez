@@ -5,22 +5,20 @@
 # Uncomment and customize rules as needed.
 # Works with Claude Code, Gemini CLI, GitHub Copilot, and OpenCode.
 
-version: "1"
+version: "1.0"
 
-hooks:
+rules:
   # ============================================================
   # SESSION HOOKS
   # ============================================================
 
   # Load project context at session start
   # - name: project-context
-  #   event: SessionStart
   #   description: Load project overview and conventions
-  #   match: {}
-  #   action:
-  #     type: inject
-  #     source: file
-  #     path: .claude/context/project-overview.md
+  #   matchers:
+  #     operations: [SessionStart]
+  #   actions:
+  #     inject: .claude/context/project-overview.md
 
   # ============================================================
   # CODE QUALITY HOOKS
@@ -28,27 +26,23 @@ hooks:
 
   # Inject Python coding standards
   - name: python-standards
-    event: PreToolUse
     description: Inject Python coding standards for .py files
-    match:
+    matchers:
+      operations: [PreToolUse]
       tools: [Write, Edit]
       extensions: [.py]
-    action:
-      type: inject
-      source: file
-      path: .claude/context/python-standards.md
+    actions:
+      inject: .claude/context/python-standards.md
 
   # Inject TypeScript/JavaScript standards
   # - name: typescript-standards
-  #   event: PreToolUse
   #   description: Inject TypeScript standards
-  #   match:
+  #   matchers:
+  #     operations: [PreToolUse]
   #     tools: [Write, Edit]
   #     extensions: [.ts, .tsx, .js, .jsx]
-  #   action:
-  #     type: inject
-  #     source: file
-  #     path: .claude/context/typescript-standards.md
+  #   actions:
+  #     inject: .claude/context/typescript-standards.md
 
   # ============================================================
   # SECURITY HOOKS
@@ -56,28 +50,27 @@ hooks:
 
   # Block force push to main/master
   - name: block-force-push
-    event: PreToolUse
-    priority: 10
     description: Prevent force push to protected branches
-    match:
+    priority: 10
+    matchers:
+      operations: [PreToolUse]
       tools: [Bash]
       command_match: "git push.*(--force|-f).*(main|master)"
-    action:
-      type: block
+    actions:
+      block: true
+    governance:
       reason: "Force push to main/master is prohibited. Use a PR workflow."
 
   # Warn about recursive delete
   # - name: warn-rm-rf
-  #   event: PreToolUse
-  #   priority: 20
   #   description: Warn before recursive delete operations
-  #   match:
+  #   priority: 20
+  #   matchers:
+  #     operations: [PreToolUse]
   #     tools: [Bash]
   #     command_match: "rm\\s+(-rf|-fr)"
-  #   action:
-  #     type: inject
-  #     source: inline
-  #     content: |
+  #   actions:
+  #     inject_inline: |
   #       **Warning**: Recursive delete detected. Verify target path carefully.
 
   # ============================================================
@@ -86,15 +79,13 @@ hooks:
 
   # Run secret scanner before commits
   # - name: pre-commit-secrets
-  #   event: PreToolUse
   #   description: Check for secrets before git commit
-  #   match:
+  #   matchers:
+  #     operations: [PreToolUse]
   #     tools: [Bash]
   #     command_match: "git commit"
-  #   action:
-  #     type: run
-  #     command: .claude/validators/check-secrets.sh
-  #     timeout: 30
+  #   actions:
+  #     run: .claude/validators/check-secrets.sh
 
   # ============================================================
   # PERMISSION HOOKS
@@ -102,29 +93,25 @@ hooks:
 
   # Auto-approve read operations
   # - name: auto-approve-read
-  #   event: PermissionRequest
   #   description: Auto-approve read-only operations
-  #   match:
+  #   matchers:
+  #     operations: [PermissionRequest]
   #     tools: [Read, Glob, Grep]
-  #   action:
-  #     type: inject
-  #     source: inline
-  #     content: "Auto-approved: read-only operation"
+  #   actions:
+  #     inject_inline: "Auto-approved: read-only operation"
 
   # ============================================================
   # AGENT LIFECYCLE HOOKS
   # ============================================================
 
   # Inject policy before agent/subagent tasks
-  # Works on Claude Code (SubagentStart) and Gemini CLI (BeforeAgent)
+  # Works on Claude Code (SubagentStart alias) and Gemini CLI (BeforeAgent)
   # - name: agent-policy
-  #   event: BeforeAgent
   #   description: Ensure agents follow project conventions
-  #   match: {}
-  #   action:
-  #     type: inject
-  #     source: file
-  #     path: .claude/context/agent-policy.md
+  #   matchers:
+  #     operations: [BeforeAgent]
+  #   actions:
+  #     inject: .claude/context/agent-policy.md
 
   # ============================================================
   # WORKFLOW HOOKS
@@ -132,13 +119,11 @@ hooks:
 
   # Remind about tests after source changes
   # - name: test-reminder
-  #   event: PostToolUse
   #   description: Remind to run tests after modifying source
-  #   match:
+  #   matchers:
+  #     operations: [PostToolUse]
   #     tools: [Write, Edit]
   #     directories: [src/]
-  #   action:
-  #     type: inject
-  #     source: inline
-  #     content: |
+  #   actions:
+  #     inject_inline: |
   #       **Reminder**: Source code modified. Consider running tests.

@@ -1,3 +1,8 @@
+---
+last_modified: 2026-03-16
+last_validated: 2026-03-16
+---
+
 # RuleZ Event Schema
 
 This document describes the JSON event format that AI coding assistants send to RuleZ on stdin, and the JSON response format that RuleZ writes to stdout.

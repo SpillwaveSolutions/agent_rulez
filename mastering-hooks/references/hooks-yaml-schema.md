@@ -1,3 +1,8 @@
+---
+last_modified: 2026-03-16
+last_validated: 2026-03-16
+---
+
 # hooks.yaml Schema Reference
 
 Complete reference for the RuleZ configuration file format.
@@ -12,8 +17,9 @@ Complete reference for the RuleZ configuration file format.
 ## Top-Level Structure
 
 ```yaml
-version: "1.0"                  # Required: Schema version (must be x.y format)
+version: "1"                    # Required: Schema version ("1" or "1.0")
 rules: []                       # Required: List of hook rules
+settings: {}                    # Optional: Global settings
 ```
 
 ## Rule Schema
@@ -22,16 +28,36 @@ rules: []                       # Required: List of hook rules
 rules:
   - name: string                # Required: Unique kebab-case identifier
     description: string         # Optional: Human-readable explanation
-    metadata:
-      enabled: boolean          # Optional: Default true
-    priority: integer           # Optional: Higher number = higher priority (default: 100)
+    enabled_when: string        # Optional: Evalexpr boolean expression for conditional activation
+    mode: string                # Optional: Policy mode (enforce, warn, audit). Default: enforce
+    priority: integer           # Optional: Higher number = higher priority (default: 0)
     matchers:                   # Required: Conditions to match
       operations: [EventType]   # Filter by event type (e.g. [PreToolUse])
       tools: [ToolName]         # Filter by tool name
-      command_match: "regex"    # Filter by Bash command
+      extensions: [.ext]        # Filter by file extension
+      directories: [path/]      # Filter by directory (glob patterns)
+      command_match: "regex"    # Filter by Bash command regex
+      prompt_match: "regex"     # Filter by user prompt regex
+      require_fields: [path]    # Require fields in tool_input
+      field_types: {}           # Validate field types in tool_input
     actions:                    # Required: What to do when matched
-      block: true
-      reason: "explanation"
+      block: true               # Block the operation
+      block_if_match: "regex"   # Conditionally block
+      inject: "path"            # Inject file content
+      inject_inline: "content"  # Inject inline content
+      inject_command: "cmd"     # Inject command output
+      run: "script"             # Run validator script
+      validate_expr: "expr"     # Evalexpr validation
+      inline_script: "script"   # Inline shell validation
+    governance:                 # Optional: Provenance metadata
+      author: string
+      reason: string
+      confidence: string        # high, medium, low
+      tags: [string]
+    metadata:                   # Optional: Legacy metadata (deprecated)
+      enabled: boolean          # Default: true
+      priority: integer         # Legacy priority field
+      timeout: integer          # Script timeout in seconds
 ```
 
 ---
@@ -72,29 +98,31 @@ These event names still work in hooks.yaml but are deprecated. Use the new names
 
 Not all events fire on all platforms. See [platform-adapters.md](platform-adapters.md) for the full cross-platform mapping table and dual-fire behavior.
 
-### Event Context Variables
+### Eval Context Variables
 
-Access in `enabled_when` expressions:
+These variables are available in `enabled_when` expressions. Note: evalexpr uses underscores, not dots, as separators.
 
 ```yaml
-# PreToolUse / PostToolUse
-tool.name           # "Write", "Bash", "Read", etc.
-tool.input.path     # File path for file operations
-tool.input.command  # Command for Bash tool
-tool.output         # Only in PostToolUse
+# Available in all events
+env_CI              # "true" if CI environment variable is set
+env_USER            # Current username
+env_HOME            # Home directory
+tool_name           # "Write", "Bash", "Read", etc.
+event_type          # "PreToolUse", "PostToolUse", etc.
 
-# UserPromptSubmit
-prompt.text         # Full user message
+# tool_input fields (prefixed with tool_input_)
+tool_input_command  # Bash command string
+tool_input_file_path # File path for file operations
 
-# SessionStart / SessionEnd
-session.id          # Unique session identifier
-session.project     # Project directory path
-
-# Environment (all events)
-env.CI              # "true" if in CI environment
-env.USER            # Current username
-env.HOME            # Home directory
+# Examples
+enabled_when: 'env_CI == "true"'
+enabled_when: 'tool_name == "Bash"'
+enabled_when: 'event_type == "PreToolUse"'
 ```
+
+**Operators**: `==`, `!=`, `&&`, `||`, `!`, `>`, `<`, `>=`, `<=`
+
+**Important:** evalexpr distinguishes `Float` from `Int`. Numbers from `tool_input` are exposed as Float. Use `30.0` not `30` in numeric comparisons, because `Float(30.0) != Int(30)`.
 
 ---
 
@@ -107,10 +135,12 @@ matchers:
   operations: [PreToolUse]     # Filter by event type
   tools: [Tool, ...]           # Match specific tool names
   extensions: [.ext, ...]      # Match file extensions
-  directories: [path/, ...]    # Match directory prefixes
+  directories: [path/, ...]    # Match directory patterns (glob)
   command_match: "regex"       # Match Bash command
   prompt_match: "regex"        # Match user prompt
-  enabled_when: "expression"   # Conditional expression
+  require_fields: [field]      # Require fields in tool_input
+  field_types:                 # Validate field types
+    field_name: type
 ```
 
 ### operations
@@ -136,7 +166,7 @@ matchers:
 
 ### extensions
 
-Array of file extensions. Matches `tool.input.path`.
+Array of file extensions. Matches `file_path` in `tool_input`.
 
 ```yaml
 matchers:
@@ -146,22 +176,13 @@ matchers:
 
 ### directories
 
-Array of directory prefixes. Uses forward slash.
+Array of directory patterns using glob syntax (via `globset` crate).
 
 ```yaml
 matchers:
   directories: [src/, lib/]    # Source directories
-  directories: [tests/]        # Test directory only
-```
-
-### operations (Bash operations)
-
-Array of Bash command prefixes. Extracts first word of command.
-
-```yaml
-matchers:
-  operations: [git, npm, docker]  # Version control, package, container
-  operations: [rm, mv, cp]        # File operations
+  directories: ["src/**"]      # All files under src/
+  directories: ["**/*.rs"]     # All Rust files anywhere
 ```
 
 ### command_match
@@ -179,26 +200,59 @@ matchers:
 
 ### prompt_match
 
-Regex pattern matched against user prompt text.
+Pattern matching for user prompt text. Supports two formats:
+
+#### Simple format (string or array)
 
 ```yaml
 matchers:
-  prompt_match: "(?i)deploy"             # Deploy requests
-  prompt_match: "^/fix"                  # Slash commands
+  prompt_match: "(?i)deploy"             # Single regex
 ```
-
-### enabled_when
-
-Conditional expression for dynamic matching.
 
 ```yaml
 matchers:
-  enabled_when: "env.CI == 'true'"              # Only in CI
-  enabled_when: "tool.input.path =~ '\\.test\\.'"  # Test files
-  enabled_when: "session.project =~ 'backend'"  # Backend projects
+  prompt_match: ["deploy", "production"]  # ANY pattern matches (OR logic)
 ```
 
-**Operators**: `==`, `!=`, `=~` (regex match), `&&`, `||`, `!`
+#### Complex object format
+
+```yaml
+matchers:
+  prompt_match:
+    patterns: ["deploy", "production"]
+    mode: all              # "any" (OR, default) or "all" (AND)
+    case_insensitive: true
+    anchor: start          # "start", "end", or "contains" (default)
+```
+
+**Shorthand patterns:**
+
+| Shorthand | Expansion | Description |
+|-----------|-----------|-------------|
+| `contains_word:deploy` | `\bdeploy\b` | Matches whole word only |
+| `not:pattern` | Negation | Matches when pattern does NOT match |
+
+### require_fields
+
+Array of dot-notation field paths that must exist in `tool_input`.
+
+```yaml
+matchers:
+  require_fields: ["file_path", "input.user.name"]
+```
+
+### field_types
+
+Expected types for fields in `tool_input`. Keys are dot-notation paths, values are type specifiers. Implicitly requires the field to exist.
+
+```yaml
+matchers:
+  field_types:
+    file_path: string
+    line_number: number
+```
+
+**Supported types**: `string`, `number`, `boolean`, `array`, `object`, `any`
 
 ---
 
@@ -235,11 +289,22 @@ actions:
 
 ### run
 
-Execute a script and use its output.
+Execute a validator script. Supports two formats:
+
+#### Simple format
 
 ```yaml
 actions:
   run: .claude/validators/check.sh
+```
+
+#### Extended format with trust level
+
+```yaml
+actions:
+  run:
+    script: .claude/validators/check.sh
+    trust: local    # "local" (default), "verified", or "untrusted"
 ```
 
 **Script output format** (JSON to stdout):
@@ -264,38 +329,88 @@ Unconditionally block the tool execution.
 ```yaml
 actions:
   block: true
-  reason: "This operation is not allowed in this project"
 ```
 
 ### block_if_match
 
-Block if pattern matches in tool input.
+Block if regex pattern matches in the command.
 
 ```yaml
 actions:
   block_if_match: "(?i)(password|secret|api_key)"
-  reason: "Potential secret detected in file content"
 ```
+
+### validate_expr
+
+Evalexpr boolean expression for validation. `true` = allow, `false` = block.
+
+```yaml
+actions:
+  validate_expr: 'len(tool_input_description) > 0'
+```
+
+### inline_script
+
+Inline shell script for validation. Event JSON is passed on stdin. Exit code 0 = allow, non-zero = block.
+
+```yaml
+actions:
+  inline_script: |
+    #!/bin/bash
+    jq -e '.tool_input.file_path' > /dev/null 2>&1
+```
+
+---
+
+## Governance Schema
+
+Optional provenance and documentation metadata attached to a rule.
+
+```yaml
+governance:
+  author: "security-team"
+  created_by: "react-skill@2.1.0"
+  reason: "Prevent accidental data loss"
+  confidence: high
+  last_reviewed: "2026-03-01"
+  ticket: "SEC-1234"
+  tags: ["security", "git", "destructive"]
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `author` | string | Who authored this rule |
+| `created_by` | string | Source that created this rule (e.g., a skill or automation) |
+| `reason` | string | Why this rule exists |
+| `confidence` | string | Confidence level: `high`, `medium`, or `low` |
+| `last_reviewed` | string | ISO 8601 date of last review |
+| `ticket` | string | Related ticket or issue reference |
+| `tags` | array | Tags for categorization and filtering |
 
 ---
 
 ## Complete Example
 
 ```yaml
-version: "1.0"
+version: "1"
 
 rules:
   # High priority: Block dangerous operations first
   - name: block-force-push
     description: Prevent force push to protected branches
     priority: 10
+    mode: enforce
     matchers:
       operations: [PreToolUse]
       tools: [Bash]
       command_match: "git push.*(--force|-f).*main"
     actions:
       block: true
-      reason: "Force push to main is prohibited. Use a PR workflow."
+    governance:
+      author: "platform-team"
+      reason: "Protect main branch integrity"
+      confidence: high
+      tags: ["security"]
 
   # Medium priority: Inject context for code changes
   - name: python-standards
@@ -309,10 +424,10 @@ rules:
 
   # Conditional: Only in CI
   - name: ci-strict-mode
+    enabled_when: 'env_CI == "true"'
     matchers:
       operations: [PreToolUse]
       tools: [Bash]
-      enabled_when: "env.CI == 'true'"
     actions:
       run: .claude/validators/ci-check.sh
 
@@ -330,7 +445,116 @@ rules:
       operations: [BeforeAgent]
     actions:
       inject: .claude/context/agent-policy.md
+
+settings:
+  log_level: "info"
+  script_timeout: 5
+  fail_open: true
+  debug_logs: false
 ```
+
+---
+
+## Engine Behavior (v2.0+)
+
+These sections document internal engine behaviors that affect rule evaluation. No user configuration is required unless noted.
+
+### Parallel Rule Evaluation
+
+When 10 or more rules are enabled, RuleZ automatically switches to parallel matching using `tokio::join_all`. This improves evaluation latency for large rule sets.
+
+- **Threshold:** `PARALLEL_THRESHOLD = 10` (compile-time constant)
+- **Phase 1 (parallel):** All rule matchers are evaluated concurrently
+- **Phase 2 (sequential):** Matched rule actions execute in priority order
+
+Below the threshold, all evaluation is sequential. No user configuration is needed.
+
+### Config Caching
+
+`Config::from_file()` caches parsed configuration with mtime-based invalidation. If the hooks.yaml file has not been modified (same filesystem mtime), subsequent calls return the cached config without re-reading from disk.
+
+- Caching is automatic and process-scoped (no cross-process shared state)
+- Any file modification (save, touch) invalidates the cache immediately
+- No user configuration is needed
+
+### Globset Matching
+
+The `directories` matcher uses the `globset` crate for file pattern matching instead of naive string contains. Patterns in `directories` fields support full glob syntax.
+
+```yaml
+matchers:
+  directories:
+    - "src/**"           # All files under src/
+    - "**/*.rs"          # All Rust files anywhere
+    - "tests/unit/**"    # Unit test files only
+```
+
+Internally, `build_glob_set()` compiles patterns into an optimized set. Multiple patterns use OR semantics (any pattern match satisfies the matcher). Invalid glob patterns are skipped with a warning.
+
+### Regex Fail-Closed
+
+Invalid regex patterns in matchers (`command_match`, `prompt_match`, `block_if_match`) cause the rule to **not match** rather than crashing or matching everything. This is a fail-closed safety design.
+
+- `get_or_compile_regex()` returns an error for invalid patterns
+- The calling matcher treats the error as "no match"
+- A warning is logged for debugging
+- This also applies to `enabled_when` expression errors and inline script failures
+
+### tool_input Fields in Eval Context
+
+`build_eval_context()` injects fields from the tool invocation's `tool_input` JSON object into the `enabled_when` evaluation context with a `tool_input_` prefix.
+
+```yaml
+# Rule-level enabled_when (NOT a matcher field)
+enabled_when: 'tool_input_command == "git push"'
+enabled_when: 'tool_input_file_path == "src/main.py"'
+```
+
+**Supported types:**
+
+| JSON Type | evalexpr Type | Example |
+|-----------|---------------|---------|
+| string    | String        | `tool_input_command == "ls"` |
+| boolean   | Boolean       | `tool_input_dangerouslyDisableSandbox == true` |
+| number    | Float         | `tool_input_timeout > 30.0` |
+
+**Important:** All numbers are exposed as `Float` (f64). Use `30.0` not `30` in comparisons, because `Float(30.0) != Int(30)` in evalexpr.
+
+Arrays, objects, and null values in tool_input are skipped (not supported by evalexpr).
+
+### External Logging
+
+RuleZ supports forwarding audit logs to external backends via the `logging` section in the settings file. Backends send logs using `curl` (no TLS library dependency).
+
+```yaml
+settings:
+  logging:
+    backends:
+      - type: otlp
+        endpoint: "https://otel-collector.example.com/v1/logs"
+        headers:
+          Authorization: "Bearer $OTEL_TOKEN"
+        timeout_secs: 5
+
+      - type: datadog
+        endpoint: "https://http-intake.logs.datadoghq.com/api/v2/logs"
+        api_key: "$DD_API_KEY"
+        timeout_secs: 5
+
+      - type: splunk
+        endpoint: "https://splunk.example.com:8088/services/collector"
+        token: "$SPLUNK_HEC_TOKEN"
+        sourcetype: "rulez"
+        timeout_secs: 5
+```
+
+| Backend | Required Fields | Optional Fields |
+|---------|----------------|-----------------|
+| `otlp` | `endpoint` | `headers`, `timeout_secs` (default: 5) |
+| `datadog` | `api_key` | `endpoint` (default: Datadog US), `timeout_secs` |
+| `splunk` | `endpoint`, `token` | `sourcetype` (default: "rulez"), `timeout_secs` |
+
+Environment variable references (e.g., `$DD_API_KEY`) are expanded at runtime.
 
 ---
 

@@ -1,71 +1,95 @@
-# Requirements: RuleZ v2.2.2
+# Requirements: RuleZ Multi-Runtime Skill Portability
 
-**Defined:** 2026-03-13
-**Core Value:** LLMs do not enforce policy. LLMs are subject to policy.
+**Defined:** 2026-03-16
+**Core Value:** Author skills once in `.claude/`, convert at install time, run everywhere.
 
-## v2.2.2 Requirements
+## v2.3.0 Requirements
 
-Requirements for documentation audit and multi-CLI guides release.
+### Profiles — Runtime profiles and discovery
 
-### CLI Docs Audit
+- [x] **PROFILE-01**: Runtime profiles define per-platform conventions (skills dir, commands dir, command separator, tool name style, path prefix)
+- [x] **PROFILE-02**: Skill discovery scans `.claude/skills/` and `.claude/commands/` building a manifest of skills and commands
+- [x] **PROFILE-03**: Extra skill sources outside standard location (mastering-hooks at repo root) discovered automatically
+- [x] **PROFILE-04**: Custom runtime support via `--dir` flag for generic skill targets
 
-- [ ] **CLIDOC-01**: `cli-commands.md` documents all CLI commands including `test`, `lint`, `upgrade` with accurate flags and examples
-- [ ] **CLIDOC-02**: `hooks-yaml-schema.md` reflects parallel eval, config caching, globset matching, and external logging fields
-- [ ] **CLIDOC-03**: `quick-reference.md` updated with latest events, actions, matchers, and CLI commands
+### Transform — Content transformation engine
 
-### Multi-CLI Usage Guides
+- [x] **XFORM-01**: Tool names converted from Claude PascalCase to runtime conventions (lowercase for OpenCode, snake_case for Gemini)
+- [x] **XFORM-02**: Path references rewritten (`~/.claude/` -> `~/.config/opencode/`, `~/.gemini/`, `~/.codex/`)
+- [x] **XFORM-03**: Command filenames flattened from dot-separated to hyphen-separated with cross-reference rewriting
+- [x] **XFORM-04**: YAML frontmatter converted (allowed-tools -> tools format, color hex, strip unsupported fields)
+- [x] **XFORM-05**: MCP tools excluded for Gemini (auto-discovered), preserved for OpenCode/Codex
 
-- [ ] **GUIDE-01**: Claude Code usage guide covers install, configure, verify, and troubleshoot workflow
-- [ ] **GUIDE-02**: Gemini CLI usage guide covers install, dual-fire events, and verify workflow
-- [ ] **GUIDE-03**: OpenCode usage guide covers install, plugin setup, and verify workflow
+### CLI — CLI integration and file writer
 
-### Feature Documentation
+- [x] **CLI-01**: `rulez skills install --runtime <rt>` installs transformed skills to target runtime directory
+- [x] **CLI-02**: `rulez skills install --dry-run` previews what would be installed without writing
+- [x] **CLI-03**: `rulez skills clean --runtime <rt>` removes generated skill files for a runtime
+- [x] **CLI-04**: Clean-install writer removes existing target directory before writing fresh
 
-- [ ] **FEAT-01**: External logging backends (OTLP, Datadog, Splunk) documented with configuration examples
-- [ ] **FEAT-02**: `rulez lint` rules documented (duplicate names, overlapping rules, dead rules, missing descriptions)
-- [ ] **FEAT-03**: `rulez test` batch testing workflow documented with example test files
+### Config — Config file generation
 
-### Accuracy Audit
+- [x] **CONFIG-01**: After installing to `.gemini/skills/`, auto-update `GEMINI.md` skill registry section using `<!-- RULEZ_SKILLS_START -->` / `<!-- RULEZ_SKILLS_END -->` markers
+- [x] **CONFIG-02**: Auto-generate `AGENTS.md` for Codex with skill registry section
+- [x] **CONFIG-03**: Preserve non-skill sections of config files during update
+- [x] **CONFIG-04**: Mastering-hooks platform references rewritten with context-aware handling (lives at repo root, not in `.claude/skills/`)
 
-- [ ] **AUDIT-01**: All docs cross-checked against `rulez --help` output and source code for correctness
-- [ ] **AUDIT-02**: Stale field names, command flags, examples, and file paths fixed across all reference docs
+### DX — Developer experience polish
+
+- [x] **DX-01**: `rulez skills status` shows human-readable relative timestamps (e.g., "2 hours ago") and mtime freshness comparison
+- [x] **DX-02**: `rulez skills diff --runtime <rt>` shows colored diff of what would change if skills were re-installed
+- [x] **DX-03**: `rulez skills sync` installs to all detected runtimes in one command with per-runtime progress
+- [x] **DX-04**: Colorized terminal output with progress indicators for install/sync operations
 
 ## Future Requirements
 
-None — docs-only milestone.
+### Extended Portability
+- **PORT-01**: Copilot VSCode extension skill generation (different model from file-based skills)
+- **PORT-02**: Watch mode that auto-reinstalls when `.claude/skills/` changes
+- **PORT-03**: YAML-configurable transformation rules for custom runtimes
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Codex CLI guide | No hooks support — scenarios skip unconditionally |
-| Copilot CLI guide refresh | Existing docs already comprehensive |
-| New code features | Docs-only milestone, no engine changes |
-| RuleZ UI docs | UI docs already current from v2.2.1 |
+| Copilot skill distribution | VSCode extension model is fundamentally different from file-based skills |
+| YAML-configurable transforms | 4 well-known runtimes have stable conventions; Custom variant handles long tail |
+| Global skill registry/marketplace | Not needed for single-project portability |
+| Bidirectional sync (other -> Claude) | One canonical source (Claude Code), convert outward only |
 
 ## Traceability
 
-Which phases cover which requirements. Updated during roadmap creation.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CLIDOC-01 | Phase 30 | Pending |
-| CLIDOC-02 | Phase 30 | Pending |
-| CLIDOC-03 | Phase 30 | Pending |
-| GUIDE-01 | Phase 31 | Pending |
-| GUIDE-02 | Phase 31 | Pending |
-| GUIDE-03 | Phase 31 | Pending |
-| FEAT-01 | Phase 32 | Pending |
-| FEAT-02 | Phase 32 | Pending |
-| FEAT-03 | Phase 32 | Pending |
-| AUDIT-01 | Phase 33 | Pending |
-| AUDIT-02 | Phase 33 | Pending |
+| PROFILE-01 | Phase 34 | Complete |
+| PROFILE-02 | Phase 34 | Complete |
+| PROFILE-03 | Phase 34 | Complete |
+| PROFILE-04 | Phase 34 | Complete |
+| XFORM-01 | Phase 35 | Complete |
+| XFORM-02 | Phase 35 | Complete |
+| XFORM-03 | Phase 35 | Complete |
+| XFORM-04 | Phase 35 | Complete |
+| XFORM-05 | Phase 35 | Complete |
+| CLI-01 | Phase 36 | Complete |
+| CLI-02 | Phase 36 | Complete |
+| CLI-03 | Phase 36 | Complete |
+| CLI-04 | Phase 36 | Complete |
+| CONFIG-01 | Phase 37 | Complete |
+| CONFIG-02 | Phase 37 | Complete |
+| CONFIG-03 | Phase 37 | Complete |
+| CONFIG-04 | Phase 37 | Complete |
+| DX-01 | Phase 38 | Complete |
+| DX-02 | Phase 38 | Complete |
+| DX-03 | Phase 38 | Complete |
+| DX-04 | Phase 38 | Complete |
 
 **Coverage:**
-- v2.2.2 requirements: 11 total
-- Mapped to phases: 11
-- Unmapped: 0
+- v2.3.0 requirements: 21 total
+- Mapped to phases: 21
+- Unmapped: 0 ✓
+- Complete: 21 (Phases 34-38)
+- Pending: 0 ✓
 
 ---
-*Requirements defined: 2026-03-13*
-*Last updated: 2026-03-13 after roadmap creation*
+*Requirements defined: 2026-03-16*
+*Last updated: 2026-03-17 after roadmap creation*

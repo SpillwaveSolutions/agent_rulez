@@ -1,3 +1,8 @@
+---
+last_modified: 2026-03-16
+last_validated: 2026-03-16
+---
+
 # Hook Rule Patterns and Recipes
 
 Common patterns for solving real-world problems with RuleZ.
@@ -136,6 +141,7 @@ Focus: Performance optimization for search
     command_match: "git push.*(--force|-f)"
   actions:
     block: true
+  governance:
     reason: "Force push is dangerous. Use --force-with-lease or get approval."
 
 # Block main branch commits
@@ -207,6 +213,7 @@ echo '{"continue": true}'
     command_match: "rm\\s+(-rf|-fr|--recursive.*--force|--force.*--recursive)\\s+/"
   actions:
     block: true
+  governance:
     reason: "Recursive force delete from root is blocked for safety."
 
 - name: warn-rm-rf
@@ -347,20 +354,20 @@ echo '{"continue": true}'
 ```yaml
 # Stricter rules in CI
 - name: ci-strict-mode
+  enabled_when: 'env_CI == "true"'
   matchers:
     operations: [PreToolUse]
     tools: [Bash]
-    enabled_when: "env.CI == 'true'"
   actions:
     inject_inline: |
       **CI Mode Active**: All commands are logged and audited.
 
 # Development shortcuts
 - name: dev-shortcuts
+  enabled_when: 'env_CI != "true"'
   matchers:
     operations: [PreToolUse]
     tools: [Bash]
-    enabled_when: "env.CI != 'true'"
   actions:
     inject_inline: |
       Development mode: Using local configurations.
@@ -370,10 +377,10 @@ echo '{"continue": true}'
 
 ```yaml
 - name: production-branch-warning
+  enabled_when: 'env_GIT_BRANCH == "main" || env_GIT_BRANCH == "master" || env_GIT_BRANCH == "production"'
   matchers:
     operations: [PreToolUse]
     tools: [Write, Edit, Bash]
-    enabled_when: "env.GIT_BRANCH =~ '(main|master|production)'"
   actions:
     inject_inline: |
       **Warning**: You are on a protected branch.
@@ -388,7 +395,7 @@ echo '{"continue": true}'
   matchers:
     operations: [PreToolUse]
     tools: [Write, Edit]
-    enabled_when: "tool.input.path =~ '(test_|_test\\.|\\.test\\.|spec\\.)'"
+    extensions: [.test.js, .test.ts, .spec.js, .spec.ts]
   actions:
     inject: .claude/context/testing-guidelines.md
 ```
@@ -428,9 +435,10 @@ Control what subagents/agents can do by injecting policy context.
   priority: 10
   matchers:
     operations: [BeforeAgent]
-    enabled_when: "tool.input.path =~ '(production|prod)\\.'"
+    prompt_match: "(?i)(production|prod)"
   actions:
     block: true
+  governance:
     reason: "Agents cannot modify production configuration files."
 ```
 
@@ -451,6 +459,7 @@ These patterns use only events available on all platforms:
     command_match: "rm -rf /"
   actions:
     block: true
+  governance:
     reason: "Dangerous operation blocked."
 
 # Session context works on all platforms
@@ -536,7 +545,7 @@ Avoid expensive checks when not needed.
 - name: python-security
   matchers:
     tools: [Write]
-    enabled_when: "tool.input.path =~ '\\.py$'"
+    extensions: [.py]
   actions:
     run: python-security-check.sh
 ```
