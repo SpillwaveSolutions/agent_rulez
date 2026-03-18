@@ -1,5 +1,31 @@
 # Project Milestones: RuleZ (AI Policy Engine)
 
+## v2.3.0 Multi-Runtime Skill Portability (Shipped: 2026-03-18)
+
+**Delivered:** New `rulez skills` subcommand family — discover, transform, and install Claude Code skills to any AI runtime. Author once in `.claude/`, convert at install time, run everywhere.
+
+**Phases completed:** 34-38 (5 phases, ~2,099 new Rust LOC)
+**Timeline:** 2026-03-16 → 2026-03-17 (2 days)
+**PR:** #116 — 9/9 CI checks passed (Release + Full Validation)
+
+**Key accomplishments:**
+
+- `Runtime` enum covering Claude, OpenCode, Gemini, Codex, Custom — each profile resolves its own skills dir, command separator, tool name style, and path prefix
+- Skill discovery scans `.claude/skills/` and `.claude/commands/` plus extra sources (mastering-hooks at repo root)
+- 6-transform pipeline: tool name rewrite, path references, command filename flattening, YAML frontmatter conversion, MCP tool exclusion (Gemini), colors
+- `rulez skills install --runtime <rt>` / `--dry-run` / `rulez skills clean` — clean-install writer
+- Config file generation: marker-based GEMINI.md updates, AGENTS.md generation for Codex
+- `rulez skills status`, `rulez skills diff --runtime <rt>`, `rulez skills sync` — full DX subcommand family
+
+**Known Gaps (accepted as tech debt):**
+- CONFIG-04: mastering-hooks uses generic transform pipeline — no context-aware Gemini rewriting (todo)
+- DX-04: colorized terminal output not implemented — plain println!, no color crate (todo)
+
+**Stats:**
+- 5 phases (34-38), ~2,099 Rust LOC — 13 source files added across `rulez/src/skills/` and `rulez/src/cli/`
+
+---
+
 ## v2.2.2 Documentation Audit & Multi-CLI Guides (Shipped: 2026-03-17)
 
 **Delivered:** Complete documentation overhaul — all reference docs audited against source code, per-CLI usage guides created, and new feature documentation for external logging, lint, and test.
