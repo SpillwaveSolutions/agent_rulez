@@ -76,6 +76,8 @@ Progress: [██████████] 100%
 ### Pending Todos
 
 - [ ] Offload Log Filtering to Web Worker or Rust (ui) — deferred, low priority
+- [ ] Add colorized terminal output to rulez skills CLI (cli) — DX-04 tech debt from v2.3.0
+- [ ] Add context-aware mastering-hooks transform for Gemini runtime (cli) — CONFIG-04 tech debt from v2.3.0
 
 ### Blockers/Concerns
 
