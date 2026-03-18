@@ -8,9 +8,9 @@
 
 | Component | Location | Priority | Status |
 |-----------|----------|----------|--------|
-| **RuleZ Core** | `rulez/` | P1 - Primary | v1.4 Shipped |
+| **RuleZ Core** | `rulez/` | P1 - Primary | v2.3.0 Shipped |
 | **Mastering Hooks** | `mastering-hooks/` | P2 - Secondary | Complete (skill) |
-| **RuleZ UI** | `rulez-ui/` | P1 - Primary (v1.5) | M1 Scaffold Complete, v1.5 Active |
+| **RuleZ UI** | `rulez-ui/` | P1 - Primary | Complete (Tauri 2.0) |
 
 ## Core Value
 
@@ -32,9 +32,10 @@ RuleZ positions itself as comparable to:
 
 ## Current State
 
-### RuleZ Core (v2.2.2)
+### RuleZ Core (v2.3.0)
 - Policy engine with blocking, injection, validation, inline scripting, schema validation
-- CLI: init, install, uninstall, validate, logs, explain, debug, repl, test, lint, upgrade
+- CLI: init, install, uninstall, validate, logs, explain, debug, repl, test, lint, upgrade, skills
+- `rulez skills` family: install, clean, status, diff, sync — cross-runtime skill portability
 - Multi-CLI support: Claude Code, Gemini, Copilot, OpenCode (install/doctor commands)
 - Parallel rule evaluation, config caching, globset matching
 - E2E test harness across 5 CLIs (Claude Code, Gemini, Copilot, OpenCode, Codex)
@@ -89,43 +90,20 @@ RuleZ positions itself as comparable to:
 - ✓ FEAT-01..03: Feature documentation (external logging, lint, test) — v2.2.2
 - ✓ AUDIT-01..02: Accuracy audit against source code and --help output — v2.2.2
 
-### Active
+- ✓ PROFILE-01..04: Runtime profiles (Claude, OpenCode, Gemini, Codex, Custom) with discovery — v2.3.0
+- ✓ XFORM-01..05: Transform pipeline (tool names, paths, filenames, frontmatter, MCP exclusion) — v2.3.0
+- ✓ CLI-01..04: `rulez skills install/clean` with dry-run and clean-install writer — v2.3.0
+- ✓ CONFIG-01..03: GEMINI.md marker-based update, AGENTS.md generation, non-skill preservation — v2.3.0
+- ✓ DX-01..03: `rulez skills status/diff/sync` subcommand family — v2.3.0
 
-- [ ] PROFILE-01: Runtime profiles define per-platform conventions (dirs, separators, tool style)
-- [ ] PROFILE-02: Skill discovery scans .claude/skills/, .claude/commands/, and extra dirs
-- [ ] PROFILE-03: Extra skill sources (mastering-hooks at repo root) discovered automatically
-- [ ] XFORM-01: Tool names converted from PascalCase to runtime conventions
-- [ ] XFORM-02: Path references rewritten (~/.claude/ -> runtime equivalents)
-- [ ] XFORM-03: Command filenames flattened (dot to hyphen) with cross-reference rewriting
-- [ ] XFORM-04: YAML frontmatter converted (allowed-tools -> tools, color hex, strip unsupported)
-- [ ] XFORM-05: MCP tools excluded for Gemini, preserved for OpenCode
-- [ ] CLI-01: `rulez skills install --runtime <rt>` installs to target runtime
-- [ ] CLI-02: `rulez skills install --dry-run` previews without writing
-- [ ] CLI-03: `rulez skills clean --runtime <rt>` removes generated files
-- [ ] CONFIG-01: Auto-update GEMINI.md skill registry with marker sections
-- [ ] CONFIG-02: Auto-generate AGENTS.md for Codex with skill registry
-- [ ] CONFIG-03: Mastering-hooks platform references rewritten context-aware
-- [ ] DX-01: `rulez skills status` shows human-readable dates and freshness
-- [ ] DX-02: `rulez skills diff --runtime <rt>` shows colored diff of changes
-- [ ] DX-03: `rulez skills sync` installs to all detected runtimes
-- [ ] DX-04: Colorized output with progress indicators
+### Active (next milestone)
 
-## Current Milestone: v2.3.0 Multi-Runtime Skill Portability
+*(None defined — run `/gsd:new-milestone` to define next milestone requirements)*
 
-**Goal:** Build an installer-based conversion pipeline that transforms canonical Claude Code skills into runtime-specific installations. Author once in `.claude/`, convert at install time, run everywhere.
+### Known Tech Debt
 
-**Target features:**
-- Runtime profiles and skill discovery (Phase 34 — DONE)
-- Content transformation engine with 6 transform types (Phase 35 — DONE)
-- CLI integration with file writer (Phase 36 — DONE)
-- Config file generation for GEMINI.md, AGENTS.md (Phase 37)
-- DX polish: status, diff, sync, clean (Phase 38)
-
-**Plan:** `docs/plans/multi-runtime-skill-portability.md`
-
-## Shipped: v2.2.2 Documentation Audit & Multi-CLI Guides (2026-03-17)
-
-All documentation audited against source code, per-CLI usage guides created for Claude Code/Gemini/OpenCode, feature docs for external logging/lint/test. 11/11 requirements satisfied, 4 phases, 8 plans.
+- [ ] CONFIG-04: mastering-hooks context-aware transform for non-Claude runtimes — todo added
+- [ ] DX-04: Colorized terminal output with progress indicators for skills CLI — todo added
 
 ### Out of Scope
 
@@ -167,9 +145,11 @@ All documentation audited against source code, per-CLI usage guides created for 
 | LazyLock pre-compiled validators | <0.1ms validation overhead at runtime | ✓ Good |
 | ubuntu-22.04 for Tauri builds | webkit2gtk-4.1 requirement, ubuntu-latest may break | ✓ Good |
 | E2E gate before Tauri builds | Fast feedback (2-3min) prevents expensive failed builds | ✓ Good |
-| Hardcoded Rust transforms, not YAML-configurable | 4 well-known runtimes + Custom variant covers long tail | — Pending |
-| Clean-install writer (rm + recreate) | Prevents orphan files across versions, proven in GSD | — Pending |
-| `rulez skills` subcommand family, not extending `rulez install` | Hook registration and skill distribution are orthogonal | — Pending |
+| Hardcoded Rust transforms, not YAML-configurable | 4 well-known runtimes + Custom variant covers long tail | ✓ Good |
+| Clean-install writer (rm + recreate) | Prevents orphan files across versions, proven in GSD | ✓ Good |
+| `rulez skills` subcommand family, not extending `rulez install` | Hook registration and skill distribution are orthogonal | ✓ Good |
+| Skip colorized output (DX-04) in v2.3.0 | Ship fast, polish in next milestone | ⚠️ Revisit |
+| Generic transform for mastering-hooks (CONFIG-04) | Context-aware rewriting is complex; generic covers the 80% case | ⚠️ Revisit |
 
 ## Quality Gates
 
@@ -188,6 +168,6 @@ All documentation audited against source code, per-CLI usage guides created for 
 
 ---
 
-*Last updated: 2026-03-16 after v2.3.0 milestone start*
+*Last updated: 2026-03-18 after v2.3.0 milestone*
 *Reorganized as monorepo on 2026-02-06*
 *Renamed from CCH to RuleZ*
